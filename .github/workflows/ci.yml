@@ -22,10 +22,10 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Run tests
+        run: ./test.sh
+
       - name: Build app
         env:
           APP: dist/Schichta.app
         run: ./build-desktop.sh
-
-      - name: Desktop self-test
-        run: dist/Schichta.app/Contents/MacOS/Schichta --self-test

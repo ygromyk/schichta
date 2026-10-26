@@ -6,9 +6,9 @@ enum ActivePrompt: Equatable {
     case endOfDay(day: String)
 }
 
+/// Der laufende AppDelegate; `nil` in Tests, wo keine NSApplication gestartet wurde.
 func appDelegate() -> AppDelegate? {
-    guard !CommandLine.arguments.contains("--self-test") else { return nil }
-    return NSApplication.shared.delegate as? AppDelegate
+    NSApp?.delegate as? AppDelegate
 }
 
 // MARK: - SchichtaStore (Observable Store)

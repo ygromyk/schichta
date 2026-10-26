@@ -61,15 +61,16 @@ jobs:
           echo "SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
           echo "signed=true" >> "$GITHUB_OUTPUT"
 
+      - name: Run tests
+        run: ./test.sh
+
       - name: Build universal app
         env:
           UNIVERSAL: "1"
         run: ./build-desktop.sh
 
-      - name: Desktop self-test
-        run: |
-          lipo -archs "$APP/Contents/MacOS/Schichta"
-          "$APP/Contents/MacOS/Schichta" --self-test
+      - name: Check architectures
+        run: lipo "$APP/Contents/MacOS/Schichta" -verify_arch arm64 x86_64
 
       - name: Notarize and staple
         if: steps.cert.outputs.signed == 'true'

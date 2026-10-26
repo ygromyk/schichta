@@ -6,6 +6,7 @@ let package = Package(
     platforms: [.macOS(.v14)],
     targets: [
         .executableTarget(name: "Schichta", path: "Sources/Schichta"),
+        .testTarget(name: "SchichtaTests", dependencies: ["Schichta"], path: "Tests/SchichtaTests"),
     ],
     swiftLanguageModes: [.v5]
 )

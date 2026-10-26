@@ -31,7 +31,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     func playCheckInSound(customName: String? = nil) {
-        guard !CommandLine.arguments.contains("--self-test") else { return }
         guard (store?.checkInSoundEnabled == true) || customName != nil else { return }
         let soundName = customName ?? store?.checkInSoundName ?? "Glass"
         if let sound = NSSound(named: NSSound.Name(soundName)) {
@@ -304,9 +303,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         checkInPanel?.orderOut(nil)
     }
 
-    /// Mitteilungen nur in der gebündelten App; im Selbsttest oder als nacktes Binary gibt es kein Notification Center.
+    /// Mitteilungen nur in der gebündelten App; ein nacktes Binary oder der Testlauf hat kein Notification Center.
     private var notificationsAvailable: Bool {
-        !CommandLine.arguments.contains("--self-test") && Bundle.main.bundleIdentifier != nil
+        Bundle.main.bundleURL.pathExtension == "app"
     }
 
     func setupNotificationCenter() {

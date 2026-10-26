@@ -47,8 +47,8 @@ enum AppPaths {
 
 /// Startet ein Programm mit Zeitlimit und sammelt die Ausgabe.
 /// stdin wird nebenläufig geschrieben und das Zeitlimit vorher gestartet: Liest der Befehl stdin nicht,
-/// blockiert sonst das Schreiben einer vollen Pipe (> 64 KB) für immer. SIGPIPE ist beim Start ignoriert,
-/// ein vorzeitig beendeter Befehl führt daher nur zu einem Schreibfehler statt zum Absturz.
+/// blockiert sonst das Schreiben einer vollen Pipe (> 64 KB) für immer. Die stdin-Pipe löst kein SIGPIPE aus
+/// (F_SETNOSIGPIPE), ein vorzeitig beendeter Befehl führt daher nur zu einem Schreibfehler statt zum Absturz.
 enum Shell {
     struct Output {
         let status: Int32
@@ -76,6 +76,9 @@ enum Shell {
         process.standardOutput = out
         process.standardError = mergeStderr ? out : err
         process.standardInput = input ?? FileHandle.nullDevice
+        if let input {
+            _ = fcntl(input.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1)
+        }
         try process.run()
 
         let killer = DispatchWorkItem { if process.isRunning { process.terminate() } }

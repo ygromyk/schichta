@@ -265,15 +265,16 @@ To back up, copy the folder. To uninstall, delete the app, that folder and
 ## Development
 
 ```bash
-Schichta.app/Contents/MacOS/Schichta --self-test
+./test.sh
 ```
 
 ```bash
 cd adapters/bcs && npm install && npm test
 ```
 
-The desktop self-test uses a temporary database and its own user-defaults domain
-(`local.schichta.selftest`), so it never touches your real entries or settings.
+`test.sh` runs `swift test` (Swift Testing, `Tests/SchichtaTests`); with Xcode installed, plain
+`swift test` works too. Tests use a temporary database and their own user-defaults domains
+(`local.schichta.tests.*`), so they never touch your real entries or settings.
 
 ## Releasing
 
