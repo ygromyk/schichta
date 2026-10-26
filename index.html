@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#f2f3f5">
-<title>Zeitbuch · Dein Arbeitstag, sortiert</title>
-<script>if(window.webkit?.messageHandlers?.zeitbuch)document.documentElement.classList.add('macos-app');</script>
+<title>Schichta · Dein Arbeitstag, sortiert</title>
+<script>if(window.webkit?.messageHandlers?.schichta)document.documentElement.classList.add('macos-app');</script>
 <link rel="stylesheet" href="style.css">
 <script src="core.js" defer></script><script src="app.js" defer></script>
 </head>
 <body>
-<header><a class="brand" href="./index.html"><span class="logo">z.</span>zeitbuch<span class="local">LOKAL</span></a><div class="tools"><button id="backup">Sicherung exportieren</button><label class="button" for="restore">Importieren</label><input type="file" id="restore" accept="application/json,.json" hidden></div></header>
+<header><a class="brand" href="./index.html"><span class="logo">s.</span>schichta<span class="local">LOKAL</span></a><div class="tools"><button id="backup">Sicherung exportieren</button><label class="button" for="restore">Importieren</label><input type="file" id="restore" accept="application/json,.json" hidden></div></header>
 <main>
 <div class="intro"><div class="eyebrow">WENIGER NACHDENKEN AM FEIERABEND</div><h1>Dein Tag. Gut festgehalten.</h1><p>Zwischendurch eintragen. Zum Schluss prüfen und übernehmen.</p></div>
 <div class="daybar"><div class="date-control"><button id="previous" aria-label="Vorheriger Tag">←</button><input id="day" type="date" aria-label="Ausgewählter Tag"><button id="next" aria-label="Nächster Tag">→</button><button id="today">Heute</button></div><span id="day-name"></span></div>

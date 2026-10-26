@@ -14,7 +14,7 @@ export async function book({ payload, config, password, dryRun = false, replace 
   if (plan.problems.length) {
     return { exitCode: 2, lines: [...lines, 'Nicht gebucht:', ...plan.problems.map((p) => '  ✗ ' + p)] };
   }
-  if (!password) throw new AdapterError('Kein BCS-Passwort im Schlüsselbund. Einmalig ausführen: zeitbuch-bcs set-password');
+  if (!password) throw new AdapterError('Kein BCS-Passwort im Schlüsselbund. Einmalig ausführen: schichta-bcs set-password');
 
   const client = await openClient(config);
   try {
@@ -51,7 +51,7 @@ export async function book({ payload, config, password, dryRun = false, replace 
     }
     return { exitCode: 0, lines: [...lines, `✓ Gebucht${mustReplace ? ' (ersetzt)' : ''} und in BCS bestätigt:`, ...formatTasks(plan.tasks)] };
   } catch (error) {
-    const shot = join(tmpdir(), `zeitbuch-bcs-fehler-${Date.now()}.png`);
+    const shot = join(tmpdir(), `schichta-bcs-fehler-${Date.now()}.png`);
     await client.screenshot?.(shot);
     throw new AdapterError(`${error.message}\n  Screenshot der BCS-Seite: ${shot}`, error.exitCode ?? 1);
   } finally {
@@ -60,7 +60,7 @@ export async function book({ payload, config, password, dryRun = false, replace 
 }
 
 export async function fetchDay({ date, config, password, openClient = BcsClient.open }) {
-  if (!password) throw new AdapterError('Kein BCS-Passwort im Schlüsselbund. Einmalig ausführen: zeitbuch-bcs set-password');
+  if (!password) throw new AdapterError('Kein BCS-Passwort im Schlüsselbund. Einmalig ausführen: schichta-bcs set-password');
   const client = await openClient(config);
   try {
     await client.login(password);

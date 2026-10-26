@@ -1,7 +1,7 @@
-# zeitbuch-bcs – Zeitbuch → Projektron BCS
+# schichta-bcs – Schichta → Projektron BCS
 
-Eigenständiges Programm, das einen Zeitbuch-Tag in die BCS-Tageserfassung bucht.
-Zeitbuch kennt BCS nicht; es ruft den Adapter nur als Shell-Hook auf und übergibt das
+Eigenständiges Programm, das einen Schichta-Tag in die BCS-Tageserfassung bucht.
+Schichta kennt BCS nicht; es ruft den Adapter nur als Shell-Hook auf und übergibt das
 Tages-JSON auf stdin.
 
 BCS hat dafür keine einfache API. Der Adapter bedient deshalb die Weboberfläche mit einem
@@ -24,8 +24,8 @@ unsichtbaren Chrome (puppeteer-core). Ablauf und Selektoren stammen aus
 
 ```bash
 cd adapters/bcs && npm install              # nur puppeteer-core, nutzt dein installiertes Chrome
-mkdir -p ~/.config/zeitbuch-bcs-adapter
-cp config.example.json ~/.config/zeitbuch-bcs-adapter/config.json   # url, username, mapping anpassen
+mkdir -p ~/.config/schichta-bcs-adapter
+cp config.example.json ~/.config/schichta-bcs-adapter/config.json   # url, username, mapping anpassen
 node bcs-adapter.mjs set-password           # fragt das BCS-Passwort ab (Schlüsselbund)
 node bcs-adapter.mjs fetch --date 2026-10-26   # Login und Lesen testen, ändert nichts
 ```
@@ -35,7 +35,7 @@ node bcs-adapter.mjs fetch --date 2026-10-26   # Login und Lesen testen, ändert
 sind die `taskId`. Das `mapping` ordnet per regulärem Ausdruck auf `ticket`, `description`
 oder `project` zu; die erste passende Regel gewinnt.
 
-## In Zeitbuch einbinden
+## In Schichta einbinden
 
 Einstellungen › Integrationen & Hooks › Lokaler Shell-Befehl (absoluter Node-Pfad, da Apps
 nicht deinen Shell-PATH erben):
@@ -58,7 +58,7 @@ erscheint unter „Letzte Hook-Ausgabe“.
 | `set-password` | Passwort im Schlüsselbund speichern |
 
 Exit-Codes: `0` ok · `1` Fehler · `2` bewusst abgelehnt (Plan-Probleme oder Tag schon belegt).
-Bei Fehlern im Browser liegt ein Screenshot unter `$TMPDIR/zeitbuch-bcs-fehler-*.png`.
+Bei Fehlern im Browser liegt ein Screenshot unter `$TMPDIR/schichta-bcs-fehler-*.png`.
 
 ## Tests
 

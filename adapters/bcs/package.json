@@ -1,11 +1,11 @@
 {
-  "name": "zeitbuch-bcs-adapter",
+  "name": "schichta-bcs-adapter",
   "version": "0.1.0",
   "private": true,
-  "description": "Bucht Zeitbuch-Tage in Projektron BCS (Browser-Automatisierung über die BCS-Weboberfläche).",
+  "description": "Bucht Schichta-Tage in Projektron BCS (Browser-Automatisierung über die BCS-Weboberfläche).",
   "type": "module",
   "bin": {
-    "zeitbuch-bcs": "./bcs-adapter.mjs"
+    "schichta-bcs": "./bcs-adapter.mjs"
   },
   "engines": {
     "node": ">=20"

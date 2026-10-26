@@ -1,10 +1,10 @@
-ZEITBUCH – LOKALE STUNDENNOTIZEN
+SCHICHTA – LOKALE STUNDENNOTIZEN
 
 Start ohne Installation: index.html im Browser öffnen.
-Für automatische Git-Logs: ZEITBUCH_REPOS=~/Projekte/repo-a:~/Projekte/repo-b python3 server.py
+Für automatische Git-Logs: SCHICHTA_REPOS=~/Projekte/repo-a:~/Projekte/repo-b python3 server.py
 Dann http://127.0.0.1:8765 öffnen. Diesen Port und Browser für dieselben Daten beibehalten.
 
-macOS-Desktop-App: `Zeitbuch.app` bietet einen praktischen 30-Minuten-Statusbar-Check-in
+macOS-Desktop-App: `Schichta.app` bietet einen praktischen 30-Minuten-Statusbar-Check-in
 (`z.` oben in der Menüleiste, Tastenkombination `⌘K`, Speichern als Tagesnotiz mit Zeitstempel
 oder direkt als geschätzter 30-Minuten-Eintrag).
 
@@ -30,9 +30,9 @@ Buchungen müssen vor einer echten Übertragung geprüft werden.
 FREITEXT UND CHATGPT
 1. Tagesnotizen frei schreiben, inklusive tatsächlicher/ungefährer Zeiten.
 2. „Git-Logs für diesen Tag laden“: Der lokale Python-Server liest eigene Commits
-   und HEAD-Reflogs der in ZEITBUCH_REPOS (durch „:“ getrennt) angegebenen Repositories.
+   und HEAD-Reflogs der in SCHICHTA_REPOS (durch „:“ getrennt) angegebenen Repositories.
    Keine Quelldateien, Passwörter, Chatdaten oder Remote-Abfragen. Autorfilter:
-   ZEITBUCH_AUTHOR oder `git config user.name`. Datum nach Europe/Berlin, inklusive Sommer-/Winterzeit.
+   SCHICHTA_AUTHOR oder `git config user.name`. Datum nach Europe/Berlin, inklusive Sommer-/Winterzeit.
 3. „Analyseauftrag für diesen Chat vorbereiten“, Inhalt prüfen und kopieren.
 4. Im Codex-/ChatGPT-Chat einfügen und auswerten lassen.
 5. Die JSON-Antwort unter „ChatGPT-Antwort übernehmen“ einfügen. Vorschläge
@@ -49,11 +49,11 @@ ohne Tagesnotizen bleiben kompatibel. Reine Dateiöffnung unterstützt keine Git
 Tests: node --test core.test.cjs
 Server-Tests: python3 -m unittest server_test.py
 Keine externen Abhängigkeiten, Fonts oder Tracker. Nur lokale Abfragen an
-127.0.0.1:8765; Git-Lesezugriff nur auf die in ZEITBUCH_REPOS angegebenen Repositories.
+127.0.0.1:8765; Git-Lesezugriff nur auf die in SCHICHTA_REPOS angegebenen Repositories.
 
 BUCHUNGSZIELE (TARGET-DATEIEN)
 Andere Systeme werden ohne App-Änderung über JSON-Dateien angebunden:
-~/Library/Application Support/Zeitbuch/targets/<name>.json
+~/Library/Application Support/Schichta/targets/<name>.json
 Vorlage: targets/clockify.example.json (wird beim ersten Öffnen in den Ordner kopiert;
 *.example.json wird nie geladen). Felder: name, method (POST/PUT/PATCH), url,
 mode (perEntry = eine Anfrage pro Eintrag, perDay = eine pro Tag), auth, headers, body, map.
@@ -83,4 +83,4 @@ Vorschlägen (als Schätzung markiert, Zeit offen = 0, muss vor Übernahme ergä
 plus Zusammenfassung und Rückfragen. Die App ruft keine KI-API direkt auf.
 Werkzeuge (Einstellungen > Integrationen): Claude Code (ohne Tools/MCP/Hooks), Codex
 (read-only), Ollama (lokal, llama3.1) oder eigene Dateien in
-~/Library/Application Support/Zeitbuch/ai-tools/<name>.json: {"name": "...", "command": "..."}.
+~/Library/Application Support/Schichta/ai-tools/<name>.json: {"name": "...", "command": "..."}.

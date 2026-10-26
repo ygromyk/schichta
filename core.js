@@ -17,7 +17,7 @@
     return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s)) && new Date(s).toISOString().slice(0, 10) === s;
   }
   function validate(data) {
-    if (!data || data.version !== 1 || !Array.isArray(data.entries) || data.entries.length > 50000) throw new Error('Keine gültige Zeitbuch-Sicherung.');
+    if (!data || data.version !== 1 || !Array.isArray(data.entries) || data.entries.length > 50000) throw new Error('Keine gültige Schichta-Sicherung.');
     const ids = new Set();
     for (const e of data.entries) {
       if (!e || typeof e.id !== 'string' || ids.has(e.id) || !validDate(e.date) || !Number.isInteger(e.minutes) || e.minutes < 1 || e.minutes > 1440 || typeof e.ticket !== 'string' || e.ticket.length > 100 || typeof e.description !== 'string' || !e.description.trim() || e.description.length > 4000 || typeof e.estimated !== 'boolean') throw new Error('Ungültiger Eintrag in der Sicherung.');
@@ -73,5 +73,5 @@
   }
   const api = {minutes, time, date, validDate, validate, report, proposals, analysisPrompt, appendCheckIn};
   if (typeof module !== 'undefined') module.exports = api;
-  else root.Zeitbuch = api;
+  else root.Schichta = api;
 })(globalThis);

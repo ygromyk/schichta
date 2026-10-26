@@ -2,7 +2,7 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-export const DEFAULT_CONFIG_PATH = join(homedir(), '.config', 'zeitbuch-bcs-adapter', 'config.json');
+export const DEFAULT_CONFIG_PATH = join(homedir(), '.config', 'schichta-bcs-adapter', 'config.json');
 export const DEFAULT_CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
 export class AdapterError extends Error {
@@ -12,13 +12,13 @@ export class AdapterError extends Error {
   }
 }
 
-/** Liest das Zeitbuch-Hook-Payload (stdin) und behält nur die Felder, die das Buchen braucht. */
+/** Liest das Schichta-Hook-Payload (stdin) und behält nur die Felder, die das Buchen braucht. */
 export function parsePayload(text) {
   let data;
   try {
     data = JSON.parse(text);
   } catch {
-    throw new AdapterError('Eingabe ist kein gültiges JSON (erwartet: Zeitbuch-Hook-Payload auf stdin).');
+    throw new AdapterError('Eingabe ist kein gültiges JSON (erwartet: Schichta-Hook-Payload auf stdin).');
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data?.date ?? '')) throw new AdapterError('"date" fehlt oder ist nicht YYYY-MM-DD.');
   if (!Array.isArray(data.entries)) throw new AdapterError('"entries" fehlt.');
@@ -100,7 +100,7 @@ export function buildPlan(payload, config) {
   for (const e of payload.entries) {
     const label = `${e.ticket ? e.ticket + ' ' : ''}${e.description}`;
     if (e.estimated && !config.allowEstimated) {
-      problems.push(`„${label}“ ist als Schätzung markiert – erst in Zeitbuch bestätigen.`);
+      problems.push(`„${label}“ ist als Schätzung markiert – erst in Schichta bestätigen.`);
       continue;
     }
     const match = config.mapping.find((m) => m.regex.test(e[m.source]));

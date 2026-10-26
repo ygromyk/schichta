@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// zeitbuch-bcs: bucht einen Zeitbuch-Tag in Projektron BCS. Eigenständig; Zeitbuch ruft es nur als Shell-Hook auf.
+// schichta-bcs: bucht einen Schichta-Tag in Projektron BCS. Eigenständig; Schichta ruft es nur als Shell-Hook auf.
 import { readFile } from 'node:fs/promises';
 import { AdapterError, DEFAULT_CONFIG_PATH, normalizeConfig, parsePayload, buildPlan, formatTasks, germanDate, hhmm } from './src/plan.mjs';
 import { getPassword, setPasswordInteractive } from './src/keychain.mjs';
 
-const USAGE = `zeitbuch-bcs <befehl> [optionen]
+const USAGE = `schichta-bcs <befehl> [optionen]
 
   plan              Payload prüfen und Zuordnung zeigen (ohne BCS-Zugriff)
   book              Tag in BCS buchen
@@ -14,7 +14,7 @@ const USAGE = `zeitbuch-bcs <befehl> [optionen]
   set-password      BCS-Passwort im Schlüsselbund speichern
 
   --config PFAD     Konfiguration (Standard: ${DEFAULT_CONFIG_PATH})
-  --input PFAD      Payload aus Datei statt stdin (Zeitbuch setzt auch ZEITBUCH_JSON_FILE)
+  --input PFAD      Payload aus Datei statt stdin (Schichta setzt auch SCHICHTA_JSON_FILE)
 
 Exit-Codes: 0 ok · 1 Fehler · 2 abgelehnt (Plan-Probleme oder Tag schon belegt)`;
 
@@ -72,7 +72,7 @@ async function main() {
 
     case 'plan':
     case 'book': {
-      const inputPath = args.options.input ?? (process.stdin.isTTY ? process.env.ZEITBUCH_JSON_FILE : undefined);
+      const inputPath = args.options.input ?? (process.stdin.isTTY ? process.env.SCHICHTA_JSON_FILE : undefined);
       const payload = parsePayload(inputPath ? await readFile(inputPath, 'utf8') : await readStdin());
       if (args.command === 'plan') {
         const plan = buildPlan(payload, config);

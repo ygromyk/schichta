@@ -13,7 +13,7 @@ const config = normalizeConfig({
 
 const payload = (entries) => parsePayload(JSON.stringify({ date: '2026-10-26', entries }));
 
-test('parsePayload übernimmt die Zeitbuch-Hook-Felder', () => {
+test('parsePayload übernimmt die Schichta-Hook-Felder', () => {
   const p = payload([{ id: 'a', ticket: ' PROJ-1 ', description: ' Review ', minutes: 90, estimated: false, projectName: 'App' }]);
   assert.deepEqual(p.entries[0], { id: 'a', ticket: 'PROJ-1', description: 'Review', minutes: 90, estimated: false, project: 'App' });
 });

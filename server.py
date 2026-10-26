@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent
 # Configured via environment so no personal paths or names live in the code.
-REPOS = [Path(p).expanduser() for p in os.environ.get('ZEITBUCH_REPOS', '').split(os.pathsep) if p]
+REPOS = [Path(p).expanduser() for p in os.environ.get('SCHICHTA_REPOS', '').split(os.pathsep) if p]
 
 def git_user_name():
     try:
@@ -20,7 +20,7 @@ def git_user_name():
     except (OSError, subprocess.TimeoutExpired):
         return ''
 
-AUTHOR = os.environ.get('ZEITBUCH_AUTHOR') or git_user_name()
+AUTHOR = os.environ.get('SCHICHTA_AUTHOR') or git_user_name()
 STATIC = {'/', '/index.html', '/style.css', '/core.js', '/app.js'}
 HOST = '127.0.0.1:8765'
 
@@ -93,5 +93,5 @@ class Handler(SimpleHTTPRequestHandler):
         super().do_GET()
 
 if __name__ == '__main__':
-    print('Zeitbuch: http://' + HOST, flush=True)
+    print('Schichta: http://' + HOST, flush=True)
     ThreadingHTTPServer(('127.0.0.1', 8765), Handler).serve_forever()

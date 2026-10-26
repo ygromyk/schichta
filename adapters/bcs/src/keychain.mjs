@@ -1,11 +1,11 @@
 // BCS-Passwort im macOS-Schlüsselbund über das mitgelieferte `security`-Werkzeug.
 import { execFile, spawn } from 'node:child_process';
 
-const SERVICE = 'zeitbuch-bcs-adapter';
+const SERVICE = 'schichta-bcs-adapter';
 
 export function getPassword(username) {
   // Nur für automatisierte Tests gedacht; im Alltag immer den Schlüsselbund nutzen.
-  if (process.env.ZEITBUCH_BCS_PASSWORD) return Promise.resolve(process.env.ZEITBUCH_BCS_PASSWORD);
+  if (process.env.SCHICHTA_BCS_PASSWORD) return Promise.resolve(process.env.SCHICHTA_BCS_PASSWORD);
   return new Promise((resolve) => {
     execFile('/usr/bin/security', ['find-generic-password', '-s', SERVICE, '-a', username, '-w'], (error, stdout) => {
       resolve(error ? null : stdout.replace(/\n$/, ''));

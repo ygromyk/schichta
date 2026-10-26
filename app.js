@@ -1,7 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
-const Z = Zeitbuch, KEY = 'zeitbuch.v1';
-const desktop = window.webkit?.messageHandlers?.zeitbuch;
+const Z = Schichta, KEY = 'schichta.v1';
+const desktop = window.webkit?.messageHandlers?.schichta;
 const nativeCall = (action, values = {}) => desktop.postMessage({action, ...values});
 const copyText = text => desktop ? nativeCall('copy', {text}) : navigator.clipboard.writeText(text);
 let data = {version: 1, entries: []}, editing = null, storageBroken = false;
@@ -96,7 +96,7 @@ function download(name, content, type) {
 }
 $('download').onclick = () => download(`Tagesentwurf-${currentDay}.txt`, Z.report(currentDay, dayEntries()), 'text/plain;charset=utf-8');
 $('backup').onclick = () => {
-  try { download(`Zeitbuch-Sicherung-${berlinDay()}.json`, storageBroken ? (localStorage.getItem(KEY) || '{}') : JSON.stringify(data, null, 2), 'application/json'); } catch (err) { notify('Sicherung fehlgeschlagen: ' + err.message); }
+  try { download(`Schichta-Sicherung-${berlinDay()}.json`, storageBroken ? (localStorage.getItem(KEY) || '{}') : JSON.stringify(data, null, 2), 'application/json'); } catch (err) { notify('Sicherung fehlgeschlagen: ' + err.message); }
 };
 $('copy').onclick = async () => {
   try { await copyText(Z.report(currentDay, dayEntries())); notify('Tagesentwurf kopiert. Es wurde nichts übertragen.'); }
@@ -217,7 +217,7 @@ $('parse-answer').onclick = () => {
 };
 window.addEventListener('beforeunload', event => { if (journalDirty || $('description').value || $('duration').value || $('ticket').value) { event.preventDefault(); event.returnValue = ''; } });
 render(); loadJournal();
-window.zeitbuchNativeCheckIn = function (payload) {
+window.schichtaNativeCheckIn = function (payload) {
   const p = payload || {};
   const day = berlinDay();
   if (p.mode === 'entry') {
