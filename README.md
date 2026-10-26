@@ -17,6 +17,7 @@ model, and you can make it a fully local one.
 
 ## Contents
 
+- [Why Schichta?](#why-schichta)
 - [Features](#features)
 - [Privacy: what Schichta does and does not send](#privacy-what-schichta-does-and-does-not-send)
 - [AI-ready: bring your own model](#ai-ready-bring-your-own-model)
@@ -27,6 +28,29 @@ model, and you can make it a fully local one.
 - [Development](#development)
 - [Releasing](#releasing)
 - [License](#license)
+
+## Why Schichta?
+
+**It's meant to be a little annoying.** Time tracking fails when you can forget about it, so
+Schichta stays in your face. The check-in pops up every few minutes during your working hours,
+a reminder fires at the end of the day, and the next morning it asks again if yesterday still
+isn't booked. Hours get logged while you work, not reconstructed from memory at 6 pm on Friday.
+
+**And it makes answering cheap.** A check-in is one line of text and Enter. Your recent tickets
+are one click away and durations are quick-pick chips.
+
+**It remembers the day for you.** The most annoying part of time tracking is reconstructing what
+you actually did. Schichta reads your own commits from the repositories you track and the
+Claude Code and Codex chats you had in them. If you want, an AI of your choice turns your notes,
+commits and chats into proposed entries. You only review them, fix a ticket or nudge a duration,
+and the day is ready to book. Every proposal stays marked as an estimate until you confirm it.
+
+**Your data stays yours.** Schichta collects nothing: no account, no analytics, no telemetry, no
+background network calls. Entries and notes live in one JSON file on your Mac
+(`~/Library/Application Support/Schichta/schichta.json`), secrets in the Keychain. Data leaves
+your Mac only through a destination you set up yourself: an AI command, a booking target or a
+hook. AI and booking requests are shown to you in full before anything is sent. Details in
+[Privacy](#privacy-what-schichta-does-and-does-not-send).
 
 ## Features
 
@@ -81,13 +105,15 @@ click Send.**
   shortened and run through a secret redactor (passwords, bearer tokens, `sk-…`/`ghp_…`/AWS keys,
   JWTs and long key-like strings are replaced). The redactor is a safety net, not a guarantee.
 
-**The only ways data can leave your Mac**, all opt-in and all shown to you first:
+**The only ways data can leave your Mac**, all opt-in:
 
 1. **AI summary.** The full request is shown as a preview. Only after you click does it go via
    stdin to the command *you* configured. With Ollama it never leaves the machine at all.
 2. **Booking targets.** HTTPS only (plain HTTP only for `localhost`) and redirects are refused.
    Every request is previewed first, with auth headers masked.
 3. **Hooks.** A shell command or webhook URL that you set yourself in Settings › Integrations.
+   Hooks have no preview: they run when you click "Test hook now", or automatically when you
+   mark a day as booked if you turned that option on.
 
 ## AI-ready: bring your own model
 
