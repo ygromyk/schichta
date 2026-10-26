@@ -116,6 +116,8 @@ jobs:
           cd dist && shasum -a 256 "$(basename "$DMG")" "$(basename "$ZIP")" > SHA256SUMS.txt && cat SHA256SUMS.txt
 
       - name: Attest build provenance
+        # GitHub only stores attestations for public repos (or org repos on paid plans).
+        if: github.event.repository.visibility == 'public'
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: |
