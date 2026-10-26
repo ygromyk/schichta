@@ -54,8 +54,13 @@ hook. AI and booking requests are shown to you in full before anything is sent. 
 
 ## Features
 
-- **Menu bar check-ins.** A check-in panel pops up at your chosen interval (or press `⌘K`).
-  Save the answer as a timestamped note or directly as an estimated entry.
+- **Menu bar check-ins.** A check-in panel pops up at your chosen interval without stealing the
+  keyboard from what you're typing (or press `⌥⌘K` from any app). Save the answer as a timestamped
+  note or directly as an estimated entry, or repeat the last one with one click. Unanswered check-ins
+  send a notification after 3 minutes that you can answer in place.
+- **Away and lunch.** After time away from the Mac (idle, sleep, locked screen) Schichta asks what the
+  gap was: a meeting or a break. Before lunch it asks what you did in the morning.
+- **Start at login**, switchable in Settings.
 - **Day view.** Add entries with ticket, project and duration (`1:30`, `1,5` and `1.5` all work).
   Use quick +/− buttons and a progress bar against your daily target.
 - **Estimates are flagged.** Anything guessed is marked *Estimated* and must be confirmed

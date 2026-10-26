@@ -66,6 +66,29 @@ extension SettingsView {
                     Text(store.t("Legt fest, ob ein Check-in sofort eine buchungswirksame Tätigkeit erzeugt oder nur die Tagesnotiz ergänzt.", "Defines whether check-ins create a billable activity immediately or only append to the day note."))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
+
+                    Divider()
+
+                    Toggle(store.t("Check-in überall mit \(GlobalHotKey.displayName) öffnen", "Open the check-in from any app with \(GlobalHotKey.displayName)"), isOn: $store.globalHotKeyEnabled)
+                        .font(.system(size: 12))
+
+                    Toggle(store.t("Beim Anmelden starten", "Start at login"), isOn: Binding(
+                        get: { LoginItem.isEnabled },
+                        set: { enabled in
+                            do {
+                                try LoginItem.setEnabled(enabled)
+                            } catch {
+                                store.showToast(store.t("Anmeldeobjekt nicht geändert: \(error.localizedDescription)", "Login item not changed: \(error.localizedDescription)"))
+                            }
+                            store.objectWillChange.send()
+                        }
+                    ))
+                    .font(.system(size: 12))
+                    if LoginItem.status == .requiresApproval {
+                        Text(store.t("Bitte in Systemeinstellungen › Allgemein › Anmeldeobjekte erlauben.", "Please allow it in System Settings › General › Login Items."))
+                            .font(.system(size: 11))
+                            .foregroundColor(.orange)
+                    }
                 }
                 .padding(10)
             }

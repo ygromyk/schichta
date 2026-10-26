@@ -43,6 +43,11 @@ if CommandLine.arguments.contains("--generate-icon") {
 
     render(CheckInPopoverView(store: store, onClose: {}), NSSize(width: 380, height: 305), "popover")
     render(CheckInPopoverView(store: store, onClose: {}), NSSize(width: 380, height: 320), "checkin-panel")
+    store.requestCheckIn(.beforeLunch)
+    render(CheckInPopoverView(store: store, onClose: {}), NSSize(width: 380, height: 350), "checkin-lunch")
+    store.requestCheckIn(.back(AwayPeriod(from: Date().addingTimeInterval(-65 * 60), to: Date())))
+    render(CheckInPopoverView(store: store, onClose: {}), NSSize(width: 380, height: 390), "checkin-back")
+    store.requestCheckIn(.manual)
     render(DatePickerPopoverContent(store: store, isPresented: .constant(true)), NSSize(width: 200, height: 230), "date-popover")
     render(MainWindowView(store: store), NSSize(width: 1220, height: 860), "main")
     render(MainWindowView(store: store), NSSize(width: 950, height: 650), "main-min")

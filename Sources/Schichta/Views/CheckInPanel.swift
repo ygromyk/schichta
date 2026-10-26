@@ -28,7 +28,7 @@ class CheckInPanel: NSPanel {
     override var canBecomeMain: Bool { true }
 
     override func cancelOperation(_ sender: Any?) {
-        orderOut(sender)
+        if let delegate = appDelegate() { delegate.closeCheckInPanel() } else { orderOut(sender) }
     }
 }
 
@@ -59,11 +59,12 @@ struct CheckInPopoverView: View {
                     .cornerRadius(6)
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(store.t("Was machst du gerade?", "What are you working on?"))
+                    Text(headline)
                         .font(.system(size: 13, weight: .semibold))
-                    Text(AppDelegate.checkInWindowString(intervalMinutes: durationMinutes, language: store.appLanguage))
+                    Text(subtitle)
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer()
@@ -80,6 +81,38 @@ struct CheckInPopoverView: View {
                 }
                 .buttonStyle(.plain)
                 .help(store.t("Schließen (Esc)", "Close (Esc)"))
+            }
+
+            // Back after time away: the gap can be a break
+            if case .back(let period) = store.checkInRequest.reason {
+                Button(action: {
+                    store.logBreak(period)
+                    appDelegate()?.checkInAnswered()
+                    onClose()
+                }) {
+                    Label(store.t("Pause – nicht buchen", "Break – don't log"), systemImage: "cup.and.saucer")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+            }
+
+            // One click to continue the previous activity
+            if let last = store.lastCheckIn() {
+                Button(action: { repeatLast() }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.clockwise")
+                        Text(store.t("Wie zuvor:", "Same as before:"))
+                            .foregroundColor(.secondary)
+                        Text((last.ticket.isEmpty ? "" : "[\(last.ticket)] ") + last.text)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        Spacer(minLength: 0)
+                    }
+                    .font(.system(size: 11, weight: .medium))
+                }
+                .buttonStyle(.plain)
+                .help(store.t("Letzten Check-in mit der eingestellten Dauer wiederholen", "Log the last check-in again with the duration below"))
             }
 
             // Quick Recent Tickets Chips
@@ -120,7 +153,7 @@ struct CheckInPopoverView: View {
 
                 Divider()
 
-                TextField(store.t("Kurze Notiz: Woran arbeitest du gerade?", "Short note: What are you working on?"), text: $noteText)
+                TextField(notePlaceholder, text: $noteText)
                     .textFieldStyle(.plain)
                     .font(.system(size: 13))
                     .padding(.horizontal, 10)
@@ -240,12 +273,54 @@ struct CheckInPopoverView: View {
             }
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         )
-        .onAppear {
+        // The panel's view lives as long as the app: reset it for every new opening.
+        .onChange(of: store.checkInRequest.id, initial: true) {
+            noteText = ""
+            ticketText = ""
+            isSaved = false
             mode = store.defaultCheckInMode
-            durationText = SchichtaCore.formatTime(store.reminderIntervalMinutes)
+            durationText = SchichtaCore.formatTime(store.prefilledMinutes(for: store.checkInRequest.reason))
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 isNoteFocused = true
             }
+        }
+    }
+
+    private var headline: String {
+        switch store.checkInRequest.reason {
+        case .manual, .timer: return store.t("Was machst du gerade?", "What are you working on?")
+        case .beforeLunch: return store.t("Gleich Mittagspause? 🍽", "Off to lunch? 🍽")
+        case .back: return store.t("Willkommen zurück", "Welcome back")
+        }
+    }
+
+    private var subtitle: String {
+        switch store.checkInRequest.reason {
+        case .manual, .timer:
+            return AppDelegate.checkInWindowString(intervalMinutes: durationMinutes, language: store.appLanguage)
+        case .beforeLunch:
+            return store.t("Was hast du heute Vormittag gemacht?", "What did you do this morning?")
+        case .back(let period):
+            let range = "\(AppTime.clock.string(from: period.from))–\(AppTime.clock.string(from: period.to))"
+            return store.t("Weg von \(range) (\(SchichtaCore.formatTime(period.minutes))). Was war das?",
+                           "Away \(range) (\(SchichtaCore.formatTime(period.minutes))). What was that?")
+        }
+    }
+
+    private var notePlaceholder: String {
+        switch store.checkInRequest.reason {
+        case .manual, .timer: return store.t("Kurze Notiz: Woran arbeitest du gerade?", "Short note: What are you working on?")
+        case .beforeLunch: return store.t("z. B. Review PROJ-2800, Daily, Bugfix Login", "e.g. review PROJ-2800, daily, login bugfix")
+        case .back: return store.t("z. B. Meeting mit Team, Kundencall", "e.g. team meeting, customer call")
+        }
+    }
+
+    private func repeatLast() {
+        guard store.repeatLastCheckIn(minutes: durationMinutes, mode: mode) else { return }
+        isSaved = true
+        appDelegate()?.checkInAnswered()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+            onClose()
         }
     }
 
@@ -288,8 +363,7 @@ struct CheckInPopoverView: View {
         store.handleCheckIn(text: trimmed, ticket: ticketText, mode: mode, timeStr: timeStr, minutes: minutes)
 
         isSaved = true
-        appDelegate()?.isCheckInDue = false
-        appDelegate()?.updateStatusItem(isDue: false)
+        appDelegate()?.checkInAnswered()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
             onClose()

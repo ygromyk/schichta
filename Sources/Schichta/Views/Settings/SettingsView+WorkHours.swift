@@ -174,6 +174,44 @@ extension SettingsView {
                     Toggle(store.t("Feierabend-Prompt: Zum Arbeitsende an Tagesabschluss erinnern", "End-of-day prompt: Remind to close day at end of work hours"), isOn: $store.endOfDayPromptEnabled)
                         .font(.system(size: 12))
 
+                    HStack {
+                        Toggle(store.t("Mittags-Prompt: Vor der Pause nach dem Vormittag fragen", "Lunch prompt: Ask about the morning before the break"), isOn: $store.lunchPromptEnabled)
+                            .font(.system(size: 12))
+                        Spacer()
+                        Picker("", selection: Binding(
+                            get: { String(format: "%02d:%02d", store.lunchHour, store.lunchMinute) },
+                            set: { val in
+                                let parts = val.split(separator: ":").compactMap { Int($0) }
+                                if parts.count == 2 {
+                                    store.lunchHour = parts[0]
+                                    store.lunchMinute = parts[1]
+                                }
+                            }
+                        )) {
+                            ForEach(["11:00", "11:30", "11:45", "12:00", "12:15", "12:30", "13:00", "13:30"], id: \.self) { t in
+                                Text(t).tag(t)
+                            }
+                        }
+                        .frame(width: 80)
+                        .disabled(!store.lunchPromptEnabled)
+                    }
+
+                    HStack {
+                        Toggle(store.t("Abwesenheit erkennen: nach Rückkehr fragen, was die Lücke war", "Detect time away: ask what the gap was when you're back"), isOn: $store.awayDetectionEnabled)
+                            .font(.system(size: 12))
+                        Spacer()
+                        Picker("", selection: $store.awayMinimumMinutes) {
+                            ForEach([5, 10, 15, 20, 30], id: \.self) { mins in
+                                Text(store.t("ab \(mins) min", "≥ \(mins) min")).tag(mins)
+                            }
+                        }
+                        .frame(width: 115)
+                        .disabled(!store.awayDetectionEnabled)
+                    }
+                    Text(store.t("Leerlauf, Ruhezustand und Bildschirmsperre zählen als weg. Während du weg bist, gibt es keine Check-ins; ein unbeantworteter Check-in meldet sich nach 3 Minuten per Mitteilung.", "Idle time, sleep and the lock screen count as away. No check-ins while you're away; an unanswered check-in sends a notification after 3 minutes."))
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+
                     Divider()
 
                     Toggle(store.t("Kurzen Sound bei Check-in & Prompts abspielen", "Play short sound on check-in & prompts"), isOn: $store.checkInSoundEnabled)

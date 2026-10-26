@@ -68,6 +68,18 @@ class SchichtaStore: ObservableObject {
     static let availableSounds: [String] = ["Glass", "Tink", "Pop", "Purr", "Ping", "Hero", "Submarine"]
     @Setting("Schichta.CheckInSoundEnabled") var checkInSoundEnabled: Bool = true
     @Setting("Schichta.CheckInSoundName") var checkInSoundName: String = "Glass"
+    /// "Off to lunch?" prompt asking for the morning.
+    @Setting("Schichta.LunchPromptEnabled") var lunchPromptEnabled: Bool = true
+    @Setting("Schichta.LunchHour", clamp: { max(10, min(15, $0)) }) var lunchHour: Int = 12
+    @Setting("Schichta.LunchMinute", clamp: { max(0, min(59, $0)) }) var lunchMinute: Int = 0
+    @Setting("Schichta.LastLunchPromptDate") var lastLunchPromptDate: String = ""
+    /// Ask "what was that?" after time away from the Mac (idle, sleep, locked screen).
+    @Setting("Schichta.AwayDetectionEnabled") var awayDetectionEnabled: Bool = true
+    @Setting("Schichta.AwayMinimumMinutes", clamp: { max(5, min(60, $0)) }) var awayMinimumMinutes: Int = 10
+    /// ⌥⌘K opens the check-in from any app.
+    @Setting("Schichta.GlobalHotKeyEnabled") var globalHotKeyEnabled: Bool = true {
+        didSet { appDelegate()?.updateGlobalHotKey() }
+    }
 
     // 5. Git & User settings
     /// Filled from `git config user.name` on first launch (see `prepareDefaults`).
@@ -102,6 +114,8 @@ class SchichtaStore: ObservableObject {
     @Published var isInspectingGit: Bool = false
 
     @Published var activePrompt: ActivePrompt = .none
+    /// The current opening of the check-in panel; a new value resets the panel.
+    @Published var checkInRequest = CheckInRequest(reason: .manual)
     @Published var proposals: [ProposedEntry] = []
     @Published var isSynthesizing: Bool = false
     @Published var toastMessage: String? = nil

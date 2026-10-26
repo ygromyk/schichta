@@ -5,6 +5,8 @@ import Foundation
 enum AutoSynthesizer {
     static let ticketRegex = try! NSRegularExpression(pattern: #"\b([A-Z][A-Z0-9]+-\d+)\b"#, options: [])
     static let checkInRegex = try! NSRegularExpression(pattern: #"^-\s*\d{1,2}:\d{2}\s*\((\d+)\s*Min(?:\.|\b)\):\s*(?:\[([A-Z][A-Z0-9]+-\d+)\])?\s*(.*)$"#, options: [])
+    /// Breaks noted after time away ("- 12:05–13:10 Pause"): not work, so never proposed.
+    static let breakRegex = try! NSRegularExpression(pattern: #"^-\s*\d{1,2}:\d{2}\s*[–-]\s*\d{1,2}:\d{2}\s+(?:Pause|Break)\b"#, options: [])
     static let durationRegex = try! NSRegularExpression(pattern: #"\b(\d{1,2}:[0-5]\d|\d+([.,]\d+)?\s*(?:h|std|stunden)|\d+\s*(?:m|min|minuten))\b"#, options: .caseInsensitive)
 
     static func extractTicket(from text: String) -> String? {
@@ -43,6 +45,7 @@ enum AutoSynthesizer {
             guard !trimmed.isEmpty else { continue }
 
             let ns = trimmed as NSString
+            if breakRegex.firstMatch(in: trimmed, options: [], range: NSRange(location: 0, length: ns.length)) != nil { continue }
             let checkInMatches = checkInRegex.matches(in: trimmed, options: [], range: NSRange(location: 0, length: ns.length))
 
             if let m = checkInMatches.first {

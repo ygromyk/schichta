@@ -14,7 +14,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     var settingsWindow: NSWindow?
     var checkInTimer: Timer?
     var promptTimer: Timer?
+    var awayTimer: Timer?
     var isCheckInDue: Bool = false
+    /// Pending notification for an unanswered check-in.
+    var escalationTask: Task<Void, Never>?
+    var awayTracker = AwayTracker(minimumAway: 10 * 60)
+    var hotKey: GlobalHotKey?
+
+    /// An unanswered check-in panel gets a notification after this long.
+    static let escalationDelay: Duration = .seconds(3 * 60)
+    static let checkInCategory = "schichta.checkin"
 
     static func activeScreen() -> NSScreen {
         let mouseLoc = NSEvent.mouseLocation
@@ -129,6 +138,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         _ = AppDelegate.ensureNotificationIconSaved()
         startCheckInTimer()
         startPromptTimer()
+        startAwayDetection()
+        updateGlobalHotKey()
         setupMainMenu()
 
         NSApp.activate(ignoringOtherApps: true)
@@ -170,6 +181,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     func updateMenuLanguage() {
         setupMainMenu()
+        registerNotificationCategories()
         if let win = settingsWindow {
             win.title = (store?.appLanguage ?? .de) == .de ? "Einstellungen" : "Settings"
         }
@@ -297,14 +309,55 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
     }
 
+    /// Opened by the user (menu bar, ⌘K, shortcut, notification): takes the keyboard.
     func showCheckInPanel(anchorButton: NSStatusBarButton? = nil) {
-        positionCheckInPanel(anchorButton: anchorButton)
-        NSApp.activate(ignoringOtherApps: true)
-        checkInPanel?.makeKeyAndOrderFront(nil)
+        presentCheckIn(.manual, activate: true, anchorButton: anchorButton)
+    }
+
+    /// Shows the panel for `reason`. Without `activate` it only floats in front: whatever you are typing in
+    /// stays focused until you click the panel (it is a non-activating panel).
+    func presentCheckIn(_ reason: CheckInReason, activate: Bool, anchorButton: NSStatusBarButton? = nil) {
+        store.requestCheckIn(reason)
+        // Let SwiftUI lay out the new content first, so the panel gets the right height.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let panel = self.checkInPanel else { return }
+            self.positionCheckInPanel(anchorButton: anchorButton)
+            if activate {
+                NSApp.activate(ignoringOtherApps: true)
+                panel.makeKeyAndOrderFront(nil)
+            } else {
+                panel.orderFrontRegardless()
+            }
+        }
     }
 
     func closeCheckInPanel() {
         checkInPanel?.orderOut(nil)
+        // Closing counts as seen: no notification follows.
+        cancelEscalation()
+    }
+
+    /// A check-in was saved (panel, notification reply or "same as before").
+    func checkInAnswered() {
+        isCheckInDue = false
+        updateStatusItem(isDue: false)
+        cancelEscalation()
+    }
+
+    // MARK: - Escalation: quiet panel first, a notification only if it stays unanswered
+
+    func scheduleEscalation() {
+        cancelEscalation()
+        escalationTask = Task { [weak self] in
+            try? await Task.sleep(for: AppDelegate.escalationDelay)
+            guard !Task.isCancelled, let self, self.isCheckInDue, !self.isAway else { return }
+            self.sendCheckInNotification()
+        }
+    }
+
+    func cancelEscalation() {
+        escalationTask?.cancel()
+        escalationTask = nil
     }
 
     /// Notifications only in the bundled app; a bare binary or the test run has no notification center.
@@ -317,21 +370,47 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         let center = UNUserNotificationCenter.current()
         center.delegate = self
         center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        registerNotificationCategories()
+    }
+
+    /// Check-in notifications can be answered in place: a reply field, "same as before" and "later".
+    func registerNotificationCategories() {
+        guard notificationsAvailable else { return }
+        let isDe = (store?.appLanguage ?? .de) == .de
+        let reply = UNTextInputNotificationAction(
+            identifier: "reply",
+            title: isDe ? "Antworten…" : "Reply…",
+            options: [],
+            textInputButtonTitle: isDe ? "Speichern" : "Save",
+            textInputPlaceholder: isDe ? "Woran arbeitest du? (Ticket optional)" : "What are you working on? (ticket optional)")
+        let same = UNNotificationAction(identifier: "same", title: isDe ? "Wie zuvor" : "Same as before", options: [])
+        let later = UNNotificationAction(identifier: "later", title: isDe ? "Später" : "Later", options: [])
+        UNUserNotificationCenter.current().setNotificationCategories([
+            UNNotificationCategory(identifier: AppDelegate.checkInCategory, actions: [reply, same, later], intentIdentifiers: [], options: []),
+        ])
     }
 
     /// An `id` prefixed "morning-prompt"/"endofday-prompt" opens the main window on click, anything else the check-in.
-    private func postNotification(id: String, de: (title: String, body: String), en: (title: String, body: String)) {
+    private func postNotification(id: String, category: String? = nil, de: (title: String, body: String), en: (title: String, body: String)) {
         guard notificationsAvailable else { return }
         let text = (store?.appLanguage ?? .de) == .de ? de : en
-        let request = UNNotificationRequest(identifier: id, content: makeNotificationContent(title: text.title, body: text.body), trigger: nil)
+        let content = makeNotificationContent(title: text.title, body: text.body)
+        if let category { content.categoryIdentifier = category }
+        let request = UNNotificationRequest(identifier: id, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
     }
 
-    func sendNotificationIfAllowed() {
+    func sendCheckInNotification() {
+        if case .beforeLunch = store.checkInRequest.reason {
+            postNotification(id: UUID().uuidString, category: AppDelegate.checkInCategory,
+                             de: ("Schichta · Mittagspause?", "Was hast du heute Vormittag gemacht? Kurz antworten, bevor du gehst."),
+                             en: ("Schichta · Off to lunch?", "What did you do this morning? Answer quickly before you go."))
+            return
+        }
         let minutes = store.reminderIntervalMinutes
-        postNotification(id: UUID().uuidString,
-                         de: ("Schichta · \(minutes) Minuten", "Was machst du gerade? Kurz in der Statusleiste festhalten."),
-                         en: ("Schichta · \(minutes) minutes", "What are you working on? Log it quickly in the status bar."))
+        postNotification(id: UUID().uuidString, category: AppDelegate.checkInCategory,
+                         de: ("Schichta · \(minutes) Minuten", "Was machst du gerade? Hier antworten oder in der Statusleiste festhalten."),
+                         en: ("Schichta · \(minutes) minutes", "What are you working on? Reply here or log it in the status bar."))
     }
 
     // UNUserNotificationCenterDelegate
@@ -342,14 +421,37 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         let id = response.notification.request.identifier
+        let action = response.actionIdentifier
+        let reply = (response as? UNTextInputNotificationResponse)?.userText
         DispatchQueue.main.async { [weak self] in
-            if id.starts(with: "morning-prompt") || id.starts(with: "endofday-prompt") {
-                self?.bringMainWindowToFront()
-            } else {
-                self?.showCheckInPanel(anchorButton: nil)
-            }
+            self?.handleNotificationResponse(id: id, action: action, reply: reply)
         }
         completionHandler()
+    }
+
+    func handleNotificationResponse(id: String, action: String, reply: String?) {
+        switch action {
+        case "reply":
+            guard let reply, !reply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+            store.checkInFromReply(reply)
+            checkInAnswered()
+            closeCheckInPanel()
+        case "same":
+            if store.repeatLastCheckIn(minutes: store.prefilledMinutes(for: store.checkInRequest.reason)) {
+                checkInAnswered()
+                closeCheckInPanel()
+            } else {
+                showCheckInPanel()
+            }
+        case "later":
+            snoozeCheckIn()
+        default:
+            if id.starts(with: "morning-prompt") || id.starts(with: "endofday-prompt") {
+                bringMainWindowToFront()
+            } else {
+                showCheckInPanel(anchorButton: nil)
+            }
+        }
     }
 
     func startCheckInTimer() {
@@ -363,8 +465,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     func snoozeCheckIn() {
-        isCheckInDue = false
-        updateStatusItem(isDue: false)
+        checkInAnswered()
         closeCheckInPanel()
         if store.timerEnabled {
             startCheckInTimer()
@@ -381,12 +482,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     @objc func triggerCheckInPrompt() {
         guard let store = store, store.timerEnabled else { return }
-        guard store.isCurrentlyWithinWorkingHours() else { return }
+        guard store.isCurrentlyWithinWorkingHours(), !isAway else { return }
+        promptQuietly(.timer)
+    }
+
+    /// Timer and lunch prompts: the panel floats in front without taking the keyboard, with the sound;
+    /// a notification follows only if nobody answers within `escalationDelay`.
+    func promptQuietly(_ reason: CheckInReason) {
         isCheckInDue = true
         updateStatusItem(isDue: true)
-        showCheckInPanel(anchorButton: nil)
+        presentCheckIn(reason, activate: false)
         playCheckInSound()
-        sendNotificationIfAllowed()
+        scheduleEscalation()
     }
 
     @objc func openCheckInFromMenu() {
@@ -428,6 +535,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             }
         }
 
+        // Lunch: ask for the morning before leaving; the next regular check-in comes a full interval later.
+        if store.isLunchPromptDue(now: now) && !isAway {
+            store.lastLunchPromptDate = today
+            promptQuietly(.beforeLunch)
+            startCheckInTimer()
+            return
+        }
+
         // Prompt B: end-of-day sign-off
         let targetEndMinutes = store.workEndHour * 60 + store.workEndMinute
         if store.endOfDayPromptEnabled && store.isWorkingDay(today) && currentTotalMinutes >= targetEndMinutes && store.lastEndOfDayPromptDate != today {
@@ -435,6 +550,76 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             if !isTodayBooked {
                 store.lastEndOfDayPromptDate = today
                 triggerEndOfDayPrompt(day: today)
+            }
+        }
+    }
+
+    // MARK: - Away detection (idle, sleep, locked screen)
+
+    /// Seconds since the last keyboard or mouse input in this login session.
+    nonisolated static func idleSeconds() -> TimeInterval {
+        CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: CGEventType(rawValue: ~0)!)
+    }
+
+    /// Away right now: tracked as away, or idle long enough (detection on).
+    var isAway: Bool {
+        guard store?.awayDetectionEnabled == true else { return false }
+        return awayTracker.isAway || AppDelegate.idleSeconds() >= awayTracker.minimumAway
+    }
+
+    func startAwayDetection() {
+        awayTimer?.invalidate()
+        awayTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.checkAway() }
+        }
+        let workspace = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.willSleepNotification, NSWorkspace.screensDidSleepNotification, NSWorkspace.sessionDidResignActiveNotification] {
+            workspace.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.awayTracker.wentAway(at: Date()) }
+            }
+        }
+        let distributed = DistributedNotificationCenter.default()
+        distributed.addObserver(forName: .init("com.apple.screenIsLocked"), object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.awayTracker.wentAway(at: Date()) }
+        }
+        distributed.addObserver(forName: .init("com.apple.screenIsUnlocked"), object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, let period = self.awayTracker.cameBack(at: Date()) else { return }
+                self.handleBack(period)
+            }
+        }
+    }
+
+    func checkAway() {
+        guard let store else { return }
+        awayTracker.minimumAway = TimeInterval(store.awayMinimumMinutes * 60)
+        if let period = awayTracker.update(now: Date(), idleSeconds: AppDelegate.idleSeconds()) {
+            handleBack(period)
+        }
+    }
+
+    /// Back at the Mac: ask what the gap was (break or work), then restart the interval.
+    func handleBack(_ period: AwayPeriod) {
+        cancelEscalation()
+        guard store.shouldAskAbout(period) else { return }
+        isCheckInDue = true
+        updateStatusItem(isDue: true)
+        presentCheckIn(.back(period), activate: false)
+        startCheckInTimer()
+    }
+
+    // MARK: - Global shortcut
+
+    func updateGlobalHotKey() {
+        hotKey?.unregister()
+        hotKey = nil
+        guard store?.globalHotKeyEnabled == true else { return }
+        hotKey = GlobalHotKey { [weak self] in
+            guard let self else { return }
+            if self.checkInPanel?.isKeyWindow == true {
+                self.closeCheckInPanel()
+            } else {
+                self.showCheckInPanel()
             }
         }
     }
