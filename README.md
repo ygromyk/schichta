@@ -92,7 +92,7 @@ click Send.**
 | Analytics, telemetry, crash reporting | **None.** |
 | Accounts, sign-in, license checks | **None.** |
 | Update checks or other background network calls | **None.** |
-| Third-party SDKs, fonts, trackers | **None.** The app is a single Swift file using only Apple frameworks. |
+| Third-party SDKs, fonts, trackers | **None.** The app is a Swift package with no dependencies, using only Apple frameworks. |
 | Where entries are stored | One local JSON file, see [Where your data lives](#where-your-data-lives). |
 | Where secrets are stored | macOS Keychain. Target files contain only the *name* of a secret. |
 
@@ -190,8 +190,9 @@ xattr -dr com.apple.quarantine /Applications/Schichta.app
 
 ## Build from source
 
-You need the Xcode Command Line Tools (`xcode-select --install`). No Xcode project and no
-dependencies are required.
+You need the Xcode Command Line Tools (`xcode-select --install`). The app is a plain Swift
+package (`Package.swift`, sources in `Sources/Schichta`) with no dependencies; `build-desktop.sh`
+runs `swift build` and wraps the binary into `Schichta.app`. No Xcode project is required.
 
 ```bash
 ./build-desktop.sh

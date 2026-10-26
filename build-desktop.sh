@@ -15,18 +15,19 @@ MIN_MACOS="14.0"  # onChange(of:initial:_:) braucht macOS 14
 rm -rf "$APP/Contents/Resources"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
-SWIFTC=(xcrun swiftc -swift-version 5 -O -module-cache-path /private/tmp/schichta-swift-cache
-        -framework Cocoa -framework SwiftUI -framework UserNotifications -framework Security)
-echo "Kompiliere Schichta $VERSION (SwiftUI + AppKit + UserNotifications)..."
+echo "Kompiliere Schichta $VERSION (swift build)..."
 if [ "${UNIVERSAL:-}" = "1" ]; then
-    BUILD_DIR="$(mktemp -d)"
+    # Pro Architektur bauen und mit lipo zusammenführen: `--arch a --arch b` bräuchte Xcode, das hier nicht.
+    BINARIES=()
     for ARCH in arm64 x86_64; do
-        "${SWIFTC[@]}" -target "$ARCH-apple-macosx$MIN_MACOS" Desktop.swift -o "$BUILD_DIR/Schichta-$ARCH"
+        BUILD=(swift build -c release --triple "$ARCH-apple-macosx$MIN_MACOS")
+        "${BUILD[@]}"
+        BINARIES+=("$("${BUILD[@]}" --show-bin-path)/Schichta")
     done
-    lipo -create "$BUILD_DIR/Schichta-arm64" "$BUILD_DIR/Schichta-x86_64" -output "$APP/Contents/MacOS/Schichta"
-    rm -rf "$BUILD_DIR"
+    lipo -create "${BINARIES[@]}" -output "$APP/Contents/MacOS/Schichta"
 else
-    "${SWIFTC[@]}" Desktop.swift -o "$APP/Contents/MacOS/Schichta"
+    swift build -c release
+    cp "$(swift build -c release --show-bin-path)/Schichta" "$APP/Contents/MacOS/Schichta"
 fi
 
 echo "Erzeuge App-Icon (AppIcon.icns)..."
