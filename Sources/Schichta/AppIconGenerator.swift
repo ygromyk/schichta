@@ -4,7 +4,8 @@ import AppKit
 
 enum AppIconGenerator {
     /// Small icon for header, banners and check-in. Drawn once instead of on every SwiftUI render.
-    static let small = makeIcon(size: 64)
+    /// Main-actor isolated: before the macOS 26 SDK, NSImage is not Sendable, so a plain static let fails to compile.
+    @MainActor static let small = makeIcon(size: 64)
 
     static func pngData(_ image: NSImage) -> Data? {
         guard let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff) else { return nil }
