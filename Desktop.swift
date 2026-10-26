@@ -34,6 +34,107 @@ enum SchichtaTheme {
     static let nsDarkForest = NSColor(srgbRed: 0x1b/255.0, green: 0x52/255.0, blue: 0x3c/255.0, alpha: 1.0)
 }
 
+// MARK: - Shared Helpers (Zeitzone, Fehler, Pfade, Prozesse)
+
+/// Alle Tage und Uhrzeiten der App gelten in Europe/Berlin.
+enum Berlin {
+    static let timeZone = TimeZone(identifier: "Europe/Berlin")!
+
+    static let calendar: Calendar = {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = timeZone
+        return cal
+    }()
+
+    /// Erzeugt einen Formatter in Berlin-Zeit. Geteilte Instanzen nur lesend nutzen, dann sind sie threadsicher.
+    static func formatter(_ format: String, locale: String = "en_US_POSIX") -> DateFormatter {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: locale)
+        f.timeZone = timeZone
+        f.dateFormat = format
+        f.isLenient = false
+        return f
+    }
+
+    /// YYYY-MM-DD
+    static let day = formatter("yyyy-MM-dd")
+    static let isoSeconds = formatter("yyyy-MM-dd'T'HH:mm:ssXXXXX")
+    static let clock = formatter("HH:mm")
+}
+
+struct SchichtaError: LocalizedError {
+    let message: String
+    init(_ message: String) { self.message = message }
+    var errorDescription: String? { message }
+}
+
+enum AppPaths {
+    /// ~/Library/Application Support/Schichta (wird bei Bedarf angelegt).
+    static let support: URL = {
+        let base = (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
+            ?? FileManager.default.temporaryDirectory
+        let dir = base.appendingPathComponent("Schichta", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }()
+}
+
+/// Startet ein Programm mit Zeitlimit und sammelt die Ausgabe.
+/// stdin wird nebenläufig geschrieben und das Zeitlimit vorher gestartet: Liest der Befehl stdin nicht,
+/// blockiert sonst das Schreiben einer vollen Pipe (> 64 KB) für immer. SIGPIPE ist beim Start ignoriert,
+/// ein vorzeitig beendeter Befehl führt daher nur zu einem Schreibfehler statt zum Absturz.
+enum Shell {
+    struct Output {
+        let status: Int32
+        let stdout: Data
+        let stderr: Data
+        var text: String { String(decoding: stdout, as: UTF8.self) }
+    }
+
+    static func run(
+        _ executable: String,
+        _ arguments: [String],
+        stdin: Data? = nil,
+        environment: [String: String]? = nil,
+        directory: URL? = nil,
+        mergeStderr: Bool = false,
+        timeout: TimeInterval
+    ) throws -> Output {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = arguments
+        if let environment { process.environment = environment }
+        if let directory { process.currentDirectoryURL = directory }
+        let out = Pipe(), err = Pipe()
+        let input = stdin == nil ? nil : Pipe()
+        process.standardOutput = out
+        process.standardError = mergeStderr ? out : err
+        process.standardInput = input ?? FileHandle.nullDevice
+        try process.run()
+
+        let killer = DispatchWorkItem { if process.isRunning { process.terminate() } }
+        DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: killer)
+        let background = DispatchGroup()
+        if let input, let stdin {
+            DispatchQueue.global().async(group: background) {
+                try? input.fileHandleForWriting.write(contentsOf: stdin)
+                try? input.fileHandleForWriting.close()
+            }
+        }
+        var errData = Data()
+        if !mergeStderr {
+            DispatchQueue.global().async(group: background) { errData = err.fileHandleForReading.readDataToEndOfFile() }
+        }
+        let outData = out.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        killer.cancel()
+        // Lese-Ende schließen, falls der Befehl beendet ist, ohne stdin zu lesen: Das hängende Schreiben bricht dann ab.
+        try? input?.fileHandleForReading.close()
+        background.wait()
+        return Output(status: process.terminationStatus, stdout: outData, stderr: errData)
+    }
+}
+
 // MARK: - Tracked Git Repository Model
 
 struct TrackedRepo: Identifiable, Codable, Equatable {
@@ -72,50 +173,26 @@ struct TrackedRepo: Identifiable, Codable, Equatable {
 
 enum Activity {
     static func bounds(_ day: String) throws -> (String, String) {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.isLenient = false
-        guard day.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil,
-              let start = formatter.date(from: day), formatter.string(from: start) == day else {
-            throw NSError(domain: "Schichta", code: 1, userInfo: [NSLocalizedDescriptionKey: "Ungültiges Datum"])
+        guard SchichtaCore.isValidDate(day), let start = Berlin.day.date(from: day) else {
+            throw SchichtaError("Ungültiges Datum")
         }
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = formatter.timeZone
-        let end = calendar.date(byAdding: .day, value: 1, to: start)!.addingTimeInterval(-1)
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssXXXXX"
-        return (formatter.string(from: start), formatter.string(from: end))
+        let end = Berlin.calendar.date(byAdding: .day, value: 1, to: start)!.addingTimeInterval(-1)
+        return (Berlin.isoSeconds.string(from: start), Berlin.isoSeconds.string(from: end))
     }
 
     /// Git-Autor aus `git config user.name`, damit kein Name im Code steht.
     static func gitUserName() -> String {
-        let process = Process(), pipe = Pipe()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-        process.arguments = ["config", "--global", "user.name"]
-        process.standardOutput = pipe; process.standardError = FileHandle.nullDevice
-        guard (try? process.run()) != nil else { return "" }
-        let bytes = pipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-        return String(decoding: bytes, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let output = try? Shell.run("/usr/bin/git", ["config", "--global", "user.name"], timeout: 5) else { return "" }
+        return output.text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     static func git(_ repo: URL, _ arguments: [String]) -> [String: Any] {
-        let process = Process(), pipe = Pipe()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-        process.arguments = ["-C", repo.path] + arguments
-        process.standardOutput = pipe
-        process.standardError = FileHandle.nullDevice
-        do {
-            try process.run()
-            let timeout = DispatchWorkItem { if process.isRunning { process.terminate() } }
-            DispatchQueue.global().asyncAfter(deadline: .now() + 15, execute: timeout)
-            let bytes = pipe.fileHandleForReading.readDataToEndOfFile()
-            process.waitUntilExit(); timeout.cancel()
-            guard process.terminationStatus == 0 else { return ["error": "Git-Abfrage fehlgeschlagen oder Zeitlimit überschritten."] }
-            let text = String(decoding: bytes, as: UTF8.self)
-            return ["text": String(text.prefix(100000)), "truncated": text.count > 100000]
-        } catch { return ["error": "Git konnte nicht gestartet werden."] }
+        guard let output = try? Shell.run("/usr/bin/git", ["-C", repo.path] + arguments, timeout: 15) else {
+            return ["error": "Git konnte nicht gestartet werden."]
+        }
+        guard output.status == 0 else { return ["error": "Git-Abfrage fehlgeschlagen oder Zeitlimit überschritten."] }
+        let text = output.text
+        return ["text": String(text.prefix(100000)), "truncated": text.count > 100000]
     }
 
     static func readRepos(_ day: String, repos: [TrackedRepo], authorFilter: String?) throws -> [String: Any] {
@@ -182,31 +259,24 @@ enum Activity {
         ]
     }
 
-    static func read(
-        _ day: String,
-        rootPath: String? = nil,
-        repoNamesString: String? = nil,
-        authorFilter: String? = nil
-    ) throws -> [String: Any] {
-        let rootResolved = rootPath ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("IdeaProjects").path
-        let root = URL(fileURLWithPath: rootResolved)
-        let repoList: [String]
-        if let names = repoNamesString {
-            let parsed = names.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
-            repoList = parsed
-        } else {
-            repoList = []
-        }
-        let tracked = repoList.map { name in
-            TrackedRepo(path: root.appendingPathComponent(name).path, projectName: "", defaultTicket: "", enabled: true)
-        }
-        return try readRepos(day, repos: tracked, authorFilter: authorFilter)
-    }
-
     static func formatLogText(_ result: [String: Any]) -> String {
         let scope = result["scope"] as? String ?? ""
         guard let repos = result["repositories"] as? [[String: Any]] else { return scope }
         var parts: [String] = [scope]
+        func appendGitSection(_ title: String, _ value: Any?) {
+            let result = value as? [String: Any] ?? [:]
+            parts.append(title)
+            if let err = result["error"] as? String { parts.append(err) }
+            else if let text = result["text"] as? String, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { parts.append(text) }
+            else { parts.append("(keine gefunden)") }
+            if (result["truncated"] as? Bool) == true { parts.append("(Ausgabe gekürzt)") }
+        }
+        func appendIfPresent(_ title: String, _ value: Any?) {
+            let text = ((value as? [String: Any])?["text"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { return }
+            parts.append(title)
+            parts.append(text)
+        }
         for repo in repos {
             let name = repo["repository"] as? String ?? "Repo"
             let projectName = (repo["projectName"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -218,31 +288,10 @@ enum Activity {
                 continue
             }
 
-            let commits = repo["commits"] as? [String: Any] ?? [:]
-            parts.append("Eigene Commits:")
-            if let err = commits["error"] as? String { parts.append(err) }
-            else if let text = commits["text"] as? String, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { parts.append(text) }
-            else { parts.append("(keine gefunden)") }
-            if (commits["truncated"] as? Bool) == true { parts.append("(Ausgabe gekürzt)") }
-
-            let changed = repo["changed_files"] as? [String: Any] ?? [:]
-            if let cText = changed["text"] as? String, !cText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                parts.append("Geänderte Dateien / Diff:")
-                parts.append(cText.trimmingCharacters(in: .whitespacesAndNewlines))
-            }
-
-            let wt = repo["working_tree"] as? [String: Any] ?? [:]
-            if let wtText = wt["text"] as? String, !wtText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                parts.append("Uncommittete Arbeitskopie (Heute):")
-                parts.append(wtText.trimmingCharacters(in: .whitespacesAndNewlines))
-            }
-
-            let head = repo["head_activity"] as? [String: Any] ?? [:]
-            parts.append("Lokale HEAD-Aktivitäten:")
-            if let err = head["error"] as? String { parts.append(err) }
-            else if let text = head["text"] as? String, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { parts.append(text) }
-            else { parts.append("(keine gefunden)") }
-            if (head["truncated"] as? Bool) == true { parts.append("(Ausgabe gekürzt)") }
+            appendGitSection("Eigene Commits:", repo["commits"])
+            appendIfPresent("Geänderte Dateien / Diff:", repo["changed_files"])
+            appendIfPresent("Uncommittete Arbeitskopie (Heute):", repo["working_tree"])
+            appendGitSection("Lokale HEAD-Aktivitäten:", repo["head_activity"])
         }
         return parts.joined(separator: "\n")
     }
@@ -251,6 +300,14 @@ enum Activity {
 // MARK: - App Icon Generator (macOS Squircle with CoreGraphics)
 
 enum AppIconGenerator {
+    /// Kleines Icon für Kopfzeile, Banner und Check-in. Einmal gezeichnet statt bei jedem SwiftUI-Render.
+    static let small = makeIcon(size: 64)
+
+    static func pngData(_ image: NSImage) -> Data? {
+        guard let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff) else { return nil }
+        return rep.representation(using: .png, properties: [:])
+    }
+
     static func makeIcon(size: CGFloat = 512) -> NSImage {
         let image = NSImage(size: NSSize(width: size, height: size))
         image.lockFocus()
@@ -398,11 +455,8 @@ enum AppIconGenerator {
             ("icon_512x512@2x.png", 1024)
         ]
         for (filename, ptSize) in sizes {
-            let img = makeIcon(size: ptSize)
-            guard let tiff = img.tiffRepresentation,
-                  let rep = NSBitmapImageRep(data: tiff),
-                  let png = rep.representation(using: .png, properties: [:]) else {
-                throw NSError(domain: "AppIconGenerator", code: 1, userInfo: [NSLocalizedDescriptionKey: "Konnte PNG für \(filename) nicht erzeugen"])
+            guard let png = pngData(makeIcon(size: ptSize)) else {
+                throw SchichtaError("Konnte PNG für \(filename) nicht erzeugen")
             }
             try png.write(to: directory.appendingPathComponent(filename))
         }
@@ -509,10 +563,6 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     }
 }
 
-func L(_ de: String, _ en: String) -> String {
-    SchichtaStore.currentLanguage == .de ? de : en
-}
-
 enum CheckInMode: String, CaseIterable, Identifiable {
     case both = "entryAndNote"
     case noteOnly = "noteOnly"
@@ -527,10 +577,6 @@ enum CheckInMode: String, CaseIterable, Identifiable {
         case (.noteOnly, .en): return "Note only"
         }
     }
-
-    var title: String {
-        title(for: .de)
-    }
 }
 
 // MARK: - SchichtaCore (Parsing, Formatting, Validation & BCS Report)
@@ -539,7 +585,7 @@ enum SchichtaCore {
     static func parseMinutes(_ input: String) throws -> Int {
         let s = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !s.isEmpty else {
-            throw NSError(domain: "Schichta", code: 10, userInfo: [NSLocalizedDescriptionKey: "Dauer darf nicht leer sein."])
+            throw SchichtaError("Dauer darf nicht leer sein.")
         }
 
         var total: Int? = nil
@@ -576,14 +622,19 @@ enum SchichtaCore {
         }
 
         guard let minutes = total else {
-            throw NSError(domain: "Schichta", code: 11, userInfo: [NSLocalizedDescriptionKey: "Dauer als 1:30, 1,5 oder 30m eingeben."])
+            throw SchichtaError("Dauer als 1:30, 1,5 oder 30m eingeben.")
         }
 
         guard minutes >= 1 && minutes <= 1440 else {
-            throw NSError(domain: "Schichta", code: 12, userInfo: [NSLocalizedDescriptionKey: "Dauer muss zwischen einer Minute und 24 Stunden liegen."])
+            throw SchichtaError("Dauer muss zwischen einer Minute und 24 Stunden liegen.")
         }
 
         return minutes
+    }
+
+    /// Grenzen für Dauer-Knöpfe und Inline-Bearbeitung: mindestens 5 Minuten, höchstens 24 Stunden.
+    static func clampDuration(_ minutes: Int) -> Int {
+        max(5, min(1440, minutes))
     }
 
     static func formatTime(_ minutes: Int) -> String {
@@ -598,57 +649,40 @@ enum SchichtaCore {
         return "\(parts[2]).\(parts[1]).\(parts[0])"
     }
 
+    private static let weekdayFormatters = Dictionary(uniqueKeysWithValues: AppLanguage.allCases.map {
+        ($0, Berlin.formatter("EEEE", locale: $0.localeIdentifier))
+    })
+    private static let fullDateFormatters = Dictionary(uniqueKeysWithValues: AppLanguage.allCases.map {
+        ($0, Berlin.formatter($0 == .de ? "EEEE, d. MMMM yyyy" : "EEEE, MMMM d, yyyy", locale: $0.localeIdentifier))
+    })
+
     static func weekdayName(_ day: String, language: AppLanguage = .de) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: language.localeIdentifier)
-        formatter.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        formatter.dateFormat = "EEEE"
-        return formatter.string(from: dateFromBerlinDay(day))
+        weekdayFormatters[language]!.string(from: dateFromBerlinDay(day))
     }
 
     static func formatFullDate(_ day: String, language: AppLanguage = .de) -> String {
-        let inFormatter = DateFormatter()
-        inFormatter.locale = Locale(identifier: "en_US_POSIX")
-        inFormatter.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        inFormatter.dateFormat = "yyyy-MM-dd"
-        guard let date = inFormatter.date(from: day) else { return day }
-
-        let outFormatter = DateFormatter()
-        outFormatter.locale = Locale(identifier: language.localeIdentifier)
-        outFormatter.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        outFormatter.dateFormat = language == .de ? "EEEE, d. MMMM yyyy" : "EEEE, MMMM d, yyyy"
-        return outFormatter.string(from: date)
-    }
-
-    static func formatFullGermanDate(_ day: String) -> String {
-        formatFullDate(day, language: .de)
+        guard let date = Berlin.day.date(from: day) else { return day }
+        return fullDateFormatters[language]!.string(from: date)
     }
 
     static func isValidDate(_ s: String) -> Bool {
-        guard s.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil else { return false }
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.isLenient = false
-        guard let d = formatter.date(from: s) else { return false }
-        return formatter.string(from: d) == s
+        guard s.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil,
+              let d = Berlin.day.date(from: s) else { return false }
+        return Berlin.day.string(from: d) == s
     }
 
     static func berlinDay(from date: Date = Date()) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
+        Berlin.day.string(from: date)
     }
 
     static func dateFromBerlinDay(_ day: String) -> Date {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: day) ?? Date()
+        Berlin.day.date(from: day) ?? Date()
+    }
+
+    /// Tag `offset` Tage vor/nach `day` (YYYY-MM-DD), DST-sicher über den Berlin-Kalender.
+    static func addDays(_ offset: Int, to day: String) -> String {
+        let date = Berlin.calendar.date(byAdding: .day, value: offset, to: dateFromBerlinDay(day)) ?? dateFromBerlinDay(day)
+        return berlinDay(from: date)
     }
 
     static func bcsReport(day: String, entries: [Entry]) -> String {
@@ -756,7 +790,7 @@ enum SchichtaCore {
     static func appendCheckIn(existingNotes: String, timeStr: String, text: String, ticket: String = "", minutes: Int = 30) throws -> String {
         let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else {
-            throw NSError(domain: "Schichta", code: 20, userInfo: [NSLocalizedDescriptionKey: "Bitte eine Tätigkeit oder Notiz eingeben."])
+            throw SchichtaError("Bitte eine Tätigkeit oder Notiz eingeben.")
         }
         let cleanTicket = ticket.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         let prefix = cleanTicket.isEmpty ? "" : "[\(cleanTicket)] "
@@ -767,39 +801,39 @@ enum SchichtaCore {
 
     static func validate(database: Database) throws -> Database {
         guard database.version == 1 else {
-            throw NSError(domain: "Schichta", code: 30, userInfo: [NSLocalizedDescriptionKey: "Keine gültige Schichta-Sicherung."])
+            throw SchichtaError("Keine gültige Schichta-Sicherung.")
         }
         guard database.entries.count <= 50000 else {
-            throw NSError(domain: "Schichta", code: 31, userInfo: [NSLocalizedDescriptionKey: "Zu viele Einträge in der Sicherung."])
+            throw SchichtaError("Zu viele Einträge in der Sicherung.")
         }
 
         var ids = Set<String>()
         for e in database.entries {
             guard !ids.contains(e.id) else {
-                throw NSError(domain: "Schichta", code: 32, userInfo: [NSLocalizedDescriptionKey: "Doppelte Eintrags-ID in der Sicherung."])
+                throw SchichtaError("Doppelte Eintrags-ID in der Sicherung.")
             }
             ids.insert(e.id)
             guard isValidDate(e.date) else {
-                throw NSError(domain: "Schichta", code: 33, userInfo: [NSLocalizedDescriptionKey: "Ungültiges Eintragsdatum: \(e.date)"])
+                throw SchichtaError("Ungültiges Eintragsdatum: \(e.date)")
             }
             guard e.minutes >= 1 && e.minutes <= 1440 else {
-                throw NSError(domain: "Schichta", code: 34, userInfo: [NSLocalizedDescriptionKey: "Dauer außerhalb des gültigen Bereichs (1-1440 Min)."])
+                throw SchichtaError("Dauer außerhalb des gültigen Bereichs (1-1440 Min).")
             }
             guard e.ticket.count <= 100 else {
-                throw NSError(domain: "Schichta", code: 35, userInfo: [NSLocalizedDescriptionKey: "Ticketname zu lang."])
+                throw SchichtaError("Ticketname zu lang.")
             }
             let desc = e.description.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !desc.isEmpty && desc.count <= 4000 else {
-                throw NSError(domain: "Schichta", code: 36, userInfo: [NSLocalizedDescriptionKey: "Ungültige Tätigkeitsbeschreibung."])
+                throw SchichtaError("Ungültige Tätigkeitsbeschreibung.")
             }
         }
 
         for (day, item) in database.journal {
             guard isValidDate(day) else {
-                throw NSError(domain: "Schichta", code: 37, userInfo: [NSLocalizedDescriptionKey: "Ungültiges Notizdatum: \(day)"])
+                throw SchichtaError("Ungültiges Notizdatum: \(day)")
             }
             guard item.notes.count <= 200000 && item.logs.count <= 200000 && item.answer.count <= 200000 else {
-                throw NSError(domain: "Schichta", code: 38, userInfo: [NSLocalizedDescriptionKey: "Notizinhalt zu lang."])
+                throw SchichtaError("Notizinhalt zu lang.")
             }
         }
 
@@ -1059,8 +1093,6 @@ func appDelegate() -> AppDelegate? {
 // MARK: - SchichtaStore (Observable Store)
 
 class SchichtaStore: ObservableObject {
-    static var currentLanguage: AppLanguage = .de
-
     @Published var database: Database = Database()
     @Published var selectedDay: String = SchichtaCore.berlinDay()
     @Published var selectedDate: Date = Date()
@@ -1068,8 +1100,7 @@ class SchichtaStore: ObservableObject {
     // 1. Language
     @Published var appLanguage: AppLanguage {
         didSet {
-            UserDefaults.standard.set(appLanguage.rawValue, forKey: "Schichta.AppLanguage")
-            SchichtaStore.currentLanguage = appLanguage
+            defaults.set(appLanguage.rawValue, forKey: "Schichta.AppLanguage")
             appDelegate()?.updateMenuLanguage()
         }
     }
@@ -1077,7 +1108,7 @@ class SchichtaStore: ObservableObject {
     // 2. Working days (1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat)
     @Published var workingDays: Set<Int> {
         didSet {
-            UserDefaults.standard.set(Array(workingDays).sorted(), forKey: "Schichta.WorkingDays")
+            defaults.set(Array(workingDays).sorted(), forKey: "Schichta.WorkingDays")
         }
     }
 
@@ -1089,42 +1120,42 @@ class SchichtaStore: ObservableObject {
                 dailyTargetMinutes = clamped
                 return
             }
-            UserDefaults.standard.set(dailyTargetMinutes, forKey: "Schichta.DailyTargetMinutes")
+            defaults.set(dailyTargetMinutes, forKey: "Schichta.DailyTargetMinutes")
         }
     }
     @Published var workStartHour: Int {
         didSet {
-            UserDefaults.standard.set(workStartHour, forKey: "Schichta.WorkStartHour")
+            defaults.set(workStartHour, forKey: "Schichta.WorkStartHour")
         }
     }
     @Published var workStartMinute: Int {
         didSet {
-            UserDefaults.standard.set(workStartMinute, forKey: "Schichta.WorkStartMinute")
+            defaults.set(workStartMinute, forKey: "Schichta.WorkStartMinute")
         }
     }
     @Published var workEndHour: Int {
         didSet {
-            UserDefaults.standard.set(workEndHour, forKey: "Schichta.WorkEndHour")
-            UserDefaults.standard.set(workEndHour, forKey: "Schichta.EndOfDayPromptHour")
+            defaults.set(workEndHour, forKey: "Schichta.WorkEndHour")
+            defaults.set(workEndHour, forKey: "Schichta.EndOfDayPromptHour")
         }
     }
     @Published var workEndMinute: Int {
         didSet {
-            UserDefaults.standard.set(workEndMinute, forKey: "Schichta.WorkEndMinute")
-            UserDefaults.standard.set(workEndMinute, forKey: "Schichta.EndOfDayPromptMinute")
+            defaults.set(workEndMinute, forKey: "Schichta.WorkEndMinute")
+            defaults.set(workEndMinute, forKey: "Schichta.EndOfDayPromptMinute")
         }
     }
     @Published var onlyPromptDuringWorkHours: Bool {
         didSet {
-            UserDefaults.standard.set(onlyPromptDuringWorkHours, forKey: "Schichta.OnlyPromptDuringWorkHours")
+            defaults.set(onlyPromptDuringWorkHours, forKey: "Schichta.OnlyPromptDuringWorkHours")
         }
     }
 
     // 4. Prompts & Check-in settings
     @Published var timerEnabled: Bool {
         didSet {
-            UserDefaults.standard.set(timerEnabled, forKey: "Schichta.TimerEnabled")
-            appDelegate()?.restartTimerWithCurrentInterval()
+            defaults.set(timerEnabled, forKey: "Schichta.TimerEnabled")
+            appDelegate()?.startCheckInTimer()
         }
     }
     @Published var reminderIntervalMinutes: Int {
@@ -1134,54 +1165,48 @@ class SchichtaStore: ObservableObject {
                 reminderIntervalMinutes = clamped
                 return
             }
-            UserDefaults.standard.set(reminderIntervalMinutes, forKey: "Schichta.ReminderIntervalMinutesV2")
-            appDelegate()?.restartTimerWithCurrentInterval()
+            defaults.set(reminderIntervalMinutes, forKey: "Schichta.ReminderIntervalMinutesV2")
+            appDelegate()?.startCheckInTimer()
         }
     }
     @Published var defaultCheckInMode: CheckInMode {
         didSet {
-            UserDefaults.standard.set(defaultCheckInMode.rawValue, forKey: "Schichta.DefaultCheckInMode")
+            defaults.set(defaultCheckInMode.rawValue, forKey: "Schichta.DefaultCheckInMode")
         }
     }
     @Published var morningPromptEnabled: Bool {
         didSet {
-            UserDefaults.standard.set(morningPromptEnabled, forKey: "Schichta.MorningPromptEnabled")
+            defaults.set(morningPromptEnabled, forKey: "Schichta.MorningPromptEnabled")
         }
     }
     @Published var endOfDayPromptEnabled: Bool {
         didSet {
-            UserDefaults.standard.set(endOfDayPromptEnabled, forKey: "Schichta.EndOfDayPromptEnabled")
+            defaults.set(endOfDayPromptEnabled, forKey: "Schichta.EndOfDayPromptEnabled")
         }
     }
     static let availableSounds: [String] = ["Glass", "Tink", "Pop", "Purr", "Ping", "Hero", "Submarine"]
     @Published var checkInSoundEnabled: Bool {
         didSet {
-            UserDefaults.standard.set(checkInSoundEnabled, forKey: "Schichta.CheckInSoundEnabled")
+            defaults.set(checkInSoundEnabled, forKey: "Schichta.CheckInSoundEnabled")
         }
     }
     @Published var checkInSoundName: String {
         didSet {
-            UserDefaults.standard.set(checkInSoundName, forKey: "Schichta.CheckInSoundName")
+            defaults.set(checkInSoundName, forKey: "Schichta.CheckInSoundName")
         }
     }
 
     // 5. Git & User settings
     @Published var gitAuthorFilter: String {
         didSet {
-            UserDefaults.standard.set(gitAuthorFilter, forKey: "Schichta.GitAuthorFilter")
+            defaults.set(gitAuthorFilter, forKey: "Schichta.GitAuthorFilter")
         }
     }
     @Published var gitProjectsRoot: String {
         didSet {
-            UserDefaults.standard.set(gitProjectsRoot, forKey: "Schichta.GitProjectsRoot")
+            defaults.set(gitProjectsRoot, forKey: "Schichta.GitProjectsRoot")
         }
     }
-    @Published var gitRepoNames: String {
-        didSet {
-            UserDefaults.standard.set(gitRepoNames, forKey: "Schichta.GitRepoNames")
-        }
-    }
-
     // Tracked Repositories V1
     @Published var trackedRepos: [TrackedRepo] {
         didSet {
@@ -1192,22 +1217,22 @@ class SchichtaStore: ObservableObject {
     // External Hooks
     @Published var hookShellCommand: String {
         didSet {
-            UserDefaults.standard.set(hookShellCommand, forKey: "Schichta.HookShellCommand")
+            defaults.set(hookShellCommand, forKey: "Schichta.HookShellCommand")
         }
     }
     @Published var hookWebhookURL: String {
         didSet {
-            UserDefaults.standard.set(hookWebhookURL, forKey: "Schichta.HookWebhookURL")
+            defaults.set(hookWebhookURL, forKey: "Schichta.HookWebhookURL")
         }
     }
     @Published var aiCommand: String {
         didSet {
-            UserDefaults.standard.set(aiCommand, forKey: "Schichta.AICommand")
+            defaults.set(aiCommand, forKey: "Schichta.AICommand")
         }
     }
     @Published var aiToolId: String {
         didSet {
-            UserDefaults.standard.set(aiToolId, forKey: "Schichta.AIToolId")
+            defaults.set(aiToolId, forKey: "Schichta.AIToolId")
         }
     }
     @Published var aiSummaryDay: String = ""
@@ -1215,7 +1240,7 @@ class SchichtaStore: ObservableObject {
     @Published var aiQuestions: [String] = []
     @Published var hookAutoTriggerOnBook: Bool {
         didSet {
-            UserDefaults.standard.set(hookAutoTriggerOnBook, forKey: "Schichta.HookAutoTriggerOnBook")
+            defaults.set(hookAutoTriggerOnBook, forKey: "Schichta.HookAutoTriggerOnBook")
         }
     }
     @Published var lastHookResult: String = ""
@@ -1234,36 +1259,27 @@ class SchichtaStore: ObservableObject {
 
     @Published var morningPromptHour: Int {
         didSet {
-            UserDefaults.standard.set(morningPromptHour, forKey: "Schichta.MorningPromptHour")
+            defaults.set(morningPromptHour, forKey: "Schichta.MorningPromptHour")
         }
     }
     @Published var lastEndOfDayPromptDate: String {
         didSet {
-            UserDefaults.standard.set(lastEndOfDayPromptDate, forKey: "Schichta.LastEndOfDayPromptDate")
+            defaults.set(lastEndOfDayPromptDate, forKey: "Schichta.LastEndOfDayPromptDate")
         }
     }
     @Published var lastMorningPromptDate: String {
         didSet {
-            UserDefaults.standard.set(lastMorningPromptDate, forKey: "Schichta.LastMorningPromptDate")
+            defaults.set(lastMorningPromptDate, forKey: "Schichta.LastMorningPromptDate")
         }
-    }
-
-    var endOfDayPromptHour: Int {
-        get { workEndHour }
-        set { workEndHour = newValue }
-    }
-    var endOfDayPromptMinute: Int {
-        get { workEndMinute }
-        set { workEndMinute = newValue }
     }
 
     @Published var activePrompt: ActivePrompt = .none
     @Published var proposals: [ProposedEntry] = []
     @Published var isSynthesizing: Bool = false
     @Published var toastMessage: String? = nil
-    @Published var gitLogsStatus: String = ""
 
     let storeURL: URL
+    private let defaults: UserDefaults
 
     func t(_ de: String, _ en: String) -> String {
         appLanguage == .de ? de : en
@@ -1271,10 +1287,7 @@ class SchichtaStore: ObservableObject {
 
     func isWorkingDay(_ dayStr: String) -> Bool {
         guard SchichtaCore.isValidDate(dayStr) else { return false }
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        let date = SchichtaCore.dateFromBerlinDay(dayStr)
-        let weekday = cal.component(.weekday, from: date)
+        let weekday = Berlin.calendar.component(.weekday, from: SchichtaCore.dateFromBerlinDay(dayStr))
         return workingDays.contains(weekday)
     }
 
@@ -1283,101 +1296,95 @@ class SchichtaStore: ObservableObject {
         guard isWorkingDay(today) else { return false }
         guard onlyPromptDuringWorkHours else { return true }
 
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        let curHour = cal.component(.hour, from: now)
-        let curMin = cal.component(.minute, from: now)
-        let curTotal = curHour * 60 + curMin
-
+        let time = Berlin.calendar.dateComponents([.hour, .minute], from: now)
+        let curTotal = time.hour! * 60 + time.minute!
         let startTotal = workStartHour * 60 + workStartMinute
         let endTotal = workEndHour * 60 + workEndMinute
         return curTotal >= startTotal && curTotal <= endTotal
     }
 
-    init() {
-        let support = try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        let dir = support?.appendingPathComponent("Schichta", isDirectory: true) ?? FileManager.default.temporaryDirectory
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        self.storeURL = dir.appendingPathComponent("schichta.json")
+    /// `storeURL` und `defaults` sind austauschbar, damit der Selbsttest nie die echten Daten und Einstellungen berührt.
+    init(storeURL: URL = AppPaths.support.appendingPathComponent("schichta.json"), defaults: UserDefaults = .standard) {
+        try? FileManager.default.createDirectory(at: storeURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        self.storeURL = storeURL
+        self.defaults = defaults
 
         // Language
         let initialLang: AppLanguage
-        if let langRaw = UserDefaults.standard.string(forKey: "Schichta.AppLanguage"),
+        if let langRaw = defaults.string(forKey: "Schichta.AppLanguage"),
            let lang = AppLanguage(rawValue: langRaw) {
             initialLang = lang
         } else {
             initialLang = .de
         }
         self.appLanguage = initialLang
-        SchichtaStore.currentLanguage = initialLang
 
         // Working Days (1=Sun, 2=Mon... Standard: Mo-Fr [2, 3, 4, 5, 6])
-        if let savedDays = UserDefaults.standard.array(forKey: "Schichta.WorkingDays") as? [Int], !savedDays.isEmpty {
+        if let savedDays = defaults.array(forKey: "Schichta.WorkingDays") as? [Int], !savedDays.isEmpty {
             self.workingDays = Set(savedDays)
         } else {
             self.workingDays = Set([2, 3, 4, 5, 6])
         }
 
         // Daily target: Default 480 min (8h)
-        let savedTarget = UserDefaults.standard.object(forKey: "Schichta.DailyTargetMinutes") as? Int
+        let savedTarget = defaults.object(forKey: "Schichta.DailyTargetMinutes") as? Int
         self.dailyTargetMinutes = (savedTarget != nil && savedTarget! >= 60) ? savedTarget! : 480
 
         // Work Hours: Default 09:00 - 17:00
-        let savedStartH = UserDefaults.standard.object(forKey: "Schichta.WorkStartHour") as? Int
+        let savedStartH = defaults.object(forKey: "Schichta.WorkStartHour") as? Int
         self.workStartHour = savedStartH ?? 9
-        let savedStartM = UserDefaults.standard.object(forKey: "Schichta.WorkStartMinute") as? Int
+        let savedStartM = defaults.object(forKey: "Schichta.WorkStartMinute") as? Int
         self.workStartMinute = savedStartM ?? 0
 
-        let savedEndH = UserDefaults.standard.object(forKey: "Schichta.WorkEndHour") as? Int
-            ?? UserDefaults.standard.object(forKey: "Schichta.EndOfDayPromptHour") as? Int
+        let savedEndH = defaults.object(forKey: "Schichta.WorkEndHour") as? Int
+            ?? defaults.object(forKey: "Schichta.EndOfDayPromptHour") as? Int
         self.workEndHour = savedEndH ?? 17
-        let savedEndM = UserDefaults.standard.object(forKey: "Schichta.WorkEndMinute") as? Int
-            ?? UserDefaults.standard.object(forKey: "Schichta.EndOfDayPromptMinute") as? Int
+        let savedEndM = defaults.object(forKey: "Schichta.WorkEndMinute") as? Int
+            ?? defaults.object(forKey: "Schichta.EndOfDayPromptMinute") as? Int
         self.workEndMinute = savedEndM ?? 0
 
-        let savedOnly = UserDefaults.standard.object(forKey: "Schichta.OnlyPromptDuringWorkHours") as? Bool
+        let savedOnly = defaults.object(forKey: "Schichta.OnlyPromptDuringWorkHours") as? Bool
         self.onlyPromptDuringWorkHours = savedOnly ?? true
 
         // Reminder Interval V2: Default 15 minutes
-        let savedIntervalV2 = UserDefaults.standard.object(forKey: "Schichta.ReminderIntervalMinutesV2") as? Int
+        let savedIntervalV2 = defaults.object(forKey: "Schichta.ReminderIntervalMinutesV2") as? Int
         if let val = savedIntervalV2, val >= 5 && val <= 240 {
             self.reminderIntervalMinutes = val
         } else {
             self.reminderIntervalMinutes = 15
-            UserDefaults.standard.set(15, forKey: "Schichta.ReminderIntervalMinutesV2")
+            defaults.set(15, forKey: "Schichta.ReminderIntervalMinutesV2")
         }
 
-        let savedTimer = UserDefaults.standard.object(forKey: "Schichta.TimerEnabled") as? Bool
+        let savedTimer = defaults.object(forKey: "Schichta.TimerEnabled") as? Bool
         self.timerEnabled = savedTimer ?? true
 
         // Default CheckInMode: Default .both
-        if let modeRaw = UserDefaults.standard.string(forKey: "Schichta.DefaultCheckInMode"),
+        if let modeRaw = defaults.string(forKey: "Schichta.DefaultCheckInMode"),
            let mode = CheckInMode(rawValue: modeRaw) {
             self.defaultCheckInMode = mode
         } else {
             self.defaultCheckInMode = .both
         }
 
-        let savedMorning = UserDefaults.standard.object(forKey: "Schichta.MorningPromptEnabled") as? Bool
+        let savedMorning = defaults.object(forKey: "Schichta.MorningPromptEnabled") as? Bool
         self.morningPromptEnabled = savedMorning ?? true
 
-        let savedEndPrompt = UserDefaults.standard.object(forKey: "Schichta.EndOfDayPromptEnabled") as? Bool
+        let savedEndPrompt = defaults.object(forKey: "Schichta.EndOfDayPromptEnabled") as? Bool
         self.endOfDayPromptEnabled = savedEndPrompt ?? true
 
-        let savedSoundEnabled = UserDefaults.standard.object(forKey: "Schichta.CheckInSoundEnabled") as? Bool
+        let savedSoundEnabled = defaults.object(forKey: "Schichta.CheckInSoundEnabled") as? Bool
         self.checkInSoundEnabled = savedSoundEnabled ?? true
 
-        let savedSoundName = UserDefaults.standard.string(forKey: "Schichta.CheckInSoundName")
+        let savedSoundName = defaults.string(forKey: "Schichta.CheckInSoundName")
         self.checkInSoundName = savedSoundName ?? "Glass"
 
         // Git & User settings
-        self.gitAuthorFilter = UserDefaults.standard.string(forKey: "Schichta.GitAuthorFilter") ?? Activity.gitUserName()
-        self.gitProjectsRoot = UserDefaults.standard.string(forKey: "Schichta.GitProjectsRoot") ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("IdeaProjects").path
-        self.gitRepoNames = UserDefaults.standard.string(forKey: "Schichta.GitRepoNames") ?? ""
+        self.gitAuthorFilter = defaults.string(forKey: "Schichta.GitAuthorFilter") ?? Activity.gitUserName()
+        self.gitProjectsRoot = defaults.string(forKey: "Schichta.GitProjectsRoot") ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("IdeaProjects").path
 
         // Tracked Repositories V1
         let initialRepos: [TrackedRepo]
-        if let data = UserDefaults.standard.data(forKey: "Schichta.TrackedReposV1"),
+        if let data = defaults.data(forKey: "Schichta.TrackedReposV1"),
            let decoded = try? JSONDecoder().decode([TrackedRepo].self, from: data),
            !decoded.isEmpty {
             initialRepos = decoded
@@ -1388,26 +1395,26 @@ class SchichtaStore: ObservableObject {
         self.trackedRepos = initialRepos
 
         // External Hooks
-        self.hookShellCommand = UserDefaults.standard.string(forKey: "Schichta.HookShellCommand") ?? ""
-        self.hookWebhookURL = UserDefaults.standard.string(forKey: "Schichta.HookWebhookURL") ?? ""
-        if let savedCommand = UserDefaults.standard.string(forKey: "Schichta.AICommand") {
+        self.hookShellCommand = defaults.string(forKey: "Schichta.HookShellCommand") ?? ""
+        self.hookWebhookURL = defaults.string(forKey: "Schichta.HookWebhookURL") ?? ""
+        if let savedCommand = defaults.string(forKey: "Schichta.AICommand") {
             self.aiCommand = savedCommand
-            self.aiToolId = UserDefaults.standard.string(forKey: "Schichta.AIToolId") ?? ""
+            self.aiToolId = defaults.string(forKey: "Schichta.AIToolId") ?? ""
         } else {
             // Erster Start: das erste installierte eingebaute Werkzeug vorauswählen (Senden bleibt manuell).
             let firstInstalled = AITools.builtIns().first(where: \.installed)
             self.aiCommand = firstInstalled?.command ?? ""
             self.aiToolId = firstInstalled?.id ?? ""
         }
-        self.hookAutoTriggerOnBook = UserDefaults.standard.bool(forKey: "Schichta.HookAutoTriggerOnBook")
+        self.hookAutoTriggerOnBook = defaults.bool(forKey: "Schichta.HookAutoTriggerOnBook")
 
         // Morning prompt hour: Default 9:00
-        let savedMorningHour = UserDefaults.standard.object(forKey: "Schichta.MorningPromptHour") as? Int
+        let savedMorningHour = defaults.object(forKey: "Schichta.MorningPromptHour") as? Int
         self.morningPromptHour = savedMorningHour ?? 9
 
         // Last prompt dates
-        self.lastEndOfDayPromptDate = UserDefaults.standard.string(forKey: "Schichta.LastEndOfDayPromptDate") ?? ""
-        self.lastMorningPromptDate = UserDefaults.standard.string(forKey: "Schichta.LastMorningPromptDate") ?? ""
+        self.lastEndOfDayPromptDate = defaults.string(forKey: "Schichta.LastEndOfDayPromptDate") ?? ""
+        self.lastMorningPromptDate = defaults.string(forKey: "Schichta.LastMorningPromptDate") ?? ""
 
         load()
     }
@@ -1438,15 +1445,18 @@ class SchichtaStore: ObservableObject {
 
     func saveTrackedRepos() {
         if let data = try? JSONEncoder().encode(trackedRepos) {
-            UserDefaults.standard.set(data, forKey: "Schichta.TrackedReposV1")
+            defaults.set(data, forKey: "Schichta.TrackedReposV1")
         }
     }
 
-    func addTrackedRepo(path: String, projectName: String = "", defaultTicket: String = "") {
+    /// Fügt ein Repo hinzu, sofern der Pfad noch nicht getrackt ist. Projektname ohne Angabe: Ordnername, "my-app" → "My App".
+    @discardableResult
+    func addTrackedRepo(path: String, projectName: String = "", defaultTicket: String = "") -> Bool {
         let cleanPath = path.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanPath.isEmpty, !trackedRepos.contains(where: { $0.path == cleanPath }) else { return }
+        guard !cleanPath.isEmpty, !trackedRepos.contains(where: { $0.path == cleanPath }) else { return false }
         let pName = !projectName.isEmpty ? projectName : URL(fileURLWithPath: cleanPath).lastPathComponent.replacingOccurrences(of: "-", with: " ").capitalized
         trackedRepos.append(TrackedRepo(path: cleanPath, projectName: pName, defaultTicket: defaultTicket, enabled: true))
+        return true
     }
 
     func removeTrackedRepo(id: String) {
@@ -1463,16 +1473,9 @@ class SchichtaStore: ObservableObject {
         var added = 0
         for item in contents {
             var isDir: ObjCBool = false
-            if FileManager.default.fileExists(atPath: item.path, isDirectory: &isDir), isDir.boolValue {
-                let gitPath = item.appendingPathComponent(".git").path
-                if FileManager.default.fileExists(atPath: gitPath) {
-                    if !trackedRepos.contains(where: { $0.path == item.path }) {
-                        let name = item.lastPathComponent.replacingOccurrences(of: "-", with: " ").capitalized
-                        trackedRepos.append(TrackedRepo(path: item.path, projectName: name, defaultTicket: "", enabled: true))
-                        added += 1
-                    }
-                }
-            }
+            guard FileManager.default.fileExists(atPath: item.path, isDirectory: &isDir), isDir.boolValue,
+                  FileManager.default.fileExists(atPath: item.appendingPathComponent(".git").path) else { continue }
+            if addTrackedRepo(path: item.path) { added += 1 }
         }
         if added > 0 {
             showToast(t("\(added) neue(s) Git-Repository(s) hinzugefügt.", "\(added) new Git repository(s) added."))
@@ -1490,8 +1493,7 @@ class SchichtaStore: ObservableObject {
         let payload = SchichtaCore.buildHookPayload(day: day, entries: entries, repos: trackedRepos, author: gitAuthorFilter)
         if let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys]),
            let jsonStr = String(data: data, encoding: .utf8) {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(jsonStr, forType: .string)
+            copyToPasteboard(jsonStr)
             showToast(t("Beispiel-JSON in Zwischenablage kopiert.", "Sample JSON copied to clipboard."))
         }
     }
@@ -1501,50 +1503,48 @@ class SchichtaStore: ObservableObject {
         appDelegate()?.showSettings(tab: tab)
     }
 
-    func inspectGitActivityForSelectedDay() {
-        self.isInspectingGit = true
-        let day = selectedDay
-        let repos = self.trackedRepos
-        let author = self.gitAuthorFilter
-
+    /// Liest die Git-Aktivität eines Tages im Hintergrund, speichert sie als Tageslog und meldet das Ergebnis auf dem Main-Thread.
+    private func loadGitActivity(for day: String, completion: @escaping (Result<(result: [String: Any], journal: JournalItem), Error>) -> Void) {
+        let repos = trackedRepos
+        let author = gitAuthorFilter
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            do {
-                let gitResult = try Activity.readRepos(day, repos: repos, authorFilter: author)
-                let text = Activity.formatLogText(gitResult)
-                DispatchQueue.main.async {
-                    guard let self = self else { return }
-                    var j = self.database.journal[day] ?? JournalItem()
-                    j.logs = text
-                    self.database.journal[day] = j
+            let read = Result { try Activity.readRepos(day, repos: repos, authorFilter: author) }
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                completion(read.map { gitResult in
+                    var journal = self.database.journal[day] ?? JournalItem()
+                    journal.logs = Activity.formatLogText(gitResult)
+                    self.database.journal[day] = journal
                     self.save()
                     self.inspectedGitResult = gitResult
-                    self.isInspectingGit = false
-                    self.showToast(self.t("Git-Aktivitäten für \(SchichtaCore.formatGermanDate(day)) geprüft.", "Git activities inspected for \(SchichtaCore.formatGermanDate(day))."))
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    guard let self = self else { return }
-                    self.isInspectingGit = false
-                    self.showToast(self.t("Fehler bei Git-Prüfung: \(error.localizedDescription)", "Git inspection error: \(error.localizedDescription)"))
-                }
+                    return (gitResult, journal)
+                })
+            }
+        }
+    }
+
+    func inspectGitActivityForSelectedDay() {
+        isInspectingGit = true
+        let day = selectedDay
+        loadGitActivity(for: day) { [weak self] outcome in
+            guard let self = self else { return }
+            self.isInspectingGit = false
+            switch outcome {
+            case .success:
+                self.showToast(self.t("Git-Aktivitäten für \(SchichtaCore.formatGermanDate(day)) geprüft.", "Git activities inspected for \(SchichtaCore.formatGermanDate(day))."))
+            case .failure(let error):
+                self.showToast(self.t("Fehler bei Git-Prüfung: \(error.localizedDescription)", "Git inspection error: \(error.localizedDescription)"))
             }
         }
     }
 
     func runExternalHook(for day: String, completion: ((Bool, String) -> Void)? = nil) {
         let entries = database.entries.filter { $0.date == day }
-        let repos = self.trackedRepos
-        let author = self.gitAuthorFilter
         let shellCmd = self.hookShellCommand.trimmingCharacters(in: .whitespacesAndNewlines)
         let webhookURLStr = self.hookWebhookURL.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        let payload = SchichtaCore.buildHookPayload(day: day, entries: entries, repos: repos, author: author)
-
-        // Write last-export.json in Application Support/Schichta/last-export.json
-        let support = try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        let dir = support?.appendingPathComponent("Schichta", isDirectory: true) ?? FileManager.default.temporaryDirectory
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let exportURL = dir.appendingPathComponent("last-export.json")
+        let payload = SchichtaCore.buildHookPayload(day: day, entries: entries, repos: trackedRepos, author: gitAuthorFilter)
+        let exportURL = AppPaths.support.appendingPathComponent("last-export.json")
 
         let jsonData: Data
         do {
@@ -1574,15 +1574,6 @@ class SchichtaStore: ObservableObject {
 
             // 1. Shell Hook
             if !shellCmd.isEmpty {
-                let proc = Process()
-                let inPipe = Pipe()
-                let outPipe = Pipe()
-                proc.executableURL = URL(fileURLWithPath: "/bin/zsh")
-                proc.arguments = ["-c", shellCmd]
-                proc.standardInput = inPipe
-                proc.standardOutput = outPipe
-                proc.standardError = outPipe
-
                 var env = ProcessInfo.processInfo.environment
                 env["SCHICHTA_DATE"] = day
                 let totalMins = entries.reduce(0) { $0 + $1.minutes }
@@ -1591,28 +1582,17 @@ class SchichtaStore: ObservableObject {
                 env["SCHICHTA_JSON_FILE"] = exportURL.path
                 env["SCHICHTA_REPORT"] = SchichtaCore.bcsReport(day: day, entries: entries)
                 env["SCHICHTA_BCS_REPORT"] = env["SCHICHTA_REPORT"] // alter Name, für bestehende Skripte
-                proc.environment = env
 
                 do {
-                    try proc.run()
-                    inPipe.fileHandleForWriting.write(jsonData)
-                    try? inPipe.fileHandleForWriting.close()
-
-                    let timeout = DispatchWorkItem { if proc.isRunning { proc.terminate() } }
-                    // Großzügig: Adapter wie schichta-bcs starten einen Browser und loggen sich ein.
-                    DispatchQueue.global().asyncAfter(deadline: .now() + 180, execute: timeout)
-
-                    let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
-                    proc.waitUntilExit()
-                    timeout.cancel()
-
-                    let output = String(decoding: outData, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-                    if proc.terminationStatus == 0 {
+                    // Großzügiges Zeitlimit: Adapter wie schichta-bcs starten einen Browser und loggen sich ein.
+                    let run = try Shell.run("/bin/zsh", ["-c", shellCmd], stdin: jsonData, environment: env, mergeStderr: true, timeout: 180)
+                    let output = run.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if run.status == 0 {
                         let snippet = output.isEmpty ? "OK" : String(output.prefix(2000))
                         results.append("Shell-Hook (Exit 0): \(snippet)")
                     } else {
                         allSuccess = false
-                        results.append("Shell-Hook Fehler (Exit \(proc.terminationStatus)): \(output)")
+                        results.append("Shell-Hook Fehler (Exit \(run.status)): \(output)")
                     }
                 } catch {
                     allSuccess = false
@@ -1688,12 +1668,7 @@ class SchichtaStore: ObservableObject {
     }
 
     func moveDay(_ offset: Int) {
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        let cur = SchichtaCore.dateFromBerlinDay(selectedDay)
-        if let next = cal.date(byAdding: .day, value: offset, to: cur) {
-            selectDate(next)
-        }
+        selectDay(SchichtaCore.addDays(offset, to: selectedDay))
     }
 
     func selectToday() {
@@ -1737,18 +1712,8 @@ class SchichtaStore: ObservableObject {
             return
         }
 
-        let temp = Entry(id: "", date: selectedDay, ticket: cleanTicket, description: cleanDesc, minutes: minutes, estimated: estimated, project: project)
-        let resolvedProject = !project.isEmpty ? project : SchichtaCore.resolveProjectName(for: temp, repos: trackedRepos)
-
-        let newEntry = Entry(
-            id: UUID().uuidString,
-            date: selectedDay,
-            ticket: cleanTicket,
-            description: cleanDesc,
-            minutes: minutes,
-            estimated: estimated,
-            project: resolvedProject
-        )
+        var newEntry = Entry(date: selectedDay, ticket: cleanTicket, description: cleanDesc, minutes: minutes, estimated: estimated, project: project)
+        newEntry.project = SchichtaCore.resolveProjectName(for: newEntry, repos: trackedRepos)
         database.entries.append(newEntry)
         save()
         showToast(t("Eintrag hinzugefügt.", "Entry added."))
@@ -1784,14 +1749,10 @@ class SchichtaStore: ObservableObject {
         showToast(t("Schätzung bestätigt.", "Estimate confirmed."))
     }
 
-    func addThirtyMinutes(id: String) {
-        adjustEntryMinutes(id: id, delta: 30)
-    }
-
     func adjustEntryMinutes(id: String, delta: Int) {
         guard let idx = database.entries.firstIndex(where: { $0.id == id }) else { return }
         let current = database.entries[idx].minutes
-        let updated = max(5, min(1440, current + delta))
+        let updated = SchichtaCore.clampDuration(current + delta)
         guard updated != current else { return }
         database.entries[idx].minutes = updated
         save()
@@ -1801,7 +1762,7 @@ class SchichtaStore: ObservableObject {
 
     func setEntryMinutes(id: String, minutes: Int) {
         guard let idx = database.entries.firstIndex(where: { $0.id == id }) else { return }
-        let updated = max(5, min(1440, minutes))
+        let updated = SchichtaCore.clampDuration(minutes)
         guard updated != database.entries[idx].minutes else { return }
         database.entries[idx].minutes = updated
         save()
@@ -1834,17 +1795,8 @@ class SchichtaStore: ObservableObject {
                 let newMin = min(1440, database.entries[idx].minutes + effectiveMinutes)
                 database.entries[idx].minutes = newMin
             } else {
-                let temp = Entry(id: "", date: today, ticket: cleanTicket, description: cleanText, minutes: effectiveMinutes, estimated: true)
-                let proj = SchichtaCore.resolveProjectName(for: temp, repos: trackedRepos)
-                let entry = Entry(
-                    id: UUID().uuidString,
-                    date: today,
-                    ticket: cleanTicket,
-                    description: cleanText,
-                    minutes: effectiveMinutes,
-                    estimated: true,
-                    project: proj
-                )
+                var entry = Entry(date: today, ticket: cleanTicket, description: cleanText, minutes: effectiveMinutes, estimated: true)
+                entry.project = SchichtaCore.resolveProjectName(for: entry, repos: trackedRepos)
                 database.entries.append(entry)
             }
         }
@@ -1863,63 +1815,19 @@ class SchichtaStore: ObservableObject {
     // --- Auto Synthesize Actions ---
 
     func synthesizeDayAction() {
-        self.isSynthesizing = true
+        isSynthesizing = true
         let day = selectedDay
         let existing = entriesForSelectedDay()
-        let repos = self.trackedRepos
-        let author = self.gitAuthorFilter
-
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            do {
-                let gitResult = try Activity.readRepos(day, repos: repos, authorFilter: author)
-                let logText = Activity.formatLogText(gitResult)
-
-                DispatchQueue.main.async {
-                    guard let self = self else { return }
-                    var j = self.database.journal[day] ?? JournalItem()
-                    j.logs = logText
-                    self.database.journal[day] = j
-                    self.save()
-                    self.inspectedGitResult = gitResult
-
-                    let synth = AutoSynthesizer.synthesizeDay(day: day, journal: j, gitResult: gitResult, existingEntries: existing)
-                    self.proposals = synth
-                    self.isSynthesizing = false
-                    self.showToast(self.t("\(synth.count) Tätigkeiten automatisch erkannt.", "\(synth.count) activities automatically recognized."))
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    guard let self = self else { return }
-                    self.isSynthesizing = false
-                    self.showToast(self.t("Fehler bei Git-Auswertung: \(error.localizedDescription)", "Git analysis error: \(error.localizedDescription)"))
-                }
-            }
-        }
-    }
-
-    func reloadGitLogsAction() {
-        self.gitLogsStatus = self.t("Lese Git-Logs...", "Reading Git logs...")
-        let day = selectedDay
-        let repos = self.trackedRepos
-        let author = self.gitAuthorFilter
-
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            do {
-                let gitResult = try Activity.readRepos(day, repos: repos, authorFilter: author)
-                let text = Activity.formatLogText(gitResult)
-                DispatchQueue.main.async {
-                    guard let self = self else { return }
-                    var j = self.database.journal[day] ?? JournalItem()
-                    j.logs = text
-                    self.database.journal[day] = j
-                    self.save()
-                    self.inspectedGitResult = gitResult
-                    self.gitLogsStatus = self.t("Git-Logs geladen.", "Git logs loaded.")
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self?.gitLogsStatus = self?.t("Fehler: \(error.localizedDescription)", "Error: \(error.localizedDescription)") ?? "Error"
-                }
+        loadGitActivity(for: day) { [weak self] outcome in
+            guard let self = self else { return }
+            self.isSynthesizing = false
+            switch outcome {
+            case .success(let loaded):
+                let synth = AutoSynthesizer.synthesizeDay(day: day, journal: loaded.journal, gitResult: loaded.result, existingEntries: existing)
+                self.proposals = synth
+                self.showToast(self.t("\(synth.count) Tätigkeiten automatisch erkannt.", "\(synth.count) activities automatically recognized."))
+            case .failure(let error):
+                self.showToast(self.t("Fehler bei Git-Auswertung: \(error.localizedDescription)", "Git analysis error: \(error.localizedDescription)"))
             }
         }
     }
@@ -1955,14 +1863,7 @@ class SchichtaStore: ObservableObject {
 
     func toggleDayBooked(_ day: String? = nil) {
         let target = day ?? selectedDay
-        var item = database.journal[target] ?? JournalItem()
-        item.booked.toggle()
-        database.journal[target] = item
-        save()
-        if item.booked && hookAutoTriggerOnBook {
-            runExternalHook(for: target)
-        }
-        showToast(item.booked ? t("Tag \(SchichtaCore.formatGermanDate(target)) als gebucht markiert ✓", "Day \(SchichtaCore.formatGermanDate(target)) marked as booked ✓") : t("Tag \(SchichtaCore.formatGermanDate(target)) wieder als offen markiert.", "Day \(SchichtaCore.formatGermanDate(target)) marked as open."))
+        markDayBooked(target, booked: database.journal[target]?.booked != true)
     }
 
     func markDayBooked(_ day: String, booked: Bool = true) {
@@ -1983,59 +1884,25 @@ class SchichtaStore: ObservableObject {
         let item = database.journal[day]
         if item?.booked == true { return false }
 
-        let dayEntries = database.entries.filter { $0.date == day }
-        let hasEntries = !dayEntries.isEmpty
-        let hasNotes = !(item?.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+        return hasActivity(day) || isWorkingDay(day)
+    }
 
-        let isWorkDay = isWorkingDay(day)
-        return hasEntries || hasNotes || isWorkDay
+    /// Einträge oder nicht-leere Tagesnotizen vorhanden.
+    private func hasActivity(_ day: String) -> Bool {
+        database.entries.contains(where: { $0.date == day }) ||
+            !(database.journal[day]?.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
     }
 
     func previousWorkingDay(before today: String = SchichtaCore.berlinDay()) -> String {
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        let todayDate = SchichtaCore.dateFromBerlinDay(today)
+        // Arbeitstage der letzten 14 Tage, neuester zuerst.
+        let workDays = (1...14).map { SchichtaCore.addDays(-$0, to: today) }.filter(isWorkingDay)
+        let isBooked = { (day: String) in self.database.journal[day]?.booked == true }
 
-        // 1. Search last 14 days for the most recent working day with entries or notes that is not booked
-        for offset in 1...14 {
-            if let d = cal.date(byAdding: .day, value: -offset, to: todayDate) {
-                let dayStr = SchichtaCore.berlinDay(from: d)
-                guard isWorkingDay(dayStr) else { continue }
-                let item = database.journal[dayStr]
-                let hasEntries = database.entries.contains(where: { $0.date == dayStr })
-                let hasNotes = !(item?.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
-                if (hasEntries || hasNotes) && item?.booked != true {
-                    return dayStr
-                }
-            }
-        }
-
-        // 2. Search last 14 days for the most recent configured working day that is not booked
-        for offset in 1...14 {
-            if let d = cal.date(byAdding: .day, value: -offset, to: todayDate) {
-                let dayStr = SchichtaCore.berlinDay(from: d)
-                if isWorkingDay(dayStr) {
-                    if database.journal[dayStr]?.booked != true {
-                        return dayStr
-                    }
-                }
-            }
-        }
-
-        // 3. Fallback: last configured working day before today regardless of booked status
-        for offset in 1...14 {
-            if let d = cal.date(byAdding: .day, value: -offset, to: todayDate) {
-                let dayStr = SchichtaCore.berlinDay(from: d)
-                if isWorkingDay(dayStr) {
-                    return dayStr
-                }
-            }
-        }
-
-        if let yesterday = cal.date(byAdding: .day, value: -1, to: todayDate) {
-            return SchichtaCore.berlinDay(from: yesterday)
-        }
-        return today
+        // 1. Ungebucht mit Einträgen/Notizen, 2. irgendein ungebuchter Arbeitstag, 3. letzter Arbeitstag, 4. gestern.
+        return workDays.first(where: { !isBooked($0) && self.hasActivity($0) })
+            ?? workDays.first(where: { !isBooked($0) })
+            ?? workDays.first
+            ?? SchichtaCore.addDays(-1, to: today)
     }
 
     func unbookedPreviousDay(today: String = SchichtaCore.berlinDay()) -> String? {
@@ -2049,13 +1916,8 @@ class SchichtaStore: ObservableObject {
 
     // --- Prompt Configuration & Actions ---
 
-    func setEndOfDayPromptTime(hour: Int, minute: Int) {
-        self.endOfDayPromptHour = hour
-        self.endOfDayPromptMinute = minute
-    }
-
     var endOfDayPromptTimeString: String {
-        String(format: "%02d:%02d", endOfDayPromptHour, endOfDayPromptMinute)
+        String(format: "%02d:%02d", workEndHour, workEndMinute)
     }
 
     func triggerEndOfDayPromptManually() {
@@ -2076,18 +1938,32 @@ class SchichtaStore: ObservableObject {
 
     // --- Import / Export ---
 
-    func copyBCSReport() {
-        let rep = SchichtaCore.bcsReport(day: selectedDay, entries: entriesForSelectedDay())
+    private func copyToPasteboard(_ text: String) {
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(rep, forType: .string)
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+
+    /// Zeigt den Dialog als Sheet am Fenster (falls vorhanden), sonst modal, und ruft `onURL` nur bei „OK“ auf.
+    private func present(_ panel: NSSavePanel, window: NSWindow?, onURL: @escaping (URL) throws -> Void, failure: @escaping (Error) -> String) {
+        let handler: (NSApplication.ModalResponse) -> Void = { result in
+            guard result == .OK, let url = panel.url else { return }
+            do { try onURL(url) } catch { self.showToast(failure(error)) }
+        }
+        if let window {
+            panel.beginSheetModal(for: window, completionHandler: handler)
+        } else {
+            handler(panel.runModal())
+        }
+    }
+
+    func copyBCSReport() {
+        copyToPasteboard(SchichtaCore.bcsReport(day: selectedDay, entries: entriesForSelectedDay()))
         showToast(t("Tagesentwurf in Zwischenablage kopiert.", "Daily draft copied to clipboard."))
     }
 
     func copyBCSReportAndMarkBooked(day: String? = nil) {
         let targetDay = day ?? selectedDay
-        let rep = SchichtaCore.bcsReport(day: targetDay, entries: database.entries.filter { $0.date == targetDay })
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(rep, forType: .string)
+        copyToPasteboard(SchichtaCore.bcsReport(day: targetDay, entries: database.entries.filter { $0.date == targetDay }))
         markDayBooked(targetDay, booked: true)
         showToast(t("Tagesentwurf kopiert & Tag als gebucht markiert ✓", "Daily draft copied & day marked as booked ✓"))
     }
@@ -2098,23 +1974,10 @@ class SchichtaStore: ObservableObject {
         panel.nameFieldStringValue = "Tagesentwurf-\(selectedDay).txt"
         panel.canCreateDirectories = true
         panel.allowedContentTypes = [.plainText]
-
-        let handler: (NSApplication.ModalResponse) -> Void = { result in
-            guard result == .OK, let url = panel.url else { return }
-            do {
-                try Data(rep.utf8).write(to: url, options: .atomic)
-                self.showToast(self.t("Tagesentwurf gespeichert.", "Daily draft saved."))
-            } catch {
-                self.showToast(self.t("Fehler beim Speichern: \(error.localizedDescription)", "Error saving: \(error.localizedDescription)"))
-            }
-        }
-
-        if let win = window {
-            panel.beginSheetModal(for: win, completionHandler: handler)
-        } else {
-            let res = panel.runModal()
-            handler(res)
-        }
+        present(panel, window: window, onURL: { url in
+            try Data(rep.utf8).write(to: url, options: .atomic)
+            self.showToast(self.t("Tagesentwurf gespeichert.", "Daily draft saved."))
+        }, failure: { self.t("Fehler beim Speichern: \($0.localizedDescription)", "Error saving: \($0.localizedDescription)") })
     }
 
     func exportBackup(window: NSWindow?) {
@@ -2122,26 +1985,12 @@ class SchichtaStore: ObservableObject {
         panel.nameFieldStringValue = "Schichta-Sicherung-\(SchichtaCore.berlinDay()).json"
         panel.canCreateDirectories = true
         panel.allowedContentTypes = [.json]
-
-        let handler: (NSApplication.ModalResponse) -> Void = { result in
-            guard result == .OK, let url = panel.url else { return }
-            do {
-                let encoder = JSONEncoder()
-                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-                let data = try encoder.encode(self.database)
-                try data.write(to: url, options: .atomic)
-                self.showToast(self.t("Sicherung erfolgreich exportiert.", "Backup successfully exported."))
-            } catch {
-                self.showToast(self.t("Export fehlgeschlagen: \(error.localizedDescription)", "Export failed: \(error.localizedDescription)"))
-            }
-        }
-
-        if let win = window {
-            panel.beginSheetModal(for: win, completionHandler: handler)
-        } else {
-            let res = panel.runModal()
-            handler(res)
-        }
+        present(panel, window: window, onURL: { url in
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            try encoder.encode(self.database).write(to: url, options: .atomic)
+            self.showToast(self.t("Sicherung erfolgreich exportiert.", "Backup successfully exported."))
+        }, failure: { self.t("Export fehlgeschlagen: \($0.localizedDescription)", "Export failed: \($0.localizedDescription)") })
     }
 
     func importBackup(window: NSWindow?) {
@@ -2149,31 +1998,17 @@ class SchichtaStore: ObservableObject {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.allowedContentTypes = [.json]
-
-        let handler: (NSApplication.ModalResponse) -> Void = { result in
-            guard result == .OK, let url = panel.url else { return }
-            do {
-                let data = try Data(contentsOf: url)
-                guard data.count <= 10_000_000 else {
-                    self.showToast(self.t("Datei ist zu groß (maximal 10 MB).", "File is too large (maximum 10 MB)."))
-                    return
-                }
-                let decoded = try JSONDecoder().decode(Database.self, from: data)
-                let validated = try SchichtaCore.validate(database: decoded)
-                self.database = validated
-                self.save()
-                self.showToast(self.t("\(validated.entries.count) Einträge importiert.", "\(validated.entries.count) entries imported."))
-            } catch {
-                self.showToast(self.t("Import fehlgeschlagen: \(error.localizedDescription)", "Import failed: \(error.localizedDescription)"))
+        present(panel, window: window, onURL: { url in
+            let data = try Data(contentsOf: url)
+            guard data.count <= 10_000_000 else {
+                self.showToast(self.t("Datei ist zu groß (maximal 10 MB).", "File is too large (maximum 10 MB)."))
+                return
             }
-        }
-
-        if let win = window {
-            panel.beginSheetModal(for: win, completionHandler: handler)
-        } else {
-            let res = panel.runModal()
-            handler(res)
-        }
+            let validated = try SchichtaCore.validate(database: JSONDecoder().decode(Database.self, from: data))
+            self.database = validated
+            self.save()
+            self.showToast(self.t("\(validated.entries.count) Einträge importiert.", "\(validated.entries.count) entries imported."))
+        }, failure: { self.t("Import fehlgeschlagen: \($0.localizedDescription)", "Import failed: \($0.localizedDescription)") })
     }
 }
 
@@ -2229,7 +2064,7 @@ struct CheckInPopoverView: View {
         VStack(alignment: .leading, spacing: 14) {
             // Header
             HStack(spacing: 10) {
-                Image(nsImage: AppIconGenerator.makeIcon(size: 64))
+                Image(nsImage: AppIconGenerator.small)
                     .resizable()
                     .frame(width: 32, height: 32)
                     .cornerRadius(6)
@@ -2314,13 +2149,7 @@ struct CheckInPopoverView: View {
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
 
-                    Button(action: { adjustDuration(delta: -15) }) {
-                        Image(systemName: "minus.circle.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help(store.t("−15 Minuten (mind. 5 Min.)", "−15 minutes (min. 5 min.)"))
+                    StepButton(increase: false, size: 16, help: store.t("−15 Minuten (mind. 5 Min.)", "−15 minutes (min. 5 min.)")) { adjustDuration(delta: -15) }
 
                     TextField("0:15", text: $durationText)
                         .textFieldStyle(.roundedBorder)
@@ -2328,13 +2157,7 @@ struct CheckInPopoverView: View {
                         .multilineTextAlignment(.center)
                         .frame(width: 58)
 
-                    Button(action: { adjustDuration(delta: 15) }) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(SchichtaTheme.forestGreen)
-                    }
-                    .buttonStyle(.plain)
-                    .help(store.t("+15 Minuten", "+15 minutes"))
+                    StepButton(increase: true, size: 16, help: store.t("+15 Minuten", "+15 minutes")) { adjustDuration(delta: 15) }
 
                     Spacer(minLength: 4)
 
@@ -2456,7 +2279,7 @@ struct CheckInPopoverView: View {
 
     private func adjustDuration(delta: Int) {
         let cur = (try? SchichtaCore.parseMinutes(durationText)) ?? store.reminderIntervalMinutes
-        let next = max(5, min(1440, cur + delta))
+        let next = SchichtaCore.clampDuration(cur + delta)
         durationText = SchichtaCore.formatTime(next)
     }
 
@@ -2482,6 +2305,49 @@ struct CheckInPopoverView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
             onClose()
         }
+    }
+}
+
+// MARK: - Shared Controls
+
+/// −/+ Knopf neben Dauer- und Intervallfeldern.
+struct StepButton: View {
+    let increase: Bool
+    var size: CGFloat = 15
+    var help: String = ""
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: increase ? "plus.circle.fill" : "minus.circle.fill")
+                .font(.system(size: size))
+                .foregroundColor(increase ? SchichtaTheme.forestGreen : .secondary)
+        }
+        .buttonStyle(.plain)
+        .help(help)
+    }
+}
+
+extension View {
+    /// Rahmen der vier Kacheln in der Kennzahlenleiste.
+    func tileStyle() -> some View {
+        padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, minHeight: 78, maxHeight: 78, alignment: .topLeading)
+            .background(Color(nsColor: .controlBackgroundColor).opacity(0.65))
+            .cornerRadius(10)
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.primary.opacity(0.08), lineWidth: 1))
+    }
+
+    /// Farbiger Hinweisbalken (Morgen-/Feierabend-Prompt) unter der Kopfzeile.
+    func bannerStyle(_ color: Color) -> some View {
+        padding(10)
+            .background(color.opacity(0.12))
+            .cornerRadius(8)
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(color.opacity(0.35), lineWidth: 1))
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
+            .transition(.move(edge: .top).combined(with: .opacity))
     }
 }
 
@@ -2749,7 +2615,7 @@ struct MainWindowView: View {
         HStack(spacing: 14) {
             // Links: App-Logo + "Schichta" + Ausgeschriebener Wochentag
             HStack(spacing: 9) {
-                Image(nsImage: AppIconGenerator.makeIcon(size: 64))
+                Image(nsImage: AppIconGenerator.small)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 24, height: 24)
@@ -2930,7 +2796,7 @@ struct MainWindowView: View {
     private var topMetricsBar: some View {
         let entries = store.entriesForSelectedDay()
         let totalMinutes = entries.reduce(0) { $0 + $1.minutes }
-        let estimatesCount = entries.filter { $0.estimated }.lengthCount
+        let estimatesCount = entries.filter { $0.estimated }.count
         let openTicketsCount = entries.filter { $0.ticket.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || $0.ticket == "PROJ-0" }.count
         let target = store.dailyTargetMinutes > 0 ? store.dailyTargetMinutes : 480
         let progress = min(1.0, Double(totalMinutes) / Double(target))
@@ -2962,12 +2828,7 @@ struct MainWindowView: View {
                     .progressViewStyle(.linear)
                     .tint(SchichtaTheme.forestGreen)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, minHeight: 78, maxHeight: 78, alignment: .topLeading)
-            .background(Color(nsColor: .controlBackgroundColor).opacity(0.65))
-            .cornerRadius(10)
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.primary.opacity(0.08), lineWidth: 1))
+            .tileStyle()
 
             // Tile 2: Tätigkeiten
             VStack(alignment: .leading, spacing: 4) {
@@ -2987,12 +2848,7 @@ struct MainWindowView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, minHeight: 78, maxHeight: 78, alignment: .topLeading)
-            .background(Color(nsColor: .controlBackgroundColor).opacity(0.65))
-            .cornerRadius(10)
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.primary.opacity(0.08), lineWidth: 1))
+            .tileStyle()
 
             // Tile 3: Prüfstatus
             VStack(alignment: .leading, spacing: 4) {
@@ -3065,12 +2921,7 @@ struct MainWindowView: View {
                         .lineLimit(1)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, minHeight: 78, maxHeight: 78, alignment: .topLeading)
-            .background(Color(nsColor: .controlBackgroundColor).opacity(0.65))
-            .cornerRadius(10)
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.primary.opacity(0.08), lineWidth: 1))
+            .tileStyle()
 
             // Tile 4: Check-in Assistent & Feierabend-Prompt
             VStack(alignment: .leading, spacing: 4) {
@@ -3114,28 +2965,16 @@ struct MainWindowView: View {
 
                     Spacer()
 
-                    Button(action: {
+                    StepButton(increase: false, size: 13, help: store.t("Intervall um 5/15 Min. verringern", "Decrease interval by 5/15 min")) {
                         store.reminderIntervalMinutes = max(5, store.reminderIntervalMinutes <= 15 ? store.reminderIntervalMinutes - 5 : store.reminderIntervalMinutes - 15)
-                    }) {
-                        Image(systemName: "minus.circle.fill")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
                     }
-                    .buttonStyle(.plain)
-                    .help(store.t("Intervall um 5/15 Min. verringern", "Decrease interval by 5/15 min"))
 
                     Text("\(store.reminderIntervalMinutes) Min.")
                         .font(.system(size: 13, weight: .bold, design: .monospaced))
 
-                    Button(action: {
+                    StepButton(increase: true, size: 13, help: store.t("Intervall um 15 Min. erhöhen", "Increase interval by 15 min")) {
                         store.reminderIntervalMinutes = min(240, store.reminderIntervalMinutes + 15)
-                    }) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 13))
-                            .foregroundColor(SchichtaTheme.forestGreen)
                     }
-                    .buttonStyle(.plain)
-                    .help(store.t("Intervall um 15 Min. erhöhen", "Increase interval by 15 min"))
                 }
 
                 // Zeile 3: Subtext unten
@@ -3158,12 +2997,7 @@ struct MainWindowView: View {
                     .help(store.t("Arbeitszeit & Feierabend in den Einstellungen anpassen", "Adjust work hours & end of day in settings"))
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, minHeight: 78, maxHeight: 78, alignment: .topLeading)
-            .background(Color(nsColor: .controlBackgroundColor).opacity(0.65))
-            .cornerRadius(10)
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.primary.opacity(0.08), lineWidth: 1))
+            .tileStyle()
         }
     }
 
@@ -3237,13 +3071,7 @@ struct MainWindowView: View {
                             .foregroundColor(.secondary)
                             .fixedSize()
 
-                        Button(action: { addMinutesToDuration(-15) }) {
-                            Image(systemName: "minus.circle.fill")
-                                .font(.system(size: 15))
-                                .foregroundColor(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                        .help(store.t("−15 Minuten (mind. 5 Min.)", "−15 minutes (min. 5 min.)"))
+                        StepButton(increase: false, size: 15, help: store.t("−15 Minuten (mind. 5 Min.)", "−15 minutes (min. 5 min.)")) { addMinutesToDuration(-15) }
 
                         TextField("0:15", text: $formDuration)
                             .textFieldStyle(.roundedBorder)
@@ -3251,13 +3079,7 @@ struct MainWindowView: View {
                             .multilineTextAlignment(.center)
                             .frame(width: 58)
 
-                        Button(action: { addMinutesToDuration(15) }) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 15))
-                                .foregroundColor(SchichtaTheme.forestGreen)
-                        }
-                        .buttonStyle(.plain)
-                        .help(store.t("+15 Minuten", "+15 minutes"))
+                        StepButton(increase: true, size: 15, help: store.t("+15 Minuten", "+15 minutes")) { addMinutesToDuration(15) }
 
                         HStack(spacing: 3) {
                             Button("15m") { formDuration = "00:15" }
@@ -3496,29 +3318,17 @@ struct MainWindowView: View {
                             }
 
                             // Quick −15m
-                            Button(action: {
+                            StepButton(increase: false, size: 15, help: store.t("−15 Minuten (mind. 5 Min.)", "−15 minutes (min. 5 min.)")) {
                                 store.adjustEntryMinutes(id: entry.id, delta: -15)
-                            }) {
-                                Image(systemName: "minus.circle.fill")
-                                    .font(.system(size: 15))
-                                    .foregroundColor(.secondary)
                             }
-                            .buttonStyle(.plain)
-                            .help(store.t("−15 Minuten (mind. 5 Min.)", "−15 minutes (min. 5 min.)"))
 
                             // Inline Duration Field
                             InlineDurationField(entry: entry, store: store)
 
                             // Quick +15m
-                            Button(action: {
+                            StepButton(increase: true, size: 15, help: store.t("+15 Minuten", "+15 minutes")) {
                                 store.adjustEntryMinutes(id: entry.id, delta: 15)
-                            }) {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.system(size: 15))
-                                    .foregroundColor(SchichtaTheme.forestGreen)
                             }
-                            .buttonStyle(.plain)
-                            .help(store.t("+15 Minuten", "+15 minutes"))
 
                             // Quick +30m
                             Button("+30m") {
@@ -3600,7 +3410,7 @@ struct MainWindowView: View {
         let entries = store.entriesForSelectedDay()
         let reportText = SchichtaCore.bcsReport(day: store.selectedDay, entries: entries)
         let totalMinutes = entries.reduce(0) { $0 + $1.minutes }
-        let estimatesCount = entries.filter { $0.estimated }.lengthCount
+        let estimatesCount = entries.filter { $0.estimated }.count
 
         // Scrollbar, damit bei kleiner Fensterhöhe nichts gequetscht oder abgeschnitten wird.
         return ScrollView { VStack(alignment: .leading, spacing: 14) {
@@ -3814,7 +3624,7 @@ struct MainWindowView: View {
     private func morningPromptBanner(unbookedDay: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .center, spacing: 10) {
-                Image(nsImage: AppIconGenerator.makeIcon(size: 64))
+                Image(nsImage: AppIconGenerator.small)
                     .resizable()
                     .frame(width: 32, height: 32)
                     .cornerRadius(6)
@@ -3880,19 +3690,13 @@ struct MainWindowView: View {
                 .controlSize(.small)
             }
         }
-        .padding(10)
-        .background(Color.orange.opacity(0.12))
-        .cornerRadius(8)
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.orange.opacity(0.35), lineWidth: 1))
-        .padding(.horizontal, 20)
-        .padding(.top, 10)
-        .transition(.move(edge: .top).combined(with: .opacity))
+        .bannerStyle(.orange)
     }
 
     private func endOfDayPromptBanner(day: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .center, spacing: 10) {
-                Image(nsImage: AppIconGenerator.makeIcon(size: 64))
+                Image(nsImage: AppIconGenerator.small)
                     .resizable()
                     .frame(width: 32, height: 32)
                     .cornerRadius(6)
@@ -3954,20 +3758,14 @@ struct MainWindowView: View {
                 .controlSize(.small)
             }
         }
-        .padding(10)
-        .background(Color.purple.opacity(0.12))
-        .cornerRadius(8)
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.purple.opacity(0.35), lineWidth: 1))
-        .padding(.horizontal, 20)
-        .padding(.top, 10)
-        .transition(.move(edge: .top).combined(with: .opacity))
+        .bannerStyle(.purple)
     }
 
     // MARK: - Form Helper
 
     private func addMinutesToDuration(_ mins: Int) {
         if let current = try? SchichtaCore.parseMinutes(formDuration) {
-            formDuration = SchichtaCore.formatTime(max(5, min(1440, current + mins)))
+            formDuration = SchichtaCore.formatTime(SchichtaCore.clampDuration(current + mins))
         } else {
             formDuration = SchichtaCore.formatTime(max(5, mins))
         }
@@ -4064,18 +3862,12 @@ struct ProposalRowView: View {
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 130)
 
-                Button(action: {
+                StepButton(increase: false, size: 15, help: t("−15 Minuten (mind. 5 Min.)", "−15 minutes (min. 5 min.)")) {
                     let cur = (try? SchichtaCore.parseMinutes(timeStr)) ?? proposal.minutes
-                    let next = max(5, min(1440, cur - 15))
+                    let next = SchichtaCore.clampDuration(cur - 15)
                     timeStr = SchichtaCore.formatTime(next)
                     proposal.minutes = next
-                }) {
-                    Image(systemName: "minus.circle.fill")
-                        .font(.system(size: 15))
-                        .foregroundColor(.secondary)
                 }
-                .buttonStyle(.plain)
-                .help(t("−15 Minuten (mind. 5 Min.)", "−15 minutes (min. 5 min.)"))
 
                 TextField("0:15", text: $timeStr)
                     .textFieldStyle(.roundedBorder)
@@ -4083,18 +3875,12 @@ struct ProposalRowView: View {
                     .multilineTextAlignment(.center)
                     .frame(width: 58)
 
-                Button(action: {
+                StepButton(increase: true, size: 15, help: t("+15 Minuten", "+15 minutes")) {
                     let cur = (try? SchichtaCore.parseMinutes(timeStr)) ?? proposal.minutes
-                    let next = max(5, min(1440, cur + 15))
+                    let next = SchichtaCore.clampDuration(cur + 15)
                     timeStr = SchichtaCore.formatTime(next)
                     proposal.minutes = next
-                }) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 15))
-                        .foregroundColor(SchichtaTheme.forestGreen)
                 }
-                .buttonStyle(.plain)
-                .help(t("+15 Minuten", "+15 minutes"))
 
                 TextField(t("Tätigkeit", "Activity"), text: $proposal.description)
                     .textFieldStyle(.roundedBorder)
@@ -4302,29 +4088,17 @@ struct SettingsView: View {
                             .font(.system(size: 12, weight: .medium))
                         Spacer()
 
-                        Button(action: {
+                        StepButton(increase: false, size: 16, help: store.t("−30 Minuten", "−30 minutes")) {
                             store.dailyTargetMinutes = max(60, store.dailyTargetMinutes - 30)
-                        }) {
-                            Image(systemName: "minus.circle.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(.secondary)
                         }
-                        .buttonStyle(.plain)
-                        .help(store.t("−30 Minuten", "−30 minutes"))
 
                         Text(String(format: "%@ h", SchichtaCore.formatTime(store.dailyTargetMinutes)))
                             .font(.system(size: 14, weight: .bold, design: .monospaced))
                             .frame(width: 75, alignment: .center)
 
-                        Button(action: {
+                        StepButton(increase: true, size: 16, help: store.t("+30 Minuten", "+30 minutes")) {
                             store.dailyTargetMinutes = min(840, store.dailyTargetMinutes + 30)
-                        }) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(SchichtaTheme.forestGreen)
                         }
-                        .buttonStyle(.plain)
-                        .help(store.t("+30 Minuten", "+30 minutes"))
 
                         HStack(spacing: 3) {
                             ForEach([360, 420, 450, 480], id: \.self) { mins in
@@ -4398,11 +4172,9 @@ struct SettingsView: View {
                             .font(.system(size: 12, weight: .medium))
                         Spacer()
                         HStack(spacing: 4) {
-                            Button(action: {
+                            StepButton(increase: false, size: 14) {
                                 store.reminderIntervalMinutes = max(5, store.reminderIntervalMinutes <= 15 ? store.reminderIntervalMinutes - 5 : store.reminderIntervalMinutes - 15)
-                            }) {
-                                Image(systemName: "minus.circle.fill").font(.system(size: 14)).foregroundColor(.secondary)
-                            }.buttonStyle(.plain)
+                            }
 
                             let intervals = [5, 10, 15, 20, 30, 45, 60, 90]
                             Picker("", selection: $store.reminderIntervalMinutes) {
@@ -4415,11 +4187,9 @@ struct SettingsView: View {
                             }
                             .frame(width: 85)
 
-                            Button(action: {
+                            StepButton(increase: true, size: 14) {
                                 store.reminderIntervalMinutes = min(240, store.reminderIntervalMinutes + 15)
-                            }) {
-                                Image(systemName: "plus.circle.fill").font(.system(size: 14)).foregroundColor(SchichtaTheme.forestGreen)
-                            }.buttonStyle(.plain)
+                            }
                         }
                     }
 
@@ -4841,14 +4611,7 @@ struct SettingsView: View {
             panel.directoryURL = curUrl
         }
         if panel.runModal() == .OK {
-            for url in panel.urls {
-                let path = url.path
-                if !store.trackedRepos.contains(where: { $0.path == path }) {
-                    let folderName = url.lastPathComponent
-                    let projName = folderName.replacingOccurrences(of: "-", with: " ").capitalized
-                    store.trackedRepos.append(TrackedRepo(path: path, projectName: projName, defaultTicket: "", enabled: true))
-                }
-            }
+            panel.urls.forEach { store.addTrackedRepo(path: $0.path) }
         }
     }
 
@@ -4866,12 +4629,6 @@ struct SettingsView: View {
     }
 }
 
-typealias SettingsWindowView = SettingsView
-
-private extension Array {
-    var lengthCount: Int { count }
-}
-
 // MARK: - AppDelegate & Statusbar Popover
 
 class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
@@ -4879,7 +4636,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     var store: SchichtaStore!
 
     var statusItem: NSStatusItem?
-    var popover: NSPopover!
     var checkInPanel: CheckInPanel?
     var settingsWindow: NSWindow?
     var checkInTimer: Timer?
@@ -4892,10 +4648,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             return screen
         }
         return NSScreen.main ?? NSScreen.screens.first ?? NSScreen()
-    }
-
-    func activeScreen() -> NSScreen {
-        AppDelegate.activeScreen()
     }
 
     static func centerWindow(_ win: NSWindow, on screen: NSScreen) {
@@ -4916,26 +4668,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
     }
 
-    static var notificationIconURL: URL {
-        let support = (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
-            ?? FileManager.default.temporaryDirectory
-        let dir = support.appendingPathComponent("Schichta", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appendingPathComponent("notification-icon.png")
-    }
+    static let notificationIconURL = AppPaths.support.appendingPathComponent("notification-icon.png")
 
     @discardableResult
     static func ensureNotificationIconSaved() -> URL {
-        let fileURL = notificationIconURL
-        if !FileManager.default.fileExists(atPath: fileURL.path) {
-            let icon = AppIconGenerator.makeIcon(size: 256)
-            if let tiff = icon.tiffRepresentation,
-               let rep = NSBitmapImageRep(data: tiff),
-               let png = rep.representation(using: .png, properties: [:]) {
-                try? png.write(to: fileURL)
-            }
+        if !FileManager.default.fileExists(atPath: notificationIconURL.path) {
+            try? AppIconGenerator.pngData(AppIconGenerator.makeIcon(size: 256))?.write(to: notificationIconURL)
         }
-        return fileURL
+        return notificationIconURL
     }
 
     static func makeNotificationContent(title: String, subtitle: String = "", body: String, soundEnabled: Bool = true) -> UNMutableNotificationContent {
@@ -4974,20 +4714,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     static func checkInWindowString(for date: Date = Date(), intervalMinutes: Int = 30, language: AppLanguage = .de) -> String {
         let start = date.addingTimeInterval(-Double(intervalMinutes * 60))
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: language == .de ? "de_DE" : "en_US")
-        formatter.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        formatter.dateFormat = "HH:mm"
         let suffix = language == .de ? "\(intervalMinutes) Min. Check-in" : "\(intervalMinutes) min check-in"
-        return "\(formatter.string(from: start)) – \(formatter.string(from: date)) · \(suffix)"
+        return "\(Berlin.clock.string(from: start)) – \(Berlin.clock.string(from: date)) · \(suffix)"
     }
 
     static func checkInCurrentTimeString(for date: Date = Date()) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "de_DE")
-        formatter.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: date)
+        Berlin.clock.string(from: date)
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -5017,7 +4749,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
         setupStatusItem()
         setupCheckInPanel()
-        setupPopover()
         setupNotificationCenter()
         _ = AppDelegate.ensureNotificationIconSaved()
         startCheckInTimer()
@@ -5198,40 +4929,33 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     func closeCheckInPanel() {
         checkInPanel?.orderOut(nil)
-        if popover?.isShown == true {
-            popover?.performClose(nil)
-        }
     }
 
-    func setupPopover() {
-        popover = NSPopover()
-        popover.contentSize = NSSize(width: 380, height: 305)
-        popover.behavior = .transient
-        popover.animates = true
-        let popoverView = CheckInPopoverView(store: store, onClose: { [weak self] in
-            self?.closeCheckInPanel()
-        })
-        popover.contentViewController = NSHostingController(rootView: popoverView)
+    /// Mitteilungen nur in der gebündelten App; im Selbsttest oder als nacktes Binary gibt es kein Notification Center.
+    private var notificationsAvailable: Bool {
+        !CommandLine.arguments.contains("--self-test") && Bundle.main.bundleIdentifier != nil
     }
 
     func setupNotificationCenter() {
-        guard !CommandLine.arguments.contains("--self-test"),
-              Bundle.main.bundleIdentifier != nil else { return }
+        guard notificationsAvailable else { return }
         let center = UNUserNotificationCenter.current()
         center.delegate = self
         center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
+    /// `id` mit Präfix "morning-prompt"/"endofday-prompt" öffnet beim Klick das Hauptfenster, sonst den Check-in.
+    private func postNotification(id: String, de: (title: String, body: String), en: (title: String, body: String)) {
+        guard notificationsAvailable else { return }
+        let text = (store?.appLanguage ?? .de) == .de ? de : en
+        let request = UNNotificationRequest(identifier: id, content: makeNotificationContent(title: text.title, body: text.body), trigger: nil)
+        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+    }
+
     func sendNotificationIfAllowed() {
-        guard !CommandLine.arguments.contains("--self-test"),
-              Bundle.main.bundleIdentifier != nil else { return }
-        let center = UNUserNotificationCenter.current()
-        let isDe = (store?.appLanguage ?? .de) == .de
-        let title = isDe ? "Schichta · \(store.reminderIntervalMinutes) Minuten" : "Schichta · \(store.reminderIntervalMinutes) minutes"
-        let body = isDe ? "Was machst du gerade? Kurz in der Statusleiste festhalten." : "What are you working on? Log it quickly in the status bar."
-        let content = makeNotificationContent(title: title, body: body)
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
-        center.add(request, withCompletionHandler: nil)
+        let minutes = store.reminderIntervalMinutes
+        postNotification(id: UUID().uuidString,
+                         de: ("Schichta · \(minutes) Minuten", "Was machst du gerade? Kurz in der Statusleiste festhalten."),
+                         en: ("Schichta · \(minutes) minutes", "What are you working on? Log it quickly in the status bar."))
     }
 
     // UNUserNotificationCenterDelegate
@@ -5260,10 +4984,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
     }
 
-    func restartTimerWithCurrentInterval() {
-        startCheckInTimer()
-    }
-
     func snoozeCheckIn() {
         isCheckInDue = false
         updateStatusItem(isDue: false)
@@ -5279,14 +4999,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         } else {
             showCheckInPanel(anchorButton: statusItem?.button)
         }
-    }
-
-    func showPopover(_ sender: AnyObject?) {
-        showCheckInPanel(anchorButton: statusItem?.button)
-    }
-
-    func closePopover() {
-        closeCheckInPanel()
     }
 
     @objc func triggerCheckInPrompt() {
@@ -5323,13 +5035,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     func checkPeriodicPrompts() {
         guard let store = store else { return }
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "Europe/Berlin")!
         let now = Date()
         let today = SchichtaCore.berlinDay(from: now)
-        let currentHour = cal.component(.hour, from: now)
-        let currentMinute = cal.component(.minute, from: now)
-        let currentTotalMinutes = currentHour * 60 + currentMinute
+        let time = Berlin.calendar.dateComponents([.hour, .minute], from: now)
+        let currentHour = time.hour!
+        let currentTotalMinutes = currentHour * 60 + time.minute!
 
         // Prompt A: Morgen-Prompt (Vortag noch nicht gebucht)
         if store.morningPromptEnabled && store.isWorkingDay(today) && currentHour >= store.morningPromptHour && store.lastMorningPromptDate != today {
@@ -5375,29 +5085,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     func sendMorningPromptNotification(for unbookedDay: String) {
-        guard !CommandLine.arguments.contains("--self-test"),
-              Bundle.main.bundleIdentifier != nil else { return }
-        let center = UNUserNotificationCenter.current()
-        let isDe = (store?.appLanguage ?? .de) == .de
         let dateStr = SchichtaCore.formatFullDate(unbookedDay, language: store?.appLanguage ?? .de)
-        let title = isDe ? "Schichta · Vortag noch offen" : "Schichta · Previous day still unbooked"
-        let body = isDe ? "Deine Buchungen vom \(dateStr) sind noch nicht abgeschlossen." : "Your bookings from \(dateStr) have not been finalized yet."
-        let content = makeNotificationContent(title: title, body: body)
-        let request = UNNotificationRequest(identifier: "morning-prompt-\(unbookedDay)", content: content, trigger: nil)
-        center.add(request, withCompletionHandler: nil)
+        postNotification(id: "morning-prompt-\(unbookedDay)",
+                         de: ("Schichta · Vortag noch offen", "Deine Buchungen vom \(dateStr) sind noch nicht abgeschlossen."),
+                         en: ("Schichta · Previous day still unbooked", "Your bookings from \(dateStr) have not been finalized yet."))
     }
 
     func sendEndOfDayPromptNotification(for day: String) {
-        guard !CommandLine.arguments.contains("--self-test"),
-              Bundle.main.bundleIdentifier != nil else { return }
-        let center = UNUserNotificationCenter.current()
-        let isDe = (store?.appLanguage ?? .de) == .de
         let dateStr = SchichtaCore.formatFullDate(day, language: store?.appLanguage ?? .de)
-        let title = isDe ? "Schichta · Feierabend-Abschluss" : "Schichta · End of day sign-off"
-        let body = isDe ? "Zeit, deine heutigen Buchungen für \(dateStr) abzuschließen!" : "Time to finalize today's bookings for \(dateStr)!"
-        let content = makeNotificationContent(title: title, body: body)
-        let request = UNNotificationRequest(identifier: "endofday-prompt-\(day)", content: content, trigger: nil)
-        center.add(request, withCompletionHandler: nil)
+        postNotification(id: "endofday-prompt-\(day)",
+                         de: ("Schichta · Feierabend-Abschluss", "Zeit, deine heutigen Buchungen für \(dateStr) abzuschließen!"),
+                         en: ("Schichta · End of day sign-off", "Time to finalize today's bookings for \(dateStr)!"))
     }
 
     @objc func testMorningPromptFromMenu() {
@@ -5424,12 +5122,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 // wohin (method/url), wie authentifiziert (auth; der Wert liegt im Schlüsselbund, in der
 // Datei steht nur sein Name) und welcher JSON-Body aus unseren Feldern gebaut wird
 // (Platzhalter wie {{entry.ticket}}). Die App kennt kein Zielsystem; neue Systeme = neue Datei.
-
-struct TargetError: LocalizedError {
-    let message: String
-    init(_ message: String) { self.message = message }
-    var errorDescription: String? { message }
-}
 
 enum TargetMode: String {
     case perEntry, perDay
@@ -5462,19 +5154,19 @@ struct BookingTarget {
 
     static func parse(id: String, data: Data) throws -> BookingTarget {
         guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw TargetError("Datei muss ein JSON-Objekt sein.")
+            throw SchichtaError("Datei muss ein JSON-Objekt sein.")
         }
-        guard let url = obj["url"] as? String, !url.isEmpty else { throw TargetError("\"url\" fehlt.") }
+        guard let url = obj["url"] as? String, !url.isEmpty else { throw SchichtaError("\"url\" fehlt.") }
         let method = (obj["method"] as? String ?? "POST").uppercased()
-        guard ["POST", "PUT", "PATCH"].contains(method) else { throw TargetError("\"method\" muss POST, PUT oder PATCH sein.") }
+        guard ["POST", "PUT", "PATCH"].contains(method) else { throw SchichtaError("\"method\" muss POST, PUT oder PATCH sein.") }
         guard let mode = TargetMode(rawValue: obj["mode"] as? String ?? "perEntry") else {
-            throw TargetError("\"mode\" muss perEntry oder perDay sein.")
+            throw SchichtaError("\"mode\" muss perEntry oder perDay sein.")
         }
 
         let authObj = obj["auth"] as? [String: Any] ?? ["type": "none"]
         // Schutz vor Klartext-Secrets in der Datei: nur der Name gehört hierher.
         if authObj.keys.contains(where: { ["value", "token", "password", "key", "apiKey"].contains($0) }) {
-            throw TargetError("Secrets gehören nicht in die Datei. Unter \"secret\" nur einen Namen angeben und den Wert in Schichta im Schlüsselbund speichern.")
+            throw SchichtaError("Secrets gehören nicht in die Datei. Unter \"secret\" nur einen Namen angeben und den Wert in Schichta im Schlüsselbund speichern.")
         }
         let secret = authObj["secret"] as? String ?? ""
         let auth: TargetAuth
@@ -5484,13 +5176,13 @@ struct BookingTarget {
         case "bearer" where !secret.isEmpty:
             auth = .bearer(secret: secret)
         case "basic" where !secret.isEmpty:
-            guard let user = authObj["username"] as? String, !user.isEmpty else { throw TargetError("auth.basic braucht \"username\".") }
+            guard let user = authObj["username"] as? String, !user.isEmpty else { throw SchichtaError("auth.basic braucht \"username\".") }
             auth = .basic(username: user, secret: secret)
         case "header" where !secret.isEmpty:
-            guard let header = authObj["header"] as? String, !header.isEmpty else { throw TargetError("auth.header braucht \"header\".") }
+            guard let header = authObj["header"] as? String, !header.isEmpty else { throw SchichtaError("auth.header braucht \"header\".") }
             auth = .header(name: header, secret: secret)
         default:
-            throw TargetError("\"auth\" braucht type (none, bearer, basic, header) und einen \"secret\"-Namen.")
+            throw SchichtaError("\"auth\" braucht type (none, bearer, basic, header) und einen \"secret\"-Namen.")
         }
 
         return BookingTarget(
@@ -5543,19 +5235,13 @@ enum TargetRenderer {
         secret: (String) -> String?
     ) throws -> [PreparedRequest] {
         _ = try Activity.bounds(day) // validiert das Datum
-        guard !entries.isEmpty else { throw TargetError("Keine Einträge für \(SchichtaCore.formatGermanDate(day)).") }
+        guard !entries.isEmpty else { throw SchichtaError("Keine Einträge für \(SchichtaCore.formatGermanDate(day)).") }
 
         // Schichta speichert nur Dauern: Start/Ende werden ab Arbeitsbeginn lückenlos hintereinander gelegt.
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        guard var cursor = cal.date(bySettingHour: workStart.hour, minute: workStart.minute, second: 0, of: SchichtaCore.dateFromBerlinDay(day)) else {
-            throw TargetError("Arbeitsbeginn ungültig.")
+        guard var cursor = Berlin.calendar.date(bySettingHour: workStart.hour, minute: workStart.minute, second: 0, of: SchichtaCore.dateFromBerlinDay(day)) else {
+            throw SchichtaError("Arbeitsbeginn ungültig.")
         }
         let iso = ISO8601DateFormatter() // UTC, z. B. 2026-10-26T08:00:00Z
-        let hm = DateFormatter()
-        hm.locale = Locale(identifier: "en_US_POSIX")
-        hm.timeZone = cal.timeZone
-        hm.dateFormat = "HH:mm"
         let hours: (Int) -> Double = { Double(Int((Double($0) / 60 * 100).rounded())) / 100 }
 
         let entryContexts: [[String: Any]] = entries.map { e in
@@ -5567,7 +5253,7 @@ enum TargetRenderer {
                 "minutes": e.minutes, "hours": hours(e.minutes), "duration": SchichtaCore.formatTime(e.minutes),
                 "estimated": e.estimated, "project": SchichtaCore.resolveProjectName(for: e, repos: repos),
                 "start": iso.string(from: start), "end": iso.string(from: end),
-                "startTime": hm.string(from: start), "endTime": hm.string(from: end)
+                "startTime": Berlin.clock.string(from: start), "endTime": Berlin.clock.string(from: end)
             ]
         }
         let total = entries.reduce(0) { $0 + $1.minutes }
@@ -5580,7 +5266,7 @@ enum TargetRenderer {
         var authHeader: (name: String, value: String)?
         if let name = target.auth.secretName {
             guard let value = secret(name), !value.isEmpty else {
-                throw TargetError("Secret „\(name)“ fehlt im Schlüsselbund.")
+                throw SchichtaError("Secret „\(name)“ fehlt im Schlüsselbund.")
             }
             switch target.auth {
             case .bearer: authHeader = ("Authorization", "Bearer \(value)")
@@ -5602,11 +5288,11 @@ enum TargetRenderer {
             }
             let urlString = try renderString(target.url, ctx, map: target.map, encode: encodePath) as? String ?? target.url
             guard let url = URL(string: urlString), let scheme = url.scheme?.lowercased(), let host = url.host?.lowercased() else {
-                throw TargetError("Ungültige URL: \(urlString)")
+                throw SchichtaError("Ungültige URL: \(urlString)")
             }
             let isLocal = ["localhost", "127.0.0.1", "::1"].contains(host)
             guard scheme == "https" || (scheme == "http" && isLocal) else {
-                throw TargetError("Nur https erlaubt (http nur für localhost): \(urlString)")
+                throw SchichtaError("Nur https erlaubt (http nur für localhost): \(urlString)")
             }
 
             var headers: [String: String] = [:]
@@ -5617,7 +5303,7 @@ enum TargetRenderer {
             if let template = target.body {
                 let rendered = try render(template, ctx, map: target.map)
                 guard JSONSerialization.isValidJSONObject(rendered) else {
-                    throw TargetError("\"body\" muss ein JSON-Objekt oder eine Liste sein.")
+                    throw SchichtaError("\"body\" muss ein JSON-Objekt oder eine Liste sein.")
                 }
                 body = try JSONSerialization.data(withJSONObject: rendered, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
                 if !headers.keys.contains(where: { $0.lowercased() == "content-type" }) {
@@ -5669,13 +5355,13 @@ enum TargetRenderer {
         // {{map.ticket}}: Wert des Eintragsfelds über die "map"-Tabelle der Zieldatei übersetzen.
         if parts.count == 2, parts[0] == "map" {
             let key = try stringValue(try lookup("entry." + parts[1], ctx, map: map), path: path)
-            guard let mapped = map[key] else { throw TargetError("Keine Zuordnung in \"map\" für „\(key)“ ({{\(path)}}).") }
+            guard let mapped = map[key] else { throw SchichtaError("Keine Zuordnung in \"map\" für „\(key)“ ({{\(path)}}).") }
             return mapped
         }
         var current: Any = ctx
         for part in parts {
             guard let dict = current as? [String: Any], let next = dict[part] else {
-                throw TargetError("Unbekannter Platzhalter {{\(path)}}.")
+                throw SchichtaError("Unbekannter Platzhalter {{\(path)}}.")
             }
             current = next
         }
@@ -5688,7 +5374,7 @@ enum TargetRenderer {
         case let b as Bool: return b ? "true" : "false"
         case let i as Int: return String(i)
         case let d as Double: return d == d.rounded() ? String(Int(d)) : String(d)
-        default: throw TargetError("{{\(path)}} ist eine Liste/ein Objekt und kann nicht in Text eingesetzt werden.")
+        default: throw SchichtaError("{{\(path)}} ist eine Liste/ein Objekt und kann nicht in Text eingesetzt werden.")
         }
     }
 }
@@ -5785,8 +5471,7 @@ final class BookingTargetsModel: ObservableObject {
     private let sender = TargetSender()
 
     static var folder: URL {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return support.appendingPathComponent("Schichta/targets", isDirectory: true)
+        AppPaths.support.appendingPathComponent("targets", isDirectory: true)
     }
 
     /// Fingerabdruck der Tageseinträge: Senden ist nur erlaubt, solange die Vorschau dazu passt.
@@ -6064,10 +5749,8 @@ enum ChatActivity {
     }
 
     static func dayRange(_ day: String) -> (Date, Date) {
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        let start = cal.startOfDay(for: SchichtaCore.dateFromBerlinDay(day))
-        return (start, cal.date(byAdding: .day, value: 1, to: start)!)
+        let start = Berlin.calendar.startOfDay(for: SchichtaCore.dateFromBerlinDay(day))
+        return (start, Berlin.calendar.date(byAdding: .day, value: 1, to: start)!)
     }
 
     /// Liest Claude-Code- und Codex-Sitzungen des Tages, aber nur aus getrackten Repositories
@@ -6192,11 +5875,8 @@ enum ChatActivity {
 
     static func formatEvidence(_ sessions: [ChatSession]) -> String {
         guard !sessions.isEmpty else { return "(keine Chat-Sitzungen in getrackten Repositories)" }
-        let hm = DateFormatter()
-        hm.timeZone = TimeZone(identifier: "Europe/Berlin")!
-        hm.dateFormat = "HH:mm"
         return sessions.map { s in
-            let head = "\(s.tool) · \(s.project)\(s.branch.isEmpty ? "" : " (\(s.branch))") · \(hm.string(from: s.start))–\(hm.string(from: s.end)) · aktiv ca. \(SchichtaCore.formatTime(s.activeMinutes)) h"
+            let head = "\(s.tool) · \(s.project)\(s.branch.isEmpty ? "" : " (\(s.branch))") · \(Berlin.clock.string(from: s.start))–\(Berlin.clock.string(from: s.end)) · aktiv ca. \(SchichtaCore.formatTime(s.activeMinutes)) h"
             return ([head] + s.prompts.map { "  - \($0)" }).joined(separator: "\n")
         }.joined(separator: "\n\n")
     }
@@ -6244,7 +5924,7 @@ enum AISummary {
     static func parse(_ output: String) throws -> Result {
         guard let open = output.firstIndex(of: "{"), let close = output.lastIndex(of: "}"), open < close,
               let obj = try? JSONSerialization.jsonObject(with: Data(output[open...close].utf8)) as? [String: Any] else {
-            throw TargetError("Antwort enthält kein gültiges JSON-Objekt.")
+            throw SchichtaError("Antwort enthält kein gültiges JSON-Objekt.")
         }
         let entries = obj["entries"] as? [[String: Any]] ?? []
         let proposals: [ProposedEntry] = entries.enumerated().compactMap { index, e in
@@ -6273,30 +5953,12 @@ enum AISummary {
     static func run(command: String, prompt: String, timeout: TimeInterval = 300) throws -> String {
         let workDir = FileManager.default.temporaryDirectory.appendingPathComponent("schichta-ai", isDirectory: true)
         try? FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
-        let process = Process(), input = Pipe(), output = Pipe(), errors = Pipe()
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-lc", command]
-        process.currentDirectoryURL = workDir
-        process.standardInput = input
-        process.standardOutput = output
-        process.standardError = errors
-        try process.run()
-        input.fileHandleForWriting.write(Data(prompt.utf8))
-        try? input.fileHandleForWriting.close()
-        let killer = DispatchWorkItem { if process.isRunning { process.terminate() } }
-        DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: killer)
-        var errorData = Data()
-        let errorReader = DispatchQueue(label: "schichta.ai.stderr")
-        errorReader.async { errorData = errors.fileHandleForReading.readDataToEndOfFile() }
-        let outData = output.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-        killer.cancel()
-        errorReader.sync {}
-        guard process.terminationStatus == 0 else {
-            let message = String(decoding: errorData.isEmpty ? outData : errorData, as: UTF8.self)
-            throw TargetError("KI-Befehl fehlgeschlagen (Exit \(process.terminationStatus)): \(message.prefix(500))")
+        let run = try Shell.run("/bin/zsh", ["-lc", command], stdin: Data(prompt.utf8), directory: workDir, timeout: timeout)
+        guard run.status == 0 else {
+            let message = String(decoding: run.stderr.isEmpty ? run.stdout : run.stderr, as: UTF8.self)
+            throw SchichtaError("KI-Befehl fehlgeschlagen (Exit \(run.status)): \(message.prefix(500))")
         }
-        return String(decoding: outData, as: UTF8.self)
+        return run.text
     }
 }
 
@@ -6313,8 +5975,7 @@ struct AITool: Identifiable, Equatable {
 
 enum AITools {
     static var folder: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Schichta/ai-tools", isDirectory: true)
+        AppPaths.support.appendingPathComponent("ai-tools", isDirectory: true)
     }
 
     /// Sucht ein Programm an den üblichen Orten (GUI-Apps erben den Shell-PATH nicht).
@@ -6570,6 +6231,9 @@ struct AISettingsSection: View {
 
 // MARK: - Entry Point & Self-Tests
 
+// Ein Hook- oder KI-Befehl, der vor dem Lesen von stdin endet, soll einen Schreibfehler liefern, nicht die App beenden.
+signal(SIGPIPE, SIG_IGN)
+
 if CommandLine.arguments.contains("--generate-icon") {
     let targetPath: String
     if let idx = CommandLine.arguments.firstIndex(of: "--generate-icon"), idx + 1 < CommandLine.arguments.count {
@@ -6599,7 +6263,7 @@ if CommandLine.arguments.contains("--generate-icon") {
     } catch {}
 
     // Keine fest hinterlegten Repositories: ohne Konfiguration wird nichts gelesen.
-    let result = try Activity.read("2026-10-12")
+    let result = try Activity.readRepos("2026-10-12", repos: [], authorFilter: nil)
     let repos = result["repositories"] as! [[String: Any]]
     precondition(repos.isEmpty, "Ohne Konfiguration dürfen keine Repositories gelesen werden")
 
@@ -6749,7 +6413,13 @@ if CommandLine.arguments.contains("--generate-icon") {
     print("5. Passed")
 
     // 6. Day booking queries & previousWorkingDay tests
-    let mockStore = SchichtaStore()
+    // Eigene Datei und eigene UserDefaults-Domain: Der Test darf weder echte Einträge überschreiben
+    // noch Einstellungen ändern oder einen eingerichteten Hook auslösen.
+    // Feste Domain, vor dem Test geleert: jeder Lauf startet mit Standardwerten, es sammeln sich keine Dateien an.
+    let testDefaultsSuite = "local.schichta.selftest"
+    UserDefaults.standard.removePersistentDomain(forName: testDefaultsSuite)
+    let testStoreURL = FileManager.default.temporaryDirectory.appendingPathComponent("schichta-selftest-\(UUID().uuidString)/schichta.json")
+    let mockStore = SchichtaStore(storeURL: testStoreURL, defaults: UserDefaults(suiteName: testDefaultsSuite)!)
     print("Store created")
     mockStore.database = Database(version: 1, entries: [
         Entry(id: "e_fri", date: "2026-10-23", ticket: "PROJ-2800", description: "Freitag Arbeit", minutes: 60, estimated: false)
@@ -6801,8 +6471,7 @@ if CommandLine.arguments.contains("--generate-icon") {
     precondition(unbookedBeforeMon == "2026-10-23", "unbookedPreviousDay muss Wochenende überspringen und Freitag liefern (ist: \(String(describing: unbookedBeforeMon)))")
 
     // Working hours simulation
-    var testBerlinCal = Calendar(identifier: .gregorian)
-    testBerlinCal.timeZone = TimeZone(identifier: "Europe/Berlin")!
+    let testBerlinCal = Berlin.calendar
 
     var mondayComps = DateComponents()
     mondayComps.year = 2026; mondayComps.month = 10; mondayComps.day = 26
@@ -6827,7 +6496,6 @@ if CommandLine.arguments.contains("--generate-icon") {
     // 8. Bilingual switching & Localization tests
     mockStore.appLanguage = .de
     precondition(mockStore.t("Heute", "Today") == "Heute")
-    precondition(L("Abbrechen", "Cancel") == "Abbrechen")
     precondition(SchichtaCore.formatFullDate("2026-10-26", language: .de).contains("Montag"))
     precondition(AppDelegate.checkInWindowString(for: mondayDuring, intervalMinutes: 15, language: .de).contains("· 15 Min. Check-in"))
     precondition(CheckInMode.both.title(for: .de) == "Als Eintrag + Notiz")
@@ -6835,7 +6503,6 @@ if CommandLine.arguments.contains("--generate-icon") {
 
     mockStore.appLanguage = .en
     precondition(mockStore.t("Heute", "Today") == "Today")
-    precondition(L("Abbrechen", "Cancel") == "Cancel")
     precondition(SchichtaCore.formatFullDate("2026-10-26", language: .en).contains("Monday"))
     precondition(AppDelegate.checkInWindowString(for: mondayDuring, intervalMinutes: 15, language: .en).contains("· 15 min check-in"))
     precondition(CheckInMode.both.title(for: .en) == "As entry + note")
@@ -6846,7 +6513,6 @@ if CommandLine.arguments.contains("--generate-icon") {
 
     // 9. View instantiation smoke test
     _ = SettingsView(store: mockStore)
-    _ = SettingsWindowView(store: mockStore)
 
     // 10. TrackedRepo, Activity.readRepos & AutoSynthesizer with project name & default ticket
     print("Starting check 10...")
@@ -6956,17 +6622,19 @@ if CommandLine.arguments.contains("--generate-icon") {
     precondition(decodedOldEntry.project == "", "project sollte bei altem JSON leer initialisiert werden")
 
     // 13. Shell Hook execution environment check
-    let shellCheckProc = Process(), shellOutPipe = Pipe()
-    shellCheckProc.executableURL = URL(fileURLWithPath: "/bin/zsh")
-    shellCheckProc.arguments = ["-c", "echo $SCHICHTA_TOTAL_HHMM"]
     var testEnv = ProcessInfo.processInfo.environment
     testEnv["SCHICHTA_TOTAL_HHMM"] = "02:00"
-    shellCheckProc.environment = testEnv
-    shellCheckProc.standardOutput = shellOutPipe
-    try shellCheckProc.run()
-    shellCheckProc.waitUntilExit()
-    let shellOut = String(decoding: shellOutPipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+    let shellOut = try Shell.run("/bin/zsh", ["-c", "echo $SCHICHTA_TOTAL_HHMM"], environment: testEnv, timeout: 10).text
+        .trimmingCharacters(in: .whitespacesAndNewlines)
     precondition(shellOut == "02:00", "Shell environment check failed: \(shellOut)")
+
+    // Befehl, der stdin nie liest: großes stdin darf weder hängen noch die App per SIGPIPE beenden.
+    let bigInput = Data(repeating: UInt8(ascii: "x"), count: 1_000_000)
+    let ignoresStdin = try Shell.run("/bin/zsh", ["-c", "echo ok"], stdin: bigInput, timeout: 10)
+    precondition(ignoresStdin.status == 0 && ignoresStdin.text == "ok\n", "Shell.run mit ungelesenem stdin fehlerhaft")
+    let echoed = try Shell.run("/bin/cat", [], stdin: bigInput, timeout: 10)
+    precondition(echoed.stdout == bigInput, "Shell.run muss großes stdin vollständig übergeben")
+    print("Shell.run ok")
 
     // 14. Multi-screen activeScreen() test
     let activeSc = AppDelegate.activeScreen()
@@ -7141,6 +6809,9 @@ if CommandLine.arguments.contains("--generate-icon") {
                  "Eigene Werkzeug-Datei nicht geladen (Beispieldatei darf nicht mitzählen)")
     precondition(loadedTools.errors.count == 1 && loadedTools.errors[0].contains("broken.json"))
     print("KI-Zusammenfassung ok")
+
+    UserDefaults.standard.removePersistentDomain(forName: testDefaultsSuite)
+    try? FileManager.default.removeItem(at: testStoreURL.deletingLastPathComponent())
 
     print("Desktop-Selbsttest erfolgreich!")
     exit(0)
