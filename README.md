@@ -255,10 +255,14 @@ estimates and already-booked days by default. Plug it in as a shell hook.
 | What | Where |
 | --- | --- |
 | Entries, daily notes | `~/Library/Application Support/Schichta/schichta.json` |
+| Daily backups (last 7 days) | `~/Library/Application Support/Schichta/Backups/` |
 | Last hook payload | `~/Library/Application Support/Schichta/last-export.json` |
 | Booking targets, AI tools | `~/Library/Application Support/Schichta/targets/`, `…/ai-tools/` |
 | Settings | macOS user defaults, domain `local.schichta` |
 | Secrets | Keychain, service `Schichta.Targets` |
+
+If `schichta.json` can't be read (a bad hand edit, or a file from a newer version), Schichta never
+overwrites it: it renames it to `schichta.unreadable-<time>.json`, starts empty and tells you.
 
 To back up, copy the folder. To uninstall, delete the app, that folder and
 `~/Library/Preferences/local.schichta.plist`.

@@ -23,6 +23,7 @@ struct ShellTests {
 }
 
 @Suite("App shell")
+@MainActor
 struct AppShellTests {
     @Test func iconHasRequestedSize() {
         let icon = AppIconGenerator.makeIcon(size: 128)
@@ -138,7 +139,7 @@ struct AISummaryTests {
         #expect(result.summary == "Review und Fix.")
         #expect(result.proposals.count == 2, "entries with an empty description are dropped")
         #expect(result.proposals[0].ticket == "PROJ-1" && result.proposals[0].minutes == 90 && result.proposals[0].estimated)
-        #expect(result.proposals[1].minutes == 0 && result.proposals[1].source.contains("Zeit offen"))
+        #expect(result.proposals[1].minutes == 0 && result.proposals[1].source.de.contains("Zeit offen"))
         #expect(result.proposals.allSatisfy { $0.id.hasPrefix("ai-") })
         #expect(result.questions == ["Wie lange Abstimmung?"])
         #expect(throws: (any Error).self) { try AISummary.parse("kein json") }

@@ -34,22 +34,23 @@ final class AISummaryModel: ObservableObject {
     func send(store: SchichtaStore, onDone: @escaping () -> Void) {
         let command = store.aiCommand.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !command.isEmpty else {
-            phase = .failed("Kein KI-Befehl eingerichtet (Einstellungen › Integrationen).")
+            phase = .failed(store.t("Kein KI-Befehl eingerichtet (Einstellungen › Integrationen).", "No AI command set up (Settings › Integrations)."))
             return
         }
         phase = .running
         let prompt = self.prompt
         let day = store.selectedDay
-        Task.detached {
+        // Runs on the main actor; only the blocking command goes to a background thread.
+        Task {
             do {
-                let result = try AISummary.parse(try AISummary.run(command: command, prompt: prompt))
-                await MainActor.run {
-                    store.applyAISummary(result, day: day)
-                    self.phase = .idle
-                    onDone()
-                }
+                let result = try await Task.detached {
+                    try AISummary.parse(try AISummary.run(command: command, prompt: prompt))
+                }.value
+                store.applyAISummary(result, day: day)
+                phase = .idle
+                onDone()
             } catch {
-                await MainActor.run { self.phase = .failed(error.localizedDescription) }
+                phase = .failed(store.describe(error))
             }
         }
     }
@@ -120,7 +121,7 @@ struct AISummarySheet: View {
                 }
                 Button(store.t("Einstellungen…", "Settings…")) {
                     isPresented = false
-                    appDelegate()?.showSettings(tab: 3)
+                    appDelegate()?.showSettings(tab: .integrations)
                 }
                 Button(store.t("Abbrechen", "Cancel")) { isPresented = false }
                     .keyboardShortcut(.cancelAction)

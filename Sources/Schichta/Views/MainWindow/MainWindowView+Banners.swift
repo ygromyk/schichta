@@ -2,6 +2,35 @@ import AppKit
 import SwiftUI
 
 extension MainWindowView {
+    // MARK: - Data File Banner
+
+    func storeProblemBanner(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.red)
+                .font(.system(size: 18))
+            VStack(alignment: .leading, spacing: 6) {
+                Text(message)
+                    .font(.system(size: 12))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+                Button(store.t("Datenordner im Finder zeigen", "Show data folder in Finder")) {
+                    store.revealDataFolder()
+                }
+                .controlSize(.small)
+            }
+            Spacer()
+            Button(action: { withAnimation { store.storeProblem = nil } }) {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(.secondary)
+                    .font(.system(size: 15))
+            }
+            .buttonStyle(.plain)
+            .help(store.t("Hinweis schließen", "Close banner"))
+        }
+        .bannerStyle(.red)
+    }
+
     // MARK: - Prompt Banners
 
     func morningPromptBanner(unbookedDay: String) -> some View {

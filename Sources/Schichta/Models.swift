@@ -109,7 +109,7 @@ struct ProposedEntry: Identifiable, Equatable {
     var description: String
     var minutes: Int
     var estimated: Bool = true
-    var source: String
+    var source: LocalizedText
     var project: String = ""
 }
 
@@ -131,6 +131,21 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         case .de: return "de_DE"
         case .en: return "en_US"
         }
+    }
+
+    /// German if the system's preferred language is German, otherwise English.
+    static var system: AppLanguage {
+        Locale.preferredLanguages.first?.hasPrefix("de") == true ? .de : .en
+    }
+
+    private static let lock = NSLock()
+    private nonisolated(unsafe) static var _current: AppLanguage = .system
+
+    /// The UI language for texts produced outside the store, such as error messages.
+    /// Set by the app at launch and when the setting changes; the store's init leaves it alone.
+    static var current: AppLanguage {
+        get { lock.withLock { _current } }
+        set { lock.withLock { _current = newValue } }
     }
 }
 

@@ -18,7 +18,7 @@ struct ProposalRowView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 // Source badge
-                Text(proposal.source)
+                Text(proposal.source.in(language))
                     .font(.system(size: 9.5, weight: .bold))
                     .foregroundColor(SchichtaTheme.forestGreen)
                     .padding(.horizontal, 6)

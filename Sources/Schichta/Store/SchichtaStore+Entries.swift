@@ -171,7 +171,7 @@ extension SchichtaStore {
             self.isSynthesizing = false
             switch outcome {
             case .success(let loaded):
-                let synth = AutoSynthesizer.synthesizeDay(day: day, journal: loaded.journal, gitResult: loaded.result, existingEntries: existing)
+                let synth = AutoSynthesizer.synthesizeDay(day: day, journal: loaded.journal, gitResult: loaded.result, existingEntries: existing, language: self.appLanguage)
                 self.proposals = synth
                 self.showToast(self.t("\(synth.count) Tätigkeiten automatisch erkannt.", "\(synth.count) activities automatically recognized."))
             case .failure(let error):

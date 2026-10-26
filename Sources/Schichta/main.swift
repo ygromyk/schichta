@@ -46,9 +46,9 @@ if CommandLine.arguments.contains("--generate-icon") {
     render(DatePickerPopoverContent(store: store, isPresented: .constant(true)), NSSize(width: 200, height: 230), "date-popover")
     render(MainWindowView(store: store), NSSize(width: 1220, height: 860), "main")
     render(MainWindowView(store: store), NSSize(width: 950, height: 650), "main-min")
-    for tab in 0..<4 {
+    for tab in SettingsTab.allCases {
         store.settingsSelectedTab = tab
-        render(SettingsView(store: store), NSSize(width: 720, height: 620), "settings-\(tab)")
+        render(SettingsView(store: store), NSSize(width: 720, height: 620), "settings-\(tab.rawValue)")
     }
     exit(0)
 } else {

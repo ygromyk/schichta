@@ -8,5 +8,5 @@ let package = Package(
         .executableTarget(name: "Schichta", path: "Sources/Schichta"),
         .testTarget(name: "SchichtaTests", dependencies: ["Schichta"], path: "Tests/SchichtaTests"),
     ],
-    swiftLanguageModes: [.v5]
+    swiftLanguageModes: [.v6]
 )

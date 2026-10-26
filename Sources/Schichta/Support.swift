@@ -39,7 +39,8 @@ enum AppTime {
     }
 
     private static let lock = NSLock()
-    private static var current = State(.current)
+    /// Only accessed under `lock`.
+    private nonisolated(unsafe) static var current = State(.current)
 
     /// The active state; read once per operation so all values come from the same zone.
     static var state: State { lock.withLock { current } }
@@ -61,10 +62,26 @@ enum AppTime {
     }
 }
 
+/// A user-facing text in both UI languages; whoever shows it picks the language.
+struct LocalizedText: Equatable {
+    let de: String
+    let en: String
+    init(_ de: String, _ en: String) {
+        self.de = de
+        self.en = en
+    }
+    /// The same text in both languages, e.g. a name.
+    init(_ both: String) { self.init(both, both) }
+
+    func `in`(_ language: AppLanguage) -> String { language == .de ? de : en }
+}
+
+/// An error with a German and an English message. `localizedDescription` uses `AppLanguage.current`,
+/// so errors thrown deep in the core read right wherever the UI shows them.
 struct SchichtaError: LocalizedError {
-    let message: String
-    init(_ message: String) { self.message = message }
-    var errorDescription: String? { message }
+    let text: LocalizedText
+    init(_ de: String, en: String) { text = LocalizedText(de, en) }
+    var errorDescription: String? { text.in(AppLanguage.current) }
 }
 
 enum AppPaths {
@@ -82,7 +99,23 @@ enum AppPaths {
 /// stdin is written concurrently and the timeout is armed first: if the command never reads stdin,
 /// writing into a full pipe (> 64 KB) would otherwise block forever. The stdin pipe never raises SIGPIPE
 /// (F_SETNOSIGPIPE), so a command that exits early causes a write error instead of a crash.
+/// The pipe pumps run on their own threads, not on a dispatch queue: concurrent queues get about one thread
+/// per core, so once that many callers block in `run` (e.g. parallel tests), their pumps never start and every call hangs.
 enum Shell {
+    /// Serial queues always get a thread; the timeout work items are tiny.
+    private static let timeouts = DispatchQueue(label: "local.schichta.shell-timeouts")
+
+    /// Runs `work` on a new thread, tracked by `group`.
+    private static func pump(_ group: DispatchGroup, _ work: @escaping () -> Void) {
+        group.enter()
+        // The caller waits on `group` before it reads anything `work` wrote, so the hand-off is race-free.
+        nonisolated(unsafe) let work = work
+        Thread.detachNewThread {
+            work()
+            group.leave()
+        }
+    }
+
     struct Output {
         let status: Int32
         let stdout: Data
@@ -115,17 +148,17 @@ enum Shell {
         try process.run()
 
         let killer = DispatchWorkItem { if process.isRunning { process.terminate() } }
-        DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: killer)
+        timeouts.asyncAfter(deadline: .now() + timeout, execute: killer)
         let background = DispatchGroup()
         if let input, let stdin {
-            DispatchQueue.global().async(group: background) {
+            pump(background) {
                 try? input.fileHandleForWriting.write(contentsOf: stdin)
                 try? input.fileHandleForWriting.close()
             }
         }
         var errData = Data()
         if !mergeStderr {
-            DispatchQueue.global().async(group: background) { errData = err.fileHandleForReading.readDataToEndOfFile() }
+            pump(background) { errData = err.fileHandleForReading.readDataToEndOfFile() }
         }
         let outData = out.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()

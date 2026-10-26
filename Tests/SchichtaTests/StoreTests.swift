@@ -4,6 +4,7 @@ import Testing
 
 /// A store on a temporary file and its own user-defaults domain, so tests never touch real entries or settings.
 /// Each test passes its own `name`, which keeps parallel tests apart.
+@MainActor
 func withTestStore(_ name: String = #function, _ body: (SchichtaStore) throws -> Void) rethrows {
     let suite = "local.schichta.tests." + name.filter(\.isLetter)
     UserDefaults.standard.removePersistentDomain(forName: suite)
@@ -16,6 +17,7 @@ func withTestStore(_ name: String = #function, _ body: (SchichtaStore) throws ->
 }
 
 @Suite("Store: booking status and working days")
+@MainActor
 struct StoreTests {
     @Test func unbookedDaysAndPreviousWorkingDay() {
         withTestStore { store in
@@ -91,6 +93,48 @@ struct StoreTests {
             #expect(store.t("Heute", "Today") == "Today")
             #expect(SchichtaCore.formatFullDate("2026-10-26", language: .en).contains("Monday"))
         }
+    }
+
+    @Test func settingsKeepTheirStoredFormat() throws {
+        withTestStore { store in
+            store.appLanguage = .en
+            store.defaultCheckInMode = .noteOnly
+            store.workingDays = [6, 2]
+            store.trackedRepos = [TrackedRepo(path: "/tmp/example-app", projectName: "Example", defaultTicket: "", enabled: true)]
+            #expect(store.defaults.string(forKey: "Schichta.AppLanguage") == "en", "enums as raw strings")
+            #expect(store.defaults.string(forKey: "Schichta.DefaultCheckInMode") == "noteOnly")
+            #expect(store.defaults.array(forKey: "Schichta.WorkingDays") as? [Int] == [2, 6])
+            let data = store.defaults.data(forKey: "Schichta.TrackedReposV1") ?? Data()
+            #expect((try? JSONDecoder().decode([TrackedRepo].self, from: data))?.first?.projectName == "Example")
+
+            store.trackedRepos[0].enabled = false
+            #expect(store.trackedRepos[0].enabled == false, "element edits through bindings are saved")
+        }
+    }
+
+    @Test func settingsAreClampedAndBadValuesFallBack() {
+        withTestStore { store in
+            store.reminderIntervalMinutes = 1
+            #expect(store.reminderIntervalMinutes == 5)
+            store.defaults.set(9999, forKey: "Schichta.DailyTargetMinutes")
+            #expect(store.dailyTargetMinutes == 1440, "out-of-range stored values are clamped on read")
+            store.defaults.set("klingon", forKey: "Schichta.AppLanguage")
+            #expect(store.appLanguage == .system, "unknown values read as the default")
+            store.defaults.set([Int](), forKey: "Schichta.WorkingDays")
+            #expect(store.workingDays == [2, 3, 4, 5, 6])
+        }
+    }
+
+    @Test func legacyWorkEndKeysAreMigrated() {
+        let suite = "local.schichta.tests.legacyWorkEnd"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(18, forKey: "Schichta.EndOfDayPromptHour")
+        defaults.set(30, forKey: "Schichta.EndOfDayPromptMinute")
+        SchichtaStore.prepareDefaults(defaults)
+        #expect(defaults.integer(forKey: "Schichta.WorkEndHour") == 18)
+        #expect(defaults.integer(forKey: "Schichta.WorkEndMinute") == 30)
     }
 
     @Test func settingsViewBuilds() {

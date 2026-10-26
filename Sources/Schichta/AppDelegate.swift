@@ -4,6 +4,7 @@ import UserNotifications
 
 // MARK: - AppDelegate & Statusbar Popover
 
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     var window: NSWindow!
     var store: SchichtaStore!
@@ -84,13 +85,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         )
     }
 
-    static func checkInWindowString(for date: Date = Date(), intervalMinutes: Int = 30, language: AppLanguage = .de) -> String {
+    nonisolated static func checkInWindowString(for date: Date = Date(), intervalMinutes: Int = 30, language: AppLanguage = .de) -> String {
         let start = date.addingTimeInterval(-Double(intervalMinutes * 60))
         let suffix = language == .de ? "\(intervalMinutes) Min. Check-in" : "\(intervalMinutes) min check-in"
         return "\(AppTime.clock.string(from: start)) – \(AppTime.clock.string(from: date)) · \(suffix)"
     }
 
-    static func checkInCurrentTimeString(for date: Date = Date()) -> String {
+    nonisolated static func checkInCurrentTimeString(for date: Date = Date()) -> String {
         AppTime.clock.string(from: date)
     }
 
@@ -98,6 +99,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         // Apply the saved time zone before the store computes "today".
         AppTime.use(AppTime.zone(forIdentifier: UserDefaults.standard.string(forKey: SchichtaStore.timeZoneKey) ?? ""))
         self.store = SchichtaStore()
+        AppLanguage.current = store.appLanguage
 
         // Set high-res native macOS app icon in Dock and Cmd+Tab switcher
         NSApp.applicationIconImage = AppIconGenerator.makeIcon(size: 512)
@@ -133,10 +135,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     @objc func openSettingsWindow() {
-        showSettings(tab: store?.settingsSelectedTab ?? 0)
+        showSettings(tab: store?.settingsSelectedTab ?? .general)
     }
 
-    func showSettings(tab: Int) {
+    func showSettings(tab: SettingsTab) {
         store?.settingsSelectedTab = tab
         let targetScreen = AppDelegate.activeScreen()
         if let win = settingsWindow {
@@ -333,13 +335,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     // UNUserNotificationCenterDelegate
-    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    // The notification center may call these on any thread.
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         completionHandler([.banner, .sound])
     }
 
-    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        let id = response.notification.request.identifier
         DispatchQueue.main.async { [weak self] in
-            let id = response.notification.request.identifier
             if id.starts(with: "morning-prompt") || id.starts(with: "endofday-prompt") {
                 self?.bringMainWindowToFront()
             } else {
@@ -353,8 +356,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         checkInTimer?.invalidate()
         guard let store = store, store.timerEnabled else { return }
         let interval = TimeInterval(max(5, store.reminderIntervalMinutes) * 60)
+        // Scheduled timers fire on the main run loop.
         checkInTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            self?.triggerCheckInPrompt()
+            MainActor.assumeIsolated { self?.triggerCheckInPrompt() }
         }
     }
 
@@ -403,7 +407,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
         // Background timer every 60 seconds
         promptTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
-            self?.checkPeriodicPrompts()
+            MainActor.assumeIsolated { self?.checkPeriodicPrompts() }
         }
     }
 

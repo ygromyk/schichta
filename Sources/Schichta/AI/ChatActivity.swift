@@ -41,12 +41,13 @@ enum ChatActivity {
     static let maxPromptsPerSession = 20
     static let maxPromptLength = 300
 
-    private static let isoFractional: ISO8601DateFormatter = {
+    // ISO8601DateFormatter is thread-safe once configured.
+    private nonisolated(unsafe) static let isoFractional: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f
     }()
-    private static let isoPlain = ISO8601DateFormatter()
+    private nonisolated(unsafe) static let isoPlain = ISO8601DateFormatter()
 
     static func parseDate(_ value: Any?) -> Date? {
         guard let s = value as? String else { return nil }

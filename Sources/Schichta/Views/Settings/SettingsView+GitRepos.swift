@@ -24,10 +24,10 @@ extension SettingsView {
                         .tint(SchichtaTheme.forestGreen)
                         .controlSize(.small)
 
-                        Button(action: { _ = store.scanAndAddIdeaProjects() }) {
+                        Button(action: { chooseFolderToScan() }) {
                             HStack(spacing: 5) {
                                 Image(systemName: "folder.badge.gearshape")
-                                Text(store.t("Alle Git-Ordner in ~/IdeaProjects suchen", "Find all Git folders in ~/IdeaProjects"))
+                                Text(store.t("Git-Ordner in einem Ordner suchen…", "Find Git folders in a folder…"))
                             }
                         }
                         .buttonStyle(.bordered)
@@ -163,41 +163,25 @@ extension SettingsView {
                     }
 
                     // Stats per repo
-                    if let gitRes = store.inspectedGitResult,
-                       let repos = gitRes["repositories"] as? [[String: Any]],
-                       !repos.isEmpty {
+                    if let repos = store.inspectedGitResult?.repositories, !repos.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(store.t("Erkannte Aktivitäten nach Repositories:", "Recognized activity by repository:"))
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundColor(.secondary)
 
                             ForEach(Array(repos.enumerated()), id: \.offset) { _, r in
-                                let name = r["repository"] as? String ?? "Repo"
-                                let proj = (r["projectName"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                                let title = !proj.isEmpty ? "\(proj) (\(name))" : name
-
-                                let commitsText = (r["commits"] as? [String: Any])?["text"] as? String ?? ""
-                                let commitLines = commitsText.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-                                let commitCount = commitLines.count
-
-                                let diffText = (r["changed_files"] as? [String: Any])?["text"] as? String ?? ""
-                                let hasDiff = !diffText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-
-                                let reflogText = (r["head_activity"] as? [String: Any])?["text"] as? String ?? ""
-                                let reflogLines = reflogText.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-                                let reflogCount = reflogLines.count
-
-                                let wtText = (r["working_tree"] as? [String: Any])?["text"] as? String ?? ""
-                                let wtLines = wtText.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-                                let wtCount = wtLines.count
+                                let commitCount = r.commits.lines.count
+                                let hasDiff = !r.changedFiles.isEmpty
+                                let reflogCount = r.headActivity.lines.count
+                                let wtCount = r.workingTree.lines.count
 
                                 VStack(alignment: .leading, spacing: 5) {
                                     HStack {
-                                        Text(title)
+                                        Text(r.title)
                                             .font(.system(size: 12, weight: .bold))
                                         Spacer()
-                                        if let err = r["error"] as? String {
-                                            Text(err)
+                                        if let err = r.error {
+                                            Text(err.in(store.appLanguage))
                                                 .font(.system(size: 10))
                                                 .foregroundColor(.red)
                                         }

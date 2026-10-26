@@ -198,7 +198,7 @@ extension MainWindowView {
                     Spacer()
 
                     Button(action: {
-                        store.openSettings(tab: 1)
+                        store.openSettings(tab: .workHours)
                     }) {
                         Text(store.t("Ändern…", "Change…"))
                             .font(.system(size: 11, weight: .medium))

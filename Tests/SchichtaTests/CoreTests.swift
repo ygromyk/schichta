@@ -108,12 +108,78 @@ struct ModelTests {
             Entry(id: "h3", date: "2026-10-26", ticket: "", description: "Team Meeting", minutes: 30, estimated: false, project: "Custom Org"),
         ]
         let payload = SchichtaCore.buildHookPayload(day: "2026-10-26", entries: entries, repos: repos, author: "Max Mustermann")
-        #expect(payload["event"] as? String == "day_booked")
-        #expect(payload["date"] as? String == "2026-10-26")
-        #expect(payload["totalMinutes"] as? Int == 120)
-        #expect(payload["totalFormatted"] as? String == "02:00")
+        #expect(payload.event == "day_booked")
+        #expect(payload.date == "2026-10-26")
+        #expect(payload.totalMinutes == 120)
+        #expect(payload.totalFormatted == "02:00")
 
-        let projects = (payload["entries"] as? [[String: Any]] ?? []).map { $0["projectName"] as? String }
+        let projects = payload.entries.map(\.projectName)
         #expect(projects == ["Example App", "example-api", "Custom Org"], "default-ticket match, folder prefix, explicit project")
+    }
+}
+
+@Suite("Languages")
+@MainActor
+struct LanguageTests {
+    @Test func errorsCarryBothLanguages() throws {
+        let error = try #require(throws: SchichtaError.self) { try SchichtaCore.parseMinutes("abc") }
+        #expect(error.text.de == "Dauer als 1:30, 1,5 oder 30m eingeben.")
+        #expect(error.text.en == "Enter the duration as 1:30, 1.5 or 30m.")
+    }
+
+    @Test func storeDescribesErrorsInItsLanguage() {
+        withTestStore { store in
+            let error = SchichtaError("Fehler", en: "Error")
+            store.appLanguage = .en
+            #expect(store.describe(error) == "Error")
+            store.appLanguage = .de
+            #expect(store.describe(error) == "Fehler")
+        }
+    }
+
+    @Test func proposalTextsFollowTheLanguage() throws {
+        let gitResult = GitActivityResult(date: "2026-10-26", timezone: "UTC", repositories: [
+            RepoActivity(folderName: "example-app", workingTree: GitOutput(text: " M a.swift\n")),
+        ])
+        let en = AutoSynthesizer.synthesizeDay(day: "2026-10-26", journal: JournalItem(), gitResult: gitResult, existingEntries: [], language: .en)
+        #expect(en.first?.description == "example-app: Local changes (1 files in progress)")
+        #expect(en.first?.source.en == "Git · example-app (local changes)")
+    }
+}
+
+@Suite("Hook payload format")
+struct HookPayloadTests {
+    /// Shell hooks and webhooks parse this JSON. If this test fails, a field was renamed or removed: external
+    /// scripts would break. Add new fields to the expectation instead of changing existing ones.
+    @Test func jsonFieldsStayStable() throws {
+        let payload = SchichtaCore.buildHookPayload(
+            day: "2026-10-26",
+            entries: [Entry(id: "h1", date: "2026-10-26", ticket: "PROJ-2800", description: "Replay prüfen", minutes: 90, estimated: true)],
+            repos: [TrackedRepo(path: "/Users/me/Projects/example-app", projectName: "Example App", defaultTicket: "PROJ-2800", enabled: true)],
+            author: "Max Mustermann")
+        let expected = #"""
+        {
+          "author": "Max Mustermann",
+          "bcsReport": "Datum: 26.10.2026\nGesamtzeit: 01:30\n\n1. Replay prüfen\nTicket: PROJ-2800\nDauer: 01:30 (Schätzung – prüfen)",
+          "date": "2026-10-26",
+          "dateFormatted": "26.10.2026",
+          "entries": [{
+            "date": "2026-10-26", "description": "Replay prüfen", "durationFormatted": "01:30", "estimated": true,
+            "id": "h1", "minutes": 90, "projectName": "Example App", "ticket": "PROJ-2800"
+          }],
+          "event": "day_booked",
+          "repositories": [{
+            "defaultTicket": "PROJ-2800", "displayLabel": "Example App", "enabled": true, "folder": "example-app",
+            "path": "/Users/me/Projects/example-app", "projectName": "Example App"
+          }],
+          "totalFormatted": "01:30",
+          "totalMinutes": 90
+        }
+        """#
+        let actual = try #require(try JSONSerialization.jsonObject(with: payload.json()) as? NSDictionary)
+        let golden = try #require(try JSONSerialization.jsonObject(with: Data(expected.utf8)) as? NSDictionary)
+        #expect(actual == golden)
+        let text = String(decoding: try payload.json(), as: UTF8.self)
+        #expect(text.contains(#""estimated" : true"#), "booleans stay JSON booleans")
     }
 }

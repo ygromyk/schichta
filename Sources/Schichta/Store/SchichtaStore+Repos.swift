@@ -15,8 +15,8 @@ extension SchichtaStore {
         trackedRepos.removeAll(where: { $0.id == id })
     }
 
-    func scanAndAddIdeaProjects(root: String? = nil) -> Int {
-        let rootPath = root ?? self.gitProjectsRoot
+    /// Adds every direct subfolder of `rootPath` that is a Git repository.
+    func scanAndAddRepos(in rootPath: String) -> Int {
         let rootURL = URL(fileURLWithPath: rootPath)
         guard let contents = try? FileManager.default.contentsOfDirectory(at: rootURL, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) else {
             showToast(t("Verzeichnis konnte nicht gelesen werden: \(rootPath)", "Could not read directory: \(rootPath)"))

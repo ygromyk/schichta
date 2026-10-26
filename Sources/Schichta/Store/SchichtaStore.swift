@@ -7,21 +7,25 @@ enum ActivePrompt: Equatable {
 }
 
 /// The running AppDelegate; `nil` in tests, where no NSApplication was started.
+@MainActor
 func appDelegate() -> AppDelegate? {
     NSApp?.delegate as? AppDelegate
 }
 
 // MARK: - SchichtaStore (Observable Store)
 
+@MainActor
 class SchichtaStore: ObservableObject {
     @Published var database: Database = Database()
     @Published var selectedDay: String = SchichtaCore.day()
     @Published var selectedDate: Date = Date()
 
+    // Settings live in UserDefaults through `@Setting`; the keys are part of the saved state, so never rename them.
+
     // 1. Language
-    @Published var appLanguage: AppLanguage {
+    @Setting("Schichta.AppLanguage") var appLanguage: AppLanguage = .system {
         didSet {
-            defaults.set(appLanguage.rawValue, forKey: "Schichta.AppLanguage")
+            AppLanguage.current = appLanguage
             appDelegate()?.updateMenuLanguage()
         }
     }
@@ -30,192 +34,93 @@ class SchichtaStore: ObservableObject {
 
     /// Time zone for day boundaries and times: an identifier such as "America/New_York", or "" for the system zone.
     /// Changing it switches the app-wide `AppTime`; the store's init does not, so tests can create stores freely.
-    @Published var timeZoneIdentifier: String {
+    @Setting(SchichtaStore.timeZoneKey) var timeZoneIdentifier: String = "" {
         didSet {
-            defaults.set(timeZoneIdentifier, forKey: SchichtaStore.timeZoneKey)
             AppTime.use(AppTime.zone(forIdentifier: timeZoneIdentifier))
             selectDay(selectedDay)
         }
     }
 
     // 2. Working days (1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat)
-    @Published var workingDays: Set<Int> {
-        didSet {
-            defaults.set(Array(workingDays).sorted(), forKey: "Schichta.WorkingDays")
-        }
-    }
+    @Setting("Schichta.WorkingDays") var workingDays: Set<Int> = [2, 3, 4, 5, 6]
 
     // 3. Normal work hours & target
-    @Published var dailyTargetMinutes: Int {
-        didSet {
-            let clamped = max(60, min(1440, dailyTargetMinutes))
-            if dailyTargetMinutes != clamped {
-                dailyTargetMinutes = clamped
-                return
-            }
-            defaults.set(dailyTargetMinutes, forKey: "Schichta.DailyTargetMinutes")
-        }
-    }
-    @Published var workStartHour: Int {
-        didSet {
-            defaults.set(workStartHour, forKey: "Schichta.WorkStartHour")
-        }
-    }
-    @Published var workStartMinute: Int {
-        didSet {
-            defaults.set(workStartMinute, forKey: "Schichta.WorkStartMinute")
-        }
-    }
-    @Published var workEndHour: Int {
-        didSet {
-            defaults.set(workEndHour, forKey: "Schichta.WorkEndHour")
-            defaults.set(workEndHour, forKey: "Schichta.EndOfDayPromptHour")
-        }
-    }
-    @Published var workEndMinute: Int {
-        didSet {
-            defaults.set(workEndMinute, forKey: "Schichta.WorkEndMinute")
-            defaults.set(workEndMinute, forKey: "Schichta.EndOfDayPromptMinute")
-        }
-    }
-    @Published var onlyPromptDuringWorkHours: Bool {
-        didSet {
-            defaults.set(onlyPromptDuringWorkHours, forKey: "Schichta.OnlyPromptDuringWorkHours")
-        }
-    }
+    @Setting("Schichta.DailyTargetMinutes", clamp: { max(60, min(1440, $0)) }) var dailyTargetMinutes: Int = 480
+    @Setting("Schichta.WorkStartHour") var workStartHour: Int = 9
+    @Setting("Schichta.WorkStartMinute") var workStartMinute: Int = 0
+    @Setting("Schichta.WorkEndHour") var workEndHour: Int = 17
+    @Setting("Schichta.WorkEndMinute") var workEndMinute: Int = 0
+    @Setting("Schichta.OnlyPromptDuringWorkHours") var onlyPromptDuringWorkHours: Bool = true
 
     // 4. Prompts & Check-in settings
-    @Published var timerEnabled: Bool {
-        didSet {
-            defaults.set(timerEnabled, forKey: "Schichta.TimerEnabled")
-            appDelegate()?.startCheckInTimer()
-        }
+    @Setting("Schichta.TimerEnabled") var timerEnabled: Bool = true {
+        didSet { appDelegate()?.startCheckInTimer() }
     }
-    @Published var reminderIntervalMinutes: Int {
-        didSet {
-            let clamped = max(5, min(240, reminderIntervalMinutes))
-            if reminderIntervalMinutes != clamped {
-                reminderIntervalMinutes = clamped
-                return
-            }
-            defaults.set(reminderIntervalMinutes, forKey: "Schichta.ReminderIntervalMinutesV2")
-            appDelegate()?.startCheckInTimer()
-        }
+    @Setting("Schichta.ReminderIntervalMinutesV2", clamp: { max(5, min(240, $0)) }) var reminderIntervalMinutes: Int = 15 {
+        didSet { appDelegate()?.startCheckInTimer() }
     }
-    @Published var defaultCheckInMode: CheckInMode {
-        didSet {
-            defaults.set(defaultCheckInMode.rawValue, forKey: "Schichta.DefaultCheckInMode")
-        }
-    }
-    @Published var morningPromptEnabled: Bool {
-        didSet {
-            defaults.set(morningPromptEnabled, forKey: "Schichta.MorningPromptEnabled")
-        }
-    }
-    @Published var endOfDayPromptEnabled: Bool {
-        didSet {
-            defaults.set(endOfDayPromptEnabled, forKey: "Schichta.EndOfDayPromptEnabled")
-        }
-    }
+    @Setting("Schichta.DefaultCheckInMode") var defaultCheckInMode: CheckInMode = .both
+    @Setting("Schichta.MorningPromptEnabled") var morningPromptEnabled: Bool = true
+    @Setting("Schichta.MorningPromptHour") var morningPromptHour: Int = 9
+    @Setting("Schichta.EndOfDayPromptEnabled") var endOfDayPromptEnabled: Bool = true
+    @Setting("Schichta.LastEndOfDayPromptDate") var lastEndOfDayPromptDate: String = ""
+    @Setting("Schichta.LastMorningPromptDate") var lastMorningPromptDate: String = ""
     static let availableSounds: [String] = ["Glass", "Tink", "Pop", "Purr", "Ping", "Hero", "Submarine"]
-    @Published var checkInSoundEnabled: Bool {
-        didSet {
-            defaults.set(checkInSoundEnabled, forKey: "Schichta.CheckInSoundEnabled")
-        }
-    }
-    @Published var checkInSoundName: String {
-        didSet {
-            defaults.set(checkInSoundName, forKey: "Schichta.CheckInSoundName")
-        }
-    }
+    @Setting("Schichta.CheckInSoundEnabled") var checkInSoundEnabled: Bool = true
+    @Setting("Schichta.CheckInSoundName") var checkInSoundName: String = "Glass"
 
     // 5. Git & User settings
-    @Published var gitAuthorFilter: String {
-        didSet {
-            defaults.set(gitAuthorFilter, forKey: "Schichta.GitAuthorFilter")
-        }
-    }
-    @Published var gitProjectsRoot: String {
-        didSet {
-            defaults.set(gitProjectsRoot, forKey: "Schichta.GitProjectsRoot")
-        }
-    }
-    // Tracked Repositories V1
-    @Published var trackedRepos: [TrackedRepo] {
-        didSet {
-            saveTrackedRepos()
-        }
-    }
+    /// Filled from `git config user.name` on first launch (see `prepareDefaults`).
+    @Setting("Schichta.GitAuthorFilter") var gitAuthorFilter: String = ""
+    /// Last folder scanned for repositories; empty until the user picks one.
+    @Setting("Schichta.GitProjectsRoot") var gitProjectsRoot: String = ""
+    @Setting("Schichta.TrackedReposV1") var trackedRepos: [TrackedRepo] = []
 
-    // External Hooks
-    @Published var hookShellCommand: String {
-        didSet {
-            defaults.set(hookShellCommand, forKey: "Schichta.HookShellCommand")
-        }
-    }
-    @Published var hookWebhookURL: String {
-        didSet {
-            defaults.set(hookWebhookURL, forKey: "Schichta.HookWebhookURL")
-        }
-    }
-    @Published var aiCommand: String {
-        didSet {
-            defaults.set(aiCommand, forKey: "Schichta.AICommand")
-        }
-    }
-    @Published var aiToolId: String {
-        didSet {
-            defaults.set(aiToolId, forKey: "Schichta.AIToolId")
-        }
-    }
-    @Published var aiSummaryDay: String = ""
-    @Published var aiSummaryText: String = ""
-    @Published var aiQuestions: [String] = []
-    @Published var hookAutoTriggerOnBook: Bool {
-        didSet {
-            defaults.set(hookAutoTriggerOnBook, forKey: "Schichta.HookAutoTriggerOnBook")
-        }
-    }
-    @Published var lastHookResult: String = ""
-
-    // UI Tab navigation for Settings (0: General, 1: WorkHours, 2: GitRepos, 3: Hooks)
-    @Published var settingsSelectedTab: Int = 0
-
-    // Inspector
-    @Published var inspectedGitResult: [String: Any]? = nil
-    @Published var isInspectingGit: Bool = false
+    // 6. External hooks & AI
+    @Setting("Schichta.HookShellCommand") var hookShellCommand: String = ""
+    @Setting("Schichta.HookWebhookURL") var hookWebhookURL: String = ""
+    @Setting("Schichta.HookAutoTriggerOnBook") var hookAutoTriggerOnBook: Bool = false
+    /// Preselected on first launch with the first installed built-in tool (see `prepareDefaults`).
+    @Setting("Schichta.AICommand") var aiCommand: String = ""
+    @Setting("Schichta.AIToolId") var aiToolId: String = ""
 
     var hasExternalHookConfigured: Bool {
         !hookShellCommand.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
         !hookWebhookURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    @Published var morningPromptHour: Int {
-        didSet {
-            defaults.set(morningPromptHour, forKey: "Schichta.MorningPromptHour")
-        }
-    }
-    @Published var lastEndOfDayPromptDate: String {
-        didSet {
-            defaults.set(lastEndOfDayPromptDate, forKey: "Schichta.LastEndOfDayPromptDate")
-        }
-    }
-    @Published var lastMorningPromptDate: String {
-        didSet {
-            defaults.set(lastMorningPromptDate, forKey: "Schichta.LastMorningPromptDate")
-        }
-    }
+    // MARK: Session state (not saved)
+
+    @Published var aiSummaryDay: String = ""
+    @Published var aiSummaryText: String = ""
+    @Published var aiQuestions: [String] = []
+    @Published var lastHookResult: String = ""
+    @Published var settingsSelectedTab: SettingsTab = .general
+
+    // Inspector
+    @Published var inspectedGitResult: GitActivityResult? = nil
+    @Published var isInspectingGit: Bool = false
 
     @Published var activePrompt: ActivePrompt = .none
     @Published var proposals: [ProposedEntry] = []
     @Published var isSynthesizing: Bool = false
     @Published var toastMessage: String? = nil
+    /// Set when the data file could not be read at launch; shown as a banner until dismissed.
+    @Published var storeProblem: String? = nil
+    /// True when an unreadable data file could not be moved aside, so saving would overwrite it.
+    private(set) var savingBlocked = false
 
     let storeURL: URL
-    private let defaults: UserDefaults
+    /// Read and written by `@Setting`.
+    let defaults: UserDefaults
 
     func t(_ de: String, _ en: String) -> String {
         appLanguage == .de ? de : en
+    }
+
+    /// An error's message in the store's language (Schichta errors carry both).
+    func describe(_ error: Error) -> String {
+        (error as? SchichtaError)?.text.in(appLanguage) ?? error.localizedDescription
     }
 
     func isWorkingDay(_ dayStr: String) -> Bool {
@@ -241,149 +146,69 @@ class SchichtaStore: ObservableObject {
         try? FileManager.default.createDirectory(at: storeURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         self.storeURL = storeURL
         self.defaults = defaults
-
-        // Language
-        let initialLang: AppLanguage
-        if let langRaw = defaults.string(forKey: "Schichta.AppLanguage"),
-           let lang = AppLanguage(rawValue: langRaw) {
-            initialLang = lang
-        } else {
-            initialLang = .de
-        }
-        self.appLanguage = initialLang
-        self.timeZoneIdentifier = defaults.string(forKey: SchichtaStore.timeZoneKey) ?? ""
-
-        // Working days (1=Sun, 2=Mon...; default Mon-Fri [2, 3, 4, 5, 6])
-        if let savedDays = defaults.array(forKey: "Schichta.WorkingDays") as? [Int], !savedDays.isEmpty {
-            self.workingDays = Set(savedDays)
-        } else {
-            self.workingDays = Set([2, 3, 4, 5, 6])
-        }
-
-        // Daily target: Default 480 min (8h)
-        let savedTarget = defaults.object(forKey: "Schichta.DailyTargetMinutes") as? Int
-        self.dailyTargetMinutes = (savedTarget != nil && savedTarget! >= 60) ? savedTarget! : 480
-
-        // Work Hours: Default 09:00 - 17:00
-        let savedStartH = defaults.object(forKey: "Schichta.WorkStartHour") as? Int
-        self.workStartHour = savedStartH ?? 9
-        let savedStartM = defaults.object(forKey: "Schichta.WorkStartMinute") as? Int
-        self.workStartMinute = savedStartM ?? 0
-
-        let savedEndH = defaults.object(forKey: "Schichta.WorkEndHour") as? Int
-            ?? defaults.object(forKey: "Schichta.EndOfDayPromptHour") as? Int
-        self.workEndHour = savedEndH ?? 17
-        let savedEndM = defaults.object(forKey: "Schichta.WorkEndMinute") as? Int
-            ?? defaults.object(forKey: "Schichta.EndOfDayPromptMinute") as? Int
-        self.workEndMinute = savedEndM ?? 0
-
-        let savedOnly = defaults.object(forKey: "Schichta.OnlyPromptDuringWorkHours") as? Bool
-        self.onlyPromptDuringWorkHours = savedOnly ?? true
-
-        // Reminder Interval V2: Default 15 minutes
-        let savedIntervalV2 = defaults.object(forKey: "Schichta.ReminderIntervalMinutesV2") as? Int
-        if let val = savedIntervalV2, val >= 5 && val <= 240 {
-            self.reminderIntervalMinutes = val
-        } else {
-            self.reminderIntervalMinutes = 15
-            defaults.set(15, forKey: "Schichta.ReminderIntervalMinutesV2")
-        }
-
-        let savedTimer = defaults.object(forKey: "Schichta.TimerEnabled") as? Bool
-        self.timerEnabled = savedTimer ?? true
-
-        // Default CheckInMode: Default .both
-        if let modeRaw = defaults.string(forKey: "Schichta.DefaultCheckInMode"),
-           let mode = CheckInMode(rawValue: modeRaw) {
-            self.defaultCheckInMode = mode
-        } else {
-            self.defaultCheckInMode = .both
-        }
-
-        let savedMorning = defaults.object(forKey: "Schichta.MorningPromptEnabled") as? Bool
-        self.morningPromptEnabled = savedMorning ?? true
-
-        let savedEndPrompt = defaults.object(forKey: "Schichta.EndOfDayPromptEnabled") as? Bool
-        self.endOfDayPromptEnabled = savedEndPrompt ?? true
-
-        let savedSoundEnabled = defaults.object(forKey: "Schichta.CheckInSoundEnabled") as? Bool
-        self.checkInSoundEnabled = savedSoundEnabled ?? true
-
-        let savedSoundName = defaults.string(forKey: "Schichta.CheckInSoundName")
-        self.checkInSoundName = savedSoundName ?? "Glass"
-
-        // Git & User settings
-        self.gitAuthorFilter = defaults.string(forKey: "Schichta.GitAuthorFilter") ?? Activity.gitUserName()
-        self.gitProjectsRoot = defaults.string(forKey: "Schichta.GitProjectsRoot") ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("IdeaProjects").path
-
-        // Tracked Repositories V1
-        let initialRepos: [TrackedRepo]
-        if let data = defaults.data(forKey: "Schichta.TrackedReposV1"),
-           let decoded = try? JSONDecoder().decode([TrackedRepo].self, from: data),
-           !decoded.isEmpty {
-            initialRepos = decoded
-        } else {
-            // No preconfigured repos; the user adds them in Settings.
-            initialRepos = []
-        }
-        self.trackedRepos = initialRepos
-
-        // External Hooks
-        self.hookShellCommand = defaults.string(forKey: "Schichta.HookShellCommand") ?? ""
-        self.hookWebhookURL = defaults.string(forKey: "Schichta.HookWebhookURL") ?? ""
-        if let savedCommand = defaults.string(forKey: "Schichta.AICommand") {
-            self.aiCommand = savedCommand
-            self.aiToolId = defaults.string(forKey: "Schichta.AIToolId") ?? ""
-        } else {
-            // First launch: preselect the first installed built-in tool (sending stays manual).
-            let firstInstalled = AITools.builtIns().first(where: \.installed)
-            self.aiCommand = firstInstalled?.command ?? ""
-            self.aiToolId = firstInstalled?.id ?? ""
-        }
-        self.hookAutoTriggerOnBook = defaults.bool(forKey: "Schichta.HookAutoTriggerOnBook")
-
-        // Morning prompt hour: Default 9:00
-        let savedMorningHour = defaults.object(forKey: "Schichta.MorningPromptHour") as? Int
-        self.morningPromptHour = savedMorningHour ?? 9
-
-        // Last prompt dates
-        self.lastEndOfDayPromptDate = defaults.string(forKey: "Schichta.LastEndOfDayPromptDate") ?? ""
-        self.lastMorningPromptDate = defaults.string(forKey: "Schichta.LastMorningPromptDate") ?? ""
-
+        SchichtaStore.prepareDefaults(defaults)
         load()
     }
 
+    /// Moves settings from older keys and fills values that need detecting, once, before anything reads them.
+    nonisolated static func prepareDefaults(_ defaults: UserDefaults) {
+        // The work end used to be stored only as the end-of-day prompt time.
+        for (key, oldKey) in [("Schichta.WorkEndHour", "Schichta.EndOfDayPromptHour"), ("Schichta.WorkEndMinute", "Schichta.EndOfDayPromptMinute")]
+        where defaults.object(forKey: key) == nil {
+            if let old = defaults.object(forKey: oldKey) { defaults.set(old, forKey: key) }
+        }
+        // Without a saved filter, use the Git author name, so no name is hard-coded. Kept unset while Git has none.
+        if defaults.object(forKey: "Schichta.GitAuthorFilter") == nil {
+            let name = Activity.gitUserName()
+            if !name.isEmpty { defaults.set(name, forKey: "Schichta.GitAuthorFilter") }
+        }
+        // First launch: preselect the first installed built-in AI tool (sending stays manual).
+        if defaults.object(forKey: "Schichta.AICommand") == nil, let tool = AITools.builtIns().first(where: \.installed) {
+            defaults.set(tool.command, forKey: "Schichta.AICommand")
+            defaults.set(tool.id, forKey: "Schichta.AIToolId")
+        }
+    }
+
     func load() {
-        if FileManager.default.fileExists(atPath: storeURL.path),
-           let data = try? Data(contentsOf: storeURL),
-           let decoded = try? JSONDecoder().decode(Database.self, from: data),
-           let validated = try? SchichtaCore.validate(database: decoded) {
-            self.database = validated
-        } else {
-            self.database = Database(version: 1, entries: [], journal: [:])
+        switch DatabaseFile(url: storeURL).load() {
+        case .loaded(let database):
+            self.database = database
+        case .missing:
+            self.database = Database()
             save()
+        case .unreadable(let error, let movedTo):
+            // Start empty, but never on top of the unreadable file: it was moved aside, or saving stays off.
+            self.database = Database()
+            NSLog("Could not read the Schichta database: %@", error.localizedDescription)
+            let reason = describe(error)
+            if let movedTo {
+                storeProblem = t(
+                    "Die Datendatei konnte nicht gelesen werden (\(reason)). Sie wurde unverändert nach \(movedTo.lastPathComponent) verschoben; Schichta startet mit leeren Daten. Ältere Stände liegen im Ordner Backups.",
+                    "The data file could not be read (\(reason)). It was moved unchanged to \(movedTo.lastPathComponent); Schichta starts with empty data. Older copies are in the Backups folder.")
+            } else {
+                savingBlocked = true
+                storeProblem = t(
+                    "Die Datendatei konnte nicht gelesen werden (\(reason)). Um sie nicht zu überschreiben, speichert Schichta bis zum Neustart nichts.",
+                    "The data file could not be read (\(reason)). To avoid overwriting it, Schichta saves nothing until restarted.")
+            }
         }
     }
 
     func save() {
+        guard !savingBlocked else { return }
         do {
-            let valid = try SchichtaCore.validate(database: self.database)
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let data = try encoder.encode(valid)
-            try data.write(to: storeURL, options: .atomic)
+            try DatabaseFile(url: storeURL).save(database)
         } catch {
             NSLog("Could not save the Schichta database: %@", error.localizedDescription)
+            showToast(t("Speichern fehlgeschlagen: \(error.localizedDescription)", "Saving failed: \(error.localizedDescription)"))
         }
     }
 
-    func saveTrackedRepos() {
-        if let data = try? JSONEncoder().encode(trackedRepos) {
-            defaults.set(data, forKey: "Schichta.TrackedReposV1")
-        }
+    func revealDataFolder() {
+        NSWorkspace.shared.activateFileViewerSelecting([storeURL.deletingLastPathComponent()])
     }
 
-    func openSettings(tab: Int = 0) {
+    func openSettings(tab: SettingsTab = .general) {
         self.settingsSelectedTab = tab
         appDelegate()?.showSettings(tab: tab)
     }

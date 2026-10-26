@@ -374,7 +374,7 @@ extension MainWindowView {
             icon: "note.text",
             trailing: {
                 Button(action: {
-                    store.openSettings(tab: 2)
+                    store.openSettings(tab: .gitRepos)
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.triangle.branch")

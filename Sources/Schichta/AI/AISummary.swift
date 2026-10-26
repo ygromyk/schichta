@@ -42,7 +42,7 @@ enum AISummary {
     static func parse(_ output: String) throws -> Result {
         guard let open = output.firstIndex(of: "{"), let close = output.lastIndex(of: "}"), open < close,
               let obj = try? JSONSerialization.jsonObject(with: Data(output[open...close].utf8)) as? [String: Any] else {
-            throw SchichtaError("Antwort enthält kein gültiges JSON-Objekt.")
+            throw SchichtaError("Antwort enthält kein gültiges JSON-Objekt.", en: "The answer contains no valid JSON object.")
         }
         let entries = obj["entries"] as? [[String: Any]] ?? []
         let proposals: [ProposedEntry] = entries.enumerated().compactMap { index, e in
@@ -56,7 +56,12 @@ enum AISummary {
                 description: String(description.prefix(4000)),
                 minutes: minutes,
                 estimated: true,
-                source: "KI" + (minutes == 0 ? " · Zeit offen" : "") + (evidence.isEmpty ? "" : " · " + String(evidence.prefix(120)))
+                source: {
+                    let evidenceSuffix = evidence.isEmpty ? "" : " · " + String(evidence.prefix(120))
+                    return LocalizedText(
+                        "KI" + (minutes == 0 ? " · Zeit offen" : "") + evidenceSuffix,
+                        "AI" + (minutes == 0 ? " · time open" : "") + evidenceSuffix)
+                }()
             )
         }
         return Result(
@@ -74,7 +79,7 @@ enum AISummary {
         let run = try Shell.run("/bin/zsh", ["-lc", command], stdin: Data(prompt.utf8), directory: workDir, timeout: timeout)
         guard run.status == 0 else {
             let message = String(decoding: run.stderr.isEmpty ? run.stdout : run.stderr, as: UTF8.self)
-            throw SchichtaError("KI-Befehl fehlgeschlagen (Exit \(run.status)): \(message.prefix(500))")
+            throw SchichtaError("KI-Befehl fehlgeschlagen (Exit \(run.status)): \(message.prefix(500))", en: "AI command failed (exit \(run.status)): \(message.prefix(500))")
         }
         return run.text
     }

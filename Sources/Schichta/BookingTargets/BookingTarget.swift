@@ -39,19 +39,19 @@ struct BookingTarget {
 
     static func parse(id: String, data: Data) throws -> BookingTarget {
         guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw SchichtaError("Datei muss ein JSON-Objekt sein.")
+            throw SchichtaError("Datei muss ein JSON-Objekt sein.", en: "The file must be a JSON object.")
         }
-        guard let url = obj["url"] as? String, !url.isEmpty else { throw SchichtaError("\"url\" fehlt.") }
+        guard let url = obj["url"] as? String, !url.isEmpty else { throw SchichtaError("\"url\" fehlt.", en: "\"url\" is missing.") }
         let method = (obj["method"] as? String ?? "POST").uppercased()
-        guard ["POST", "PUT", "PATCH"].contains(method) else { throw SchichtaError("\"method\" muss POST, PUT oder PATCH sein.") }
+        guard ["POST", "PUT", "PATCH"].contains(method) else { throw SchichtaError("\"method\" muss POST, PUT oder PATCH sein.", en: "\"method\" must be POST, PUT or PATCH.") }
         guard let mode = TargetMode(rawValue: obj["mode"] as? String ?? "perEntry") else {
-            throw SchichtaError("\"mode\" muss perEntry oder perDay sein.")
+            throw SchichtaError("\"mode\" muss perEntry oder perDay sein.", en: "\"mode\" must be perEntry or perDay.")
         }
 
         let authObj = obj["auth"] as? [String: Any] ?? ["type": "none"]
         // Guard against plaintext secrets in the file: only the name belongs here.
         if authObj.keys.contains(where: { ["value", "token", "password", "key", "apiKey"].contains($0) }) {
-            throw SchichtaError("Secrets gehören nicht in die Datei. Unter \"secret\" nur einen Namen angeben und den Wert in Schichta im Schlüsselbund speichern.")
+            throw SchichtaError("Secrets gehören nicht in die Datei. Unter \"secret\" nur einen Namen angeben und den Wert in Schichta im Schlüsselbund speichern.", en: "Secrets don't belong in the file. Put only a name under \"secret\" and store the value in the Keychain from Schichta.")
         }
         let secret = authObj["secret"] as? String ?? ""
         let auth: TargetAuth
@@ -61,13 +61,13 @@ struct BookingTarget {
         case "bearer" where !secret.isEmpty:
             auth = .bearer(secret: secret)
         case "basic" where !secret.isEmpty:
-            guard let user = authObj["username"] as? String, !user.isEmpty else { throw SchichtaError("auth.basic braucht \"username\".") }
+            guard let user = authObj["username"] as? String, !user.isEmpty else { throw SchichtaError("auth.basic braucht \"username\".", en: "auth.basic needs \"username\".") }
             auth = .basic(username: user, secret: secret)
         case "header" where !secret.isEmpty:
-            guard let header = authObj["header"] as? String, !header.isEmpty else { throw SchichtaError("auth.header braucht \"header\".") }
+            guard let header = authObj["header"] as? String, !header.isEmpty else { throw SchichtaError("auth.header braucht \"header\".", en: "auth.header needs \"header\".") }
             auth = .header(name: header, secret: secret)
         default:
-            throw SchichtaError("\"auth\" braucht type (none, bearer, basic, header) und einen \"secret\"-Namen.")
+            throw SchichtaError("\"auth\" braucht type (none, bearer, basic, header) und einen \"secret\"-Namen.", en: "\"auth\" needs a type (none, bearer, basic, header) and a \"secret\" name.")
         }
 
         return BookingTarget(
@@ -120,11 +120,11 @@ enum TargetRenderer {
         secret: (String) -> String?
     ) throws -> [PreparedRequest] {
         _ = try Activity.bounds(day) // validates the date
-        guard !entries.isEmpty else { throw SchichtaError("Keine Einträge für \(SchichtaCore.formatGermanDate(day)).") }
+        guard !entries.isEmpty else { throw SchichtaError("Keine Einträge für \(SchichtaCore.formatGermanDate(day)).", en: "No entries for \(day).") }
 
         // Schichta only stores durations: start/end are laid out back to back from the start of the work day.
         guard var cursor = AppTime.calendar.date(bySettingHour: workStart.hour, minute: workStart.minute, second: 0, of: SchichtaCore.date(fromDay: day)) else {
-            throw SchichtaError("Arbeitsbeginn ungültig.")
+            throw SchichtaError("Arbeitsbeginn ungültig.", en: "Invalid work start time.")
         }
         let iso = ISO8601DateFormatter() // UTC, e.g. 2026-10-26T08:00:00Z
         let hours: (Int) -> Double = { Double(Int((Double($0) / 60 * 100).rounded())) / 100 }
@@ -151,7 +151,7 @@ enum TargetRenderer {
         var authHeader: (name: String, value: String)?
         if let name = target.auth.secretName {
             guard let value = secret(name), !value.isEmpty else {
-                throw SchichtaError("Secret „\(name)“ fehlt im Schlüsselbund.")
+                throw SchichtaError("Secret „\(name)“ fehlt im Schlüsselbund.", en: "Secret “\(name)” is missing from the Keychain.")
             }
             switch target.auth {
             case .bearer: authHeader = ("Authorization", "Bearer \(value)")
@@ -173,11 +173,11 @@ enum TargetRenderer {
             }
             let urlString = try renderString(target.url, ctx, map: target.map, encode: encodePath) as? String ?? target.url
             guard let url = URL(string: urlString), let scheme = url.scheme?.lowercased(), let host = url.host?.lowercased() else {
-                throw SchichtaError("Ungültige URL: \(urlString)")
+                throw SchichtaError("Ungültige URL: \(urlString)", en: "Invalid URL: \(urlString)")
             }
             let isLocal = ["localhost", "127.0.0.1", "::1"].contains(host)
             guard scheme == "https" || (scheme == "http" && isLocal) else {
-                throw SchichtaError("Nur https erlaubt (http nur für localhost): \(urlString)")
+                throw SchichtaError("Nur https erlaubt (http nur für localhost): \(urlString)", en: "Only https is allowed (http only for localhost): \(urlString)")
             }
 
             var headers: [String: String] = [:]
@@ -188,7 +188,7 @@ enum TargetRenderer {
             if let template = target.body {
                 let rendered = try render(template, ctx, map: target.map)
                 guard JSONSerialization.isValidJSONObject(rendered) else {
-                    throw SchichtaError("\"body\" muss ein JSON-Objekt oder eine Liste sein.")
+                    throw SchichtaError("\"body\" muss ein JSON-Objekt oder eine Liste sein.", en: "\"body\" must be a JSON object or a list.")
                 }
                 body = try JSONSerialization.data(withJSONObject: rendered, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
                 if !headers.keys.contains(where: { $0.lowercased() == "content-type" }) {
@@ -240,13 +240,13 @@ enum TargetRenderer {
         // {{map.ticket}}: translate the entry field through the target file's "map" table.
         if parts.count == 2, parts[0] == "map" {
             let key = try stringValue(try lookup("entry." + parts[1], ctx, map: map), path: path)
-            guard let mapped = map[key] else { throw SchichtaError("Keine Zuordnung in \"map\" für „\(key)“ ({{\(path)}}).") }
+            guard let mapped = map[key] else { throw SchichtaError("Keine Zuordnung in \"map\" für „\(key)“ ({{\(path)}}).", en: "No mapping in \"map\" for “\(key)” ({{\(path)}}).") }
             return mapped
         }
         var current: Any = ctx
         for part in parts {
             guard let dict = current as? [String: Any], let next = dict[part] else {
-                throw SchichtaError("Unbekannter Platzhalter {{\(path)}}.")
+                throw SchichtaError("Unbekannter Platzhalter {{\(path)}}.", en: "Unknown placeholder {{\(path)}}.")
             }
             current = next
         }
@@ -259,7 +259,7 @@ enum TargetRenderer {
         case let b as Bool: return b ? "true" : "false"
         case let i as Int: return String(i)
         case let d as Double: return d == d.rounded() ? String(Int(d)) : String(d)
-        default: throw SchichtaError("{{\(path)}} ist eine Liste/ein Objekt und kann nicht in Text eingesetzt werden.")
+        default: throw SchichtaError("{{\(path)}} ist eine Liste/ein Objekt und kann nicht in Text eingesetzt werden.", en: "{{\(path)}} is a list/object and cannot be inserted into text.")
         }
     }
 }

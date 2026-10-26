@@ -30,7 +30,7 @@ enum AutoSynthesizer {
         return s.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    static func synthesizeDay(day: String, journal: JournalItem, gitResult: [String: Any], existingEntries: [Entry]) -> [ProposedEntry] {
+    static func synthesizeDay(day: String, journal: JournalItem, gitResult: GitActivityResult, existingEntries: [Entry], language: AppLanguage = .de) -> [ProposedEntry] {
         var proposals: [ProposedEntry] = []
 
         // --- 1. Parse Notes (Check-ins & Freeform Notes) ---
@@ -87,7 +87,7 @@ enum AutoSynthesizer {
                                 description: cleanedDesc,
                                 minutes: parsedMinutes,
                                 estimated: true,
-                                source: "Aus Tagesnotiz"
+                                source: LocalizedText("Aus Tagesnotiz", "From daily notes")
                             )
                             proposals.append(prop)
                         }
@@ -105,98 +105,85 @@ enum AutoSynthesizer {
                 description: item.desc,
                 minutes: item.minutes,
                 estimated: true,
-                source: "Aus 30m Check-ins"
+                source: LocalizedText("Aus Check-ins", "From check-ins")
             )
             proposals.append(prop)
         }
 
         // --- 2. Parse Git Commits & Reflogs & Working Tree ---
-        if let repos = gitResult["repositories"] as? [[String: Any]] {
-            for repo in repos {
-                let folderName = repo["repository"] as? String ?? "git"
-                let projectName = (repo["projectName"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                let defaultTicket = (repo["defaultTicket"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                let displayLabel = !projectName.isEmpty ? projectName : folderName
+        for repo in gitResult.repositories {
+            let folderName = repo.folderName
+            let defaultTicket = repo.defaultTicket.trimmingCharacters(in: .whitespacesAndNewlines)
+            let displayLabel = repo.displayLabel
+            let commitLines = repo.commits.lines
 
-                let commitsDict = repo["commits"] as? [String: Any] ?? [:]
-                let commitsText = commitsDict["text"] as? String ?? ""
-                let commitLines = commitsText.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            var repoHadCommits = false
 
-                var repoHadCommits = false
+            if !commitLines.isEmpty {
+                var ticketGroups: [String: [String]] = [:]
+                var order: [String] = []
 
-                if !commitLines.isEmpty {
-                    var ticketGroups: [String: [String]] = [:]
-                    var order: [String] = []
-
-                    for line in commitLines {
-                        let parts = line.components(separatedBy: " | ")
-                        guard parts.count >= 4 else { continue }
-                        let subject = parts[3...].joined(separator: " | ")
-                        var ticket = extractTicket(from: subject) ?? ""
-                        if ticket.isEmpty && !defaultTicket.isEmpty {
-                            ticket = defaultTicket
-                        }
-                        let cleanSubj = cleanCommitSubject(subject)
-                        guard !cleanSubj.isEmpty else { continue }
-
-                        if ticketGroups[ticket] == nil {
-                            ticketGroups[ticket] = []
-                            order.append(ticket)
-                        }
-                        if !ticketGroups[ticket]!.contains(cleanSubj) {
-                            ticketGroups[ticket]!.append(cleanSubj)
-                        }
+                for line in commitLines {
+                    let parts = line.components(separatedBy: " | ")
+                    guard parts.count >= 4 else { continue }
+                    let subject = parts[3...].joined(separator: " | ")
+                    var ticket = extractTicket(from: subject) ?? ""
+                    if ticket.isEmpty && !defaultTicket.isEmpty {
+                        ticket = defaultTicket
                     }
+                    let cleanSubj = cleanCommitSubject(subject)
+                    guard !cleanSubj.isEmpty else { continue }
 
-                    for t in order {
-                        guard let subjects = ticketGroups[t], !subjects.isEmpty else { continue }
-                        let combinedSubjects = subjects.joined(separator: ", ")
-                        let finalDesc = "\(displayLabel): \(combinedSubjects)"
-                        // Estimate duration: 30m per distinct commit topic, max 120m
-                        let estMinutes = min(120, max(30, subjects.count * 30))
-
-                        let prop = ProposedEntry(
-                            id: "git:\(folderName):\(day):\(t):\(finalDesc.hashValue)",
-                            ticket: t,
-                            description: finalDesc,
-                            minutes: estMinutes,
-                            estimated: true,
-                            source: "Git · \(displayLabel)",
-                            project: displayLabel
-                        )
-                        proposals.append(prop)
-                        repoHadCommits = true
+                    if ticketGroups[ticket] == nil {
+                        ticketGroups[ticket] = []
+                        order.append(ticket)
+                    }
+                    if !ticketGroups[ticket]!.contains(cleanSubj) {
+                        ticketGroups[ticket]!.append(cleanSubj)
                     }
                 }
 
-                // If no commits found for this repo on this day, check working tree changes!
-                if !repoHadCommits {
-                    let wtDict = repo["working_tree"] as? [String: Any] ?? [:]
-                    if let wtText = wtDict["text"] as? String {
-                        let wtLines = wtText.components(separatedBy: .newlines)
-                            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                            .filter { !$0.isEmpty }
-                        if !wtLines.isEmpty {
-                            let fileCount = wtLines.count
-                            var branchTicket = ""
-                            let headDict = repo["head_activity"] as? [String: Any] ?? [:]
-                            if let headText = headDict["text"] as? String {
-                                branchTicket = extractTicket(from: headText) ?? ""
-                            }
-                            let effectiveTicket = !branchTicket.isEmpty ? branchTicket : defaultTicket
-                            let finalDesc = "\(displayLabel): Lokale Änderungen (\(fileCount) Dateien in Arbeit)"
-                            let prop = ProposedEntry(
-                                id: "git-wt:\(folderName):\(day):\(finalDesc.hashValue)",
-                                ticket: effectiveTicket,
-                                description: finalDesc,
-                                minutes: 30,
-                                estimated: true,
-                                source: "Git · \(displayLabel) (Lokale Änderungen)",
-                                project: displayLabel
-                            )
-                            proposals.append(prop)
-                        }
-                    }
+                for t in order {
+                    guard let subjects = ticketGroups[t], !subjects.isEmpty else { continue }
+                    let combinedSubjects = subjects.joined(separator: ", ")
+                    let finalDesc = "\(displayLabel): \(combinedSubjects)"
+                    // Estimate duration: 30m per distinct commit topic, max 120m
+                    let estMinutes = min(120, max(30, subjects.count * 30))
+
+                    let prop = ProposedEntry(
+                        id: "git:\(folderName):\(day):\(t):\(finalDesc.hashValue)",
+                        ticket: t,
+                        description: finalDesc,
+                        minutes: estMinutes,
+                        estimated: true,
+                        source: LocalizedText("Git · \(displayLabel)"),
+                        project: displayLabel
+                    )
+                    proposals.append(prop)
+                    repoHadCommits = true
+                }
+            }
+
+            // If no commits found for this repo on this day, check working tree changes!
+            if !repoHadCommits {
+                let wtLines = repo.workingTree.lines
+                if !wtLines.isEmpty {
+                    let fileCount = wtLines.count
+                    let branchTicket = extractTicket(from: repo.headActivity.text) ?? ""
+                    let effectiveTicket = !branchTicket.isEmpty ? branchTicket : defaultTicket
+                    let finalDesc = LocalizedText(
+                        "\(displayLabel): Lokale Änderungen (\(fileCount) Dateien in Arbeit)",
+                        "\(displayLabel): Local changes (\(fileCount) files in progress)").in(language)
+                    let prop = ProposedEntry(
+                        id: "git-wt:\(folderName):\(day):\(finalDesc.hashValue)",
+                        ticket: effectiveTicket,
+                        description: finalDesc,
+                        minutes: 30,
+                        estimated: true,
+                        source: LocalizedText("Git · \(displayLabel) (lokale Änderungen)", "Git · \(displayLabel) (local changes)"),
+                        project: displayLabel
+                    )
+                    proposals.append(prop)
                 }
             }
         }

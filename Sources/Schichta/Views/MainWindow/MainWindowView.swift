@@ -45,6 +45,10 @@ struct MainWindowView: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
 
+            if let problem = store.storeProblem {
+                storeProblemBanner(problem)
+            }
+
             // Prompt banners (morning / end of day)
             if case .morning(let unbookedDay) = store.activePrompt {
                 morningPromptBanner(unbookedDay: unbookedDay)
@@ -119,7 +123,7 @@ struct MainWindowView: View {
                                 } else {
                                     Button(store.t("Kein Hook eingerichtet – Einstellungen öffnen…", "No hook set up – open settings…")) {
                                         showTargetsSheet = false
-                                        appDelegate()?.showSettings(tab: 3)
+                                        appDelegate()?.showSettings(tab: .integrations)
                                     }
                                     .buttonStyle(.link)
                                 }

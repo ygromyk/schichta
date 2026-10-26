@@ -41,7 +41,7 @@ struct GitActivityTests {
 
     @Test func nothingIsReadWithoutTrackedRepos() throws {
         let result = try Activity.readRepos("2026-10-12", repos: [], authorFilter: nil)
-        #expect((result["repositories"] as? [[String: Any]])?.isEmpty == true)
+        #expect(result.repositories.isEmpty)
     }
 
     @Test func missingReposReportMetadataAndAnError() throws {
@@ -50,11 +50,12 @@ struct GitActivityTests {
             TrackedRepo(path: "/nonexistent/example-api", projectName: "", defaultTicket: "", enabled: true),
         ]
         let result = try Activity.readRepos("2026-10-12", repos: repos, authorFilter: "Max Mustermann")
-        let data = try #require(result["repositories"] as? [[String: Any]])
+        let data = result.repositories
         #expect(data.count == 2)
-        #expect(data[0]["projectName"] as? String == "Example App")
-        #expect(data[0]["defaultTicket"] as? String == "PROJ-2800")
-        #expect(data[0]["error"] is String)
+        #expect(data[0].projectName == "Example App")
+        #expect(data[0].defaultTicket == "PROJ-2800")
+        #expect(data[0].error?.en == "Directory not found: /nonexistent/example-app")
+        #expect(data[1].title == "example-api")
     }
 }
 
@@ -64,12 +65,9 @@ struct AutoSynthesizerTests {
         notes: "- 09:30 (30 Min.): [PROJ-2800] Replay testen\n- 10:00 (30 Min.): [PROJ-2800] Replay testen\n- 11:30 (30 Min.): [PROJ-2900] Architektur\nTeam-Meeting 45m",
         logs: "", answer: ""
     )
-    let gitResult: [String: Any] = [
-        "repositories": [[
-            "repository": "example-app",
-            "commits": ["text": "abc1234 | Autorzeit: 2026-10-26T10:00:00+02:00 | Commitzeit: 2026-10-26T10:00:00+02:00 | feat: PROJ-3000 Fix timing in order controller\ndef5678 | Autorzeit: 2026-10-26T11:00:00+02:00 | Commitzeit: 2026-10-26T11:00:00+02:00 | fix: PROJ-3000 Add order unit tests"],
-        ]],
-    ]
+    let gitResult = GitActivityResult(date: "2026-10-26", timezone: "Europe/Berlin", repositories: [
+        RepoActivity(folderName: "example-app", commits: GitOutput(text: "abc1234 | Autorzeit: 2026-10-26T10:00:00+02:00 | Commitzeit: 2026-10-26T10:00:00+02:00 | feat: PROJ-3000 Fix timing in order controller\ndef5678 | Autorzeit: 2026-10-26T11:00:00+02:00 | Commitzeit: 2026-10-26T11:00:00+02:00 | fix: PROJ-3000 Add order unit tests")),
+    ])
 
     func proposals(existing: [Entry] = []) -> [ProposedEntry] {
         AutoSynthesizer.synthesizeDay(day: "2026-10-26", journal: journal, gitResult: gitResult, existingEntries: existing)
@@ -78,19 +76,19 @@ struct AutoSynthesizerTests {
     @Test func repeatedCheckInsAreSummed() throws {
         let replay = try #require(proposals().first(where: { $0.ticket == "PROJ-2800" }))
         #expect(replay.minutes == 60)
-        #expect(replay.source == "Aus 30m Check-ins")
+        #expect(replay.source.de == "Aus Check-ins")
     }
 
     @Test func durationsInFreeTextNotesAreRecognized() throws {
         let meeting = try #require(proposals().first(where: { $0.description.contains("Team-Meeting") }))
         #expect(meeting.minutes == 45)
-        #expect(meeting.source == "Aus Tagesnotiz")
+        #expect(meeting.source.de == "Aus Tagesnotiz")
     }
 
     @Test func commitsAreGroupedByTicket() throws {
         let git = try #require(proposals().first(where: { $0.ticket == "PROJ-3000" }))
         #expect(git.description.contains("example-app: Fix timing in order controller, Add order unit tests"))
-        #expect(git.source == "Git · example-app")
+        #expect(git.source.en == "Git · example-app")
     }
 
     @Test func alreadyRecordedWorkIsNotProposedAgain() {
@@ -99,20 +97,13 @@ struct AutoSynthesizerTests {
     }
 
     @Test func repoProjectNameDefaultTicketAndWorkingTree() throws {
-        let result: [String: Any] = [
-            "repositories": [
-                [
-                    "repository": "example-app", "projectName": "Example App", "defaultTicket": "PROJ-2800",
-                    "commits": ["text": "c1a2b3c | Autorzeit: 2026-10-26T14:00:00+02:00 | Commitzeit: 2026-10-26T14:00:00+02:00 | Refactor connection handler"],
-                ],
-                [
-                    "repository": "example-api", "projectName": "Example API", "defaultTicket": "PROJ-1000",
-                    "commits": ["text": ""],
-                    "head_activity": ["text": "reflog 1 | commit: checkout branch PROJ-5555"],
-                    "working_tree": ["text": " M src/index.ts\n M src/controller.ts\n"],
-                ],
-            ],
-        ]
+        let result = GitActivityResult(date: "2026-10-26", timezone: "Europe/Berlin", repositories: [
+            RepoActivity(folderName: "example-app", projectName: "Example App", defaultTicket: "PROJ-2800",
+                         commits: GitOutput(text: "c1a2b3c | Autorzeit: 2026-10-26T14:00:00+02:00 | Commitzeit: 2026-10-26T14:00:00+02:00 | Refactor connection handler")),
+            RepoActivity(folderName: "example-api", projectName: "Example API", defaultTicket: "PROJ-1000",
+                         headActivity: GitOutput(text: "reflog 1 | commit: checkout branch PROJ-5555"),
+                         workingTree: GitOutput(text: " M src/index.ts\n M src/controller.ts\n")),
+        ])
         let found = AutoSynthesizer.synthesizeDay(day: "2026-10-26", journal: JournalItem(), gitResult: result, existingEntries: [])
 
         let defaultTicket = try #require(found.first(where: { $0.ticket == "PROJ-2800" }))

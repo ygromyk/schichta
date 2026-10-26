@@ -3,6 +3,10 @@ import SwiftUI
 
 // MARK: - Settings View (macOS Preferences Window)
 
+enum SettingsTab: String, CaseIterable {
+    case general, workHours, gitRepos, integrations
+}
+
 struct SettingsView: View {
     @ObservedObject var store: SchichtaStore
 
@@ -10,10 +14,10 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             // macOS Style Tab Picker
             Picker("", selection: $store.settingsSelectedTab) {
-                Label(store.t("Allgemein", "General"), systemImage: "gearshape").tag(0)
-                Label(store.t("Arbeitszeit & Prompts", "Work Hours & Prompts"), systemImage: "clock.badge.checkmark").tag(1)
-                Label(store.t("Git-Repos & Prüfung", "Git Repos & Inspector"), systemImage: "arrow.triangle.branch").tag(2)
-                Label(store.t("Integrationen & Hooks", "Integrations & Hooks"), systemImage: "network").tag(3)
+                Label(store.t("Allgemein", "General"), systemImage: "gearshape").tag(SettingsTab.general)
+                Label(store.t("Arbeitszeit & Prompts", "Work Hours & Prompts"), systemImage: "clock.badge.checkmark").tag(SettingsTab.workHours)
+                Label(store.t("Git-Repos & Prüfung", "Git Repos & Inspector"), systemImage: "arrow.triangle.branch").tag(SettingsTab.gitRepos)
+                Label(store.t("Integrationen & Hooks", "Integrations & Hooks"), systemImage: "network").tag(SettingsTab.integrations)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 20)
@@ -25,16 +29,14 @@ struct SettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     switch store.settingsSelectedTab {
-                    case 0:
+                    case .general:
                         generalTab
-                    case 1:
+                    case .workHours:
                         workHoursAndPromptsTab
-                    case 2:
+                    case .gitRepos:
                         gitReposAndInspectorTab
-                    case 3:
+                    case .integrations:
                         integrationsAndHooksTab
-                    default:
-                        generalTab
                     }
                 }
                 .padding(20)
@@ -49,12 +51,30 @@ struct SettingsView: View {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = true
         panel.canCreateDirectories = false
-        let curUrl = URL(fileURLWithPath: store.gitProjectsRoot)
-        if FileManager.default.fileExists(atPath: curUrl.path) {
-            panel.directoryURL = curUrl
-        }
+        startInProjectsRoot(panel)
         if panel.runModal() == .OK {
             panel.urls.forEach { store.addTrackedRepo(path: $0.path) }
+        }
+    }
+
+    /// Lets the user pick a folder, remembers it, and adds every Git repository directly inside it.
+    func chooseFolderToScan() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = store.t("Durchsuchen", "Scan")
+        startInProjectsRoot(panel)
+        if panel.runModal() == .OK, let url = panel.url {
+            store.gitProjectsRoot = url.path
+            _ = store.scanAndAddRepos(in: url.path)
+        }
+    }
+
+    private func startInProjectsRoot(_ panel: NSOpenPanel) {
+        let root = store.gitProjectsRoot
+        if !root.isEmpty, FileManager.default.fileExists(atPath: root) {
+            panel.directoryURL = URL(fileURLWithPath: root)
         }
     }
 

@@ -7,7 +7,7 @@ enum Activity {
     static func bounds(_ day: String, in time: AppTime.State = AppTime.state) throws -> (String, String) {
         guard day.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil,
               let start = time.day.date(from: day), time.day.string(from: start) == day else {
-            throw SchichtaError("Ungültiges Datum")
+            throw SchichtaError("Ungültiges Datum", en: "Invalid date")
         }
         let end = time.calendar.date(byAdding: .day, value: 1, to: start)!.addingTimeInterval(-1)
         return (time.isoSeconds.string(from: start), time.isoSeconds.string(from: end))
@@ -19,113 +19,144 @@ enum Activity {
         return output.text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    static func git(_ repo: URL, _ arguments: [String]) -> [String: Any] {
+    static func git(_ repo: URL, _ arguments: [String]) -> GitOutput {
         guard let output = try? Shell.run("/usr/bin/git", ["-C", repo.path] + arguments, timeout: 15) else {
-            return ["error": "Git konnte nicht gestartet werden."]
+            return GitOutput(error: LocalizedText("Git konnte nicht gestartet werden.", "Git could not be started."))
         }
-        guard output.status == 0 else { return ["error": "Git-Abfrage fehlgeschlagen oder Zeitlimit überschritten."] }
+        guard output.status == 0 else {
+            return GitOutput(error: LocalizedText("Git-Abfrage fehlgeschlagen oder Zeitlimit überschritten.", "Git query failed or timed out."))
+        }
         let text = output.text
-        return ["text": String(text.prefix(100000)), "truncated": text.count > 100000]
+        return GitOutput(text: String(text.prefix(100000)), truncated: text.count > 100000)
     }
 
-    static func readRepos(_ day: String, repos: [TrackedRepo], authorFilter: String?) throws -> [String: Any] {
+    static func readRepos(_ day: String, repos: [TrackedRepo], authorFilter: String?) throws -> GitActivityResult {
         let (start, end) = try bounds(day)
         let author = (authorFilter ?? gitUserName()).trimmingCharacters(in: .whitespacesAndNewlines)
         let authorArg = author.isEmpty ? "--all" : "--author=\(author)"
         let isToday = (day == SchichtaCore.day())
 
-        var repoResults: [[String: Any]] = []
+        var repoResults: [RepoActivity] = []
 
         for repo in repos {
             guard repo.enabled else { continue }
             let repoURL = URL(fileURLWithPath: repo.path)
-            var repoDict: [String: Any] = [
-                "repository": repo.folderName,
-                "projectName": repo.projectName,
-                "displayLabel": repo.displayLabel,
-                "defaultTicket": repo.defaultTicket,
-                "path": repo.path,
-                "enabled": repo.enabled
-            ]
+            var activity = RepoActivity(repo: repo)
 
             guard FileManager.default.fileExists(atPath: repoURL.path) else {
-                repoDict["error"] = "Verzeichnis nicht gefunden: \(repo.path)"
-                repoResults.append(repoDict)
+                activity.error = LocalizedText("Verzeichnis nicht gefunden: \(repo.path)", "Directory not found: \(repo.path)")
+                repoResults.append(activity)
                 continue
             }
 
             let isInsideGit = git(repoURL, ["rev-parse", "--is-inside-work-tree"])
-            if (isInsideGit["text"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) != "true" {
-                repoDict["error"] = "Kein Git-Repository unter: \(repo.path)"
-                repoResults.append(repoDict)
+            if isInsideGit.text.trimmingCharacters(in: .whitespacesAndNewlines) != "true" {
+                activity.error = LocalizedText("Kein Git-Repository unter: \(repo.path)", "Not a Git repository: \(repo.path)")
+                repoResults.append(activity)
                 continue
             }
 
             // 1. Own commits
-            let commits = git(repoURL, ["log", "--all", "--since-as-filter=\(start)", "--until=\(end)", authorArg, "-n", "150", "--format=%h | Autorzeit: %aI | Commitzeit: %cI | %s"])
-            repoDict["commits"] = commits
-
+            activity.commits = git(repoURL, ["log", "--all", "--since-as-filter=\(start)", "--until=\(end)", authorArg, "-n", "150", "--format=%h | Autorzeit: %aI | Commitzeit: %cI | %s"])
             // 2. Changed files / diff stats
-            let changedFiles = git(repoURL, ["log", "--all", "--since-as-filter=\(start)", "--until=\(end)", authorArg, "--shortstat", "--oneline", "-n", "30"])
-            repoDict["changed_files"] = changedFiles
-
+            activity.changedFiles = git(repoURL, ["log", "--all", "--since-as-filter=\(start)", "--until=\(end)", authorArg, "--shortstat", "--oneline", "-n", "30"])
             // 3. Local branch/HEAD activity
-            let head = git(repoURL, ["reflog", "show", "HEAD", "--since=\(start)", "--until=\(end)", "-n", "200", "--date=iso-strict", "--format=%gD | %gs"])
-            repoDict["head_activity"] = head
-
+            activity.headActivity = git(repoURL, ["reflog", "show", "HEAD", "--since=\(start)", "--until=\(end)", "-n", "200", "--date=iso-strict", "--format=%gD | %gs"])
             // 4. Uncommitted working-tree changes (today only)
             if isToday {
-                let wt = git(repoURL, ["status", "--short"])
-                repoDict["working_tree"] = wt
-            } else {
-                repoDict["working_tree"] = ["text": ""]
+                activity.workingTree = git(repoURL, ["status", "--short"])
             }
 
-            repoResults.append(repoDict)
+            repoResults.append(activity)
         }
 
-        return [
-            "date": day,
-            "timezone": AppTime.timeZone.identifier,
-            "repositories": repoResults,
-            "scope": "Direkt aus der Desktop-App gelesen, ohne Server. Lokale Git-Referenzen; kein Fetch. Eigene Commits, Diff-Statistik, Reflogs und Working-Tree je Tracked-Repository."
-        ]
+        return GitActivityResult(date: day, timezone: AppTime.timeZone.identifier, repositories: repoResults)
     }
 
-    static func formatLogText(_ result: [String: Any]) -> String {
-        let scope = result["scope"] as? String ?? ""
-        guard let repos = result["repositories"] as? [[String: Any]] else { return scope }
-        var parts: [String] = [scope]
-        func appendGitSection(_ title: String, _ value: Any?) {
-            let result = value as? [String: Any] ?? [:]
+    static func formatLogText(_ result: GitActivityResult) -> String {
+        var parts: [String] = [GitActivityResult.scope]
+        func appendGitSection(_ title: String, _ output: GitOutput) {
             parts.append(title)
-            if let err = result["error"] as? String { parts.append(err) }
-            else if let text = result["text"] as? String, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { parts.append(text) }
+            if let err = output.error { parts.append(err.de) }
+            else if !output.isEmpty { parts.append(output.text) }
             else { parts.append("(keine gefunden)") }
-            if (result["truncated"] as? Bool) == true { parts.append("(Ausgabe gekürzt)") }
+            if output.truncated { parts.append("(Ausgabe gekürzt)") }
         }
-        func appendIfPresent(_ title: String, _ value: Any?) {
-            let text = ((value as? [String: Any])?["text"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !text.isEmpty else { return }
+        func appendIfPresent(_ title: String, _ output: GitOutput) {
+            guard !output.isEmpty else { return }
             parts.append(title)
-            parts.append(text)
+            parts.append(output.text.trimmingCharacters(in: .whitespacesAndNewlines))
         }
-        for repo in repos {
-            let name = repo["repository"] as? String ?? "Repo"
-            let projectName = (repo["projectName"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            let title = !projectName.isEmpty ? "\(projectName) (\(name))" : name
-            parts.append("\nREPOSITORY: \(title)")
+        for repo in result.repositories {
+            parts.append("\nREPOSITORY: \(repo.title)")
 
-            if let err = repo["error"] as? String {
-                parts.append("Status: \(err)")
+            if let err = repo.error {
+                parts.append("Status: \(err.de)")
                 continue
             }
 
-            appendGitSection("Eigene Commits:", repo["commits"])
-            appendIfPresent("Geänderte Dateien / Diff:", repo["changed_files"])
-            appendIfPresent("Uncommittete Arbeitskopie (Heute):", repo["working_tree"])
-            appendGitSection("Lokale HEAD-Aktivitäten:", repo["head_activity"])
+            appendGitSection("Eigene Commits:", repo.commits)
+            appendIfPresent("Geänderte Dateien / Diff:", repo.changedFiles)
+            appendIfPresent("Uncommittete Arbeitskopie (Heute):", repo.workingTree)
+            appendGitSection("Lokale HEAD-Aktivitäten:", repo.headActivity)
         }
         return parts.joined(separator: "\n")
     }
+}
+
+/// One Git command's output for a repository.
+struct GitOutput: Equatable {
+    var text: String = ""
+    var truncated: Bool = false
+    var error: LocalizedText? = nil
+
+    var isEmpty: Bool { text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    /// Non-blank output lines.
+    var lines: [String] {
+        text.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+}
+
+/// What a day's Git activity looks like for one tracked repository.
+struct RepoActivity: Equatable {
+    var folderName: String
+    var projectName: String = ""
+    var defaultTicket: String = ""
+    var path: String = ""
+    /// Set when the repository could not be read at all; the outputs below are then empty.
+    var error: LocalizedText? = nil
+    var commits = GitOutput()
+    var changedFiles = GitOutput()
+    var headActivity = GitOutput()
+    var workingTree = GitOutput()
+
+    init(folderName: String, projectName: String = "", defaultTicket: String = "", commits: GitOutput = GitOutput(),
+         headActivity: GitOutput = GitOutput(), workingTree: GitOutput = GitOutput()) {
+        self.folderName = folderName
+        self.projectName = projectName
+        self.defaultTicket = defaultTicket
+        self.commits = commits
+        self.headActivity = headActivity
+        self.workingTree = workingTree
+    }
+
+    init(repo: TrackedRepo) {
+        self.init(folderName: repo.folderName, projectName: repo.projectName, defaultTicket: repo.defaultTicket)
+        path = repo.path
+    }
+
+    private var cleanProjectName: String { projectName.trimmingCharacters(in: .whitespacesAndNewlines) }
+    /// The project name, or the folder name without one.
+    var displayLabel: String { cleanProjectName.isEmpty ? folderName : cleanProjectName }
+    /// "Project (folder)", or just the folder name.
+    var title: String { cleanProjectName.isEmpty ? folderName : "\(cleanProjectName) (\(folderName))" }
+}
+
+/// A day's Git activity across all enabled tracked repositories.
+struct GitActivityResult: Equatable {
+    static let scope = "Direkt aus der Desktop-App gelesen, ohne Server. Lokale Git-Referenzen; kein Fetch. Eigene Commits, Diff-Statistik, Reflogs und Working-Tree je Tracked-Repository."
+
+    var date: String
+    var timezone: String
+    var repositories: [RepoActivity]
 }

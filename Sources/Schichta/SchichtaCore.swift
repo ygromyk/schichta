@@ -6,7 +6,7 @@ enum SchichtaCore {
     static func parseMinutes(_ input: String) throws -> Int {
         let s = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !s.isEmpty else {
-            throw SchichtaError("Dauer darf nicht leer sein.")
+            throw SchichtaError("Dauer darf nicht leer sein.", en: "Duration must not be empty.")
         }
 
         var total: Int? = nil
@@ -43,11 +43,11 @@ enum SchichtaCore {
         }
 
         guard let minutes = total else {
-            throw SchichtaError("Dauer als 1:30, 1,5 oder 30m eingeben.")
+            throw SchichtaError("Dauer als 1:30, 1,5 oder 30m eingeben.", en: "Enter the duration as 1:30, 1.5 or 30m.")
         }
 
         guard minutes >= 1 && minutes <= 1440 else {
-            throw SchichtaError("Dauer muss zwischen einer Minute und 24 Stunden liegen.")
+            throw SchichtaError("Dauer muss zwischen einer Minute und 24 Stunden liegen.", en: "Duration must be between one minute and 24 hours.")
         }
 
         return minutes
@@ -164,52 +164,31 @@ enum SchichtaCore {
         repos: [TrackedRepo],
         author: String,
         event: String = "day_booked"
-    ) -> [String: Any] {
+    ) -> HookPayload {
         let totalMinutes = entries.reduce(0) { $0 + $1.minutes }
-        let report = bcsReport(day: day, entries: entries)
-
-        let reposList: [[String: Any]] = repos.map { r in
-            [
-                "folder": r.folderName,
-                "projectName": r.projectName,
-                "displayLabel": r.displayLabel,
-                "defaultTicket": r.defaultTicket,
-                "path": r.path,
-                "enabled": r.enabled
-            ]
-        }
-
-        let entriesList: [[String: Any]] = entries.map { e in
-            let projName = resolveProjectName(for: e, repos: repos)
-            return [
-                "id": e.id,
-                "date": e.date,
-                "projectName": projName,
-                "ticket": e.ticket,
-                "description": e.description,
-                "minutes": e.minutes,
-                "durationFormatted": formatTime(e.minutes),
-                "estimated": e.estimated
-            ]
-        }
-
-        return [
-            "event": event,
-            "date": day,
-            "dateFormatted": formatGermanDate(day),
-            "author": author,
-            "totalMinutes": totalMinutes,
-            "totalFormatted": formatTime(totalMinutes),
-            "bcsReport": report,
-            "repositories": reposList,
-            "entries": entriesList
-        ]
+        return HookPayload(
+            event: event,
+            date: day,
+            dateFormatted: formatGermanDate(day),
+            author: author,
+            totalMinutes: totalMinutes,
+            totalFormatted: formatTime(totalMinutes),
+            bcsReport: bcsReport(day: day, entries: entries),
+            repositories: repos.map { r in
+                HookPayload.Repository(folder: r.folderName, projectName: r.projectName, displayLabel: r.displayLabel,
+                                       defaultTicket: r.defaultTicket, path: r.path, enabled: r.enabled)
+            },
+            entries: entries.map { e in
+                HookPayload.Entry(id: e.id, date: e.date, projectName: resolveProjectName(for: e, repos: repos), ticket: e.ticket,
+                                  description: e.description, minutes: e.minutes, durationFormatted: formatTime(e.minutes), estimated: e.estimated)
+            }
+        )
     }
 
     static func appendCheckIn(existingNotes: String, timeStr: String, text: String, ticket: String = "", minutes: Int = 30) throws -> String {
         let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else {
-            throw SchichtaError("Bitte eine Tätigkeit oder Notiz eingeben.")
+            throw SchichtaError("Bitte eine Tätigkeit oder Notiz eingeben.", en: "Please enter an activity or note.")
         }
         let cleanTicket = ticket.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         let prefix = cleanTicket.isEmpty ? "" : "[\(cleanTicket)] "
@@ -219,43 +198,88 @@ enum SchichtaCore {
     }
 
     static func validate(database: Database) throws -> Database {
+        guard database.version <= 1 else {
+            throw SchichtaError(
+                "Die Daten stammen von einer neueren Schichta-Version (Format \(database.version)). Bitte Schichta aktualisieren.",
+                en: "The data comes from a newer Schichta version (format \(database.version)). Please update Schichta.")
+        }
         guard database.version == 1 else {
-            throw SchichtaError("Keine gültige Schichta-Sicherung.")
+            throw SchichtaError("Keine gültige Schichta-Sicherung.", en: "Not a valid Schichta backup.")
         }
         guard database.entries.count <= 50000 else {
-            throw SchichtaError("Zu viele Einträge in der Sicherung.")
+            throw SchichtaError("Zu viele Einträge in der Sicherung.", en: "Too many entries in the backup.")
         }
 
         var ids = Set<String>()
         for e in database.entries {
             guard !ids.contains(e.id) else {
-                throw SchichtaError("Doppelte Eintrags-ID in der Sicherung.")
+                throw SchichtaError("Doppelte Eintrags-ID in der Sicherung.", en: "Duplicate entry ID in the backup.")
             }
             ids.insert(e.id)
             guard isValidDate(e.date) else {
-                throw SchichtaError("Ungültiges Eintragsdatum: \(e.date)")
+                throw SchichtaError("Ungültiges Eintragsdatum: \(e.date)", en: "Invalid entry date: \(e.date)")
             }
             guard e.minutes >= 1 && e.minutes <= 1440 else {
-                throw SchichtaError("Dauer außerhalb des gültigen Bereichs (1-1440 Min).")
+                throw SchichtaError("Dauer außerhalb des gültigen Bereichs (1-1440 Min).", en: "Duration out of range (1–1440 min).")
             }
             guard e.ticket.count <= 100 else {
-                throw SchichtaError("Ticketname zu lang.")
+                throw SchichtaError("Ticketname zu lang.", en: "Ticket name too long.")
             }
             let desc = e.description.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !desc.isEmpty && desc.count <= 4000 else {
-                throw SchichtaError("Ungültige Tätigkeitsbeschreibung.")
+                throw SchichtaError("Ungültige Tätigkeitsbeschreibung.", en: "Invalid activity description.")
             }
         }
 
         for (day, item) in database.journal {
             guard isValidDate(day) else {
-                throw SchichtaError("Ungültiges Notizdatum: \(day)")
+                throw SchichtaError("Ungültiges Notizdatum: \(day)", en: "Invalid note date: \(day)")
             }
             guard item.notes.count <= 200000 && item.logs.count <= 200000 && item.answer.count <= 200000 else {
-                throw SchichtaError("Notizinhalt zu lang.")
+                throw SchichtaError("Notizinhalt zu lang.", en: "Note content too long.")
             }
         }
 
         return database
+    }
+}
+
+/// The JSON that shell hooks get on stdin and webhooks get as the body. External scripts depend on these
+/// field names: add fields freely, but never rename or remove one (HookPayloadTests pins the format).
+struct HookPayload: Codable, Equatable {
+    struct Repository: Codable, Equatable {
+        let folder: String
+        let projectName: String
+        let displayLabel: String
+        let defaultTicket: String
+        let path: String
+        let enabled: Bool
+    }
+
+    struct Entry: Codable, Equatable {
+        let id: String
+        let date: String
+        let projectName: String
+        let ticket: String
+        let description: String
+        let minutes: Int
+        let durationFormatted: String
+        let estimated: Bool
+    }
+
+    let event: String
+    let date: String
+    let dateFormatted: String
+    let author: String
+    let totalMinutes: Int
+    let totalFormatted: String
+    let bcsReport: String
+    let repositories: [Repository]
+    let entries: [Entry]
+
+    func json() throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try encoder.encode(self)
     }
 }
