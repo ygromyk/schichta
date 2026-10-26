@@ -518,9 +518,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
     }
 
-    func checkPeriodicPrompts() {
+    /// `now` is injectable for tests.
+    func checkPeriodicPrompts(now: Date = Date()) {
         guard let store = store else { return }
-        let now = Date()
         let today = SchichtaCore.day(from: now)
         let time = AppTime.calendar.dateComponents([.hour, .minute], from: now)
         let currentHour = time.hour!
@@ -639,6 +639,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     func bringMainWindowToFront() {
+        guard let window else { return } // created at launch; missing only in tests
         let screen = AppDelegate.activeScreen()
         if !window.isVisible || window.screen != screen {
             AppDelegate.centerWindow(window, on: screen)

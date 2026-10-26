@@ -125,3 +125,78 @@ struct CheckInPromptTests {
         }
     }
 }
+
+@Suite("Lunch prompt, end to end")
+@MainActor
+struct LunchPromptFlowTests {
+    /// Runs the app's minute check at `times` with a quiet test store; returns the store and delegate.
+    func run(_ times: [Date], configure: (SchichtaStore, AppDelegate) -> Void = { _, _ in },
+             check: (SchichtaStore, AppDelegate) -> Void) {
+        withTestStore { store in
+            store.checkInSoundEnabled = false
+            store.awayDetectionEnabled = false // the test machine's real idle time must not matter
+            store.morningPromptEnabled = false // otherwise it fires first: an empty past working day counts as unbooked
+            let delegate = AppDelegate()
+            delegate.store = store
+            configure(store, delegate)
+            for time in times { delegate.checkPeriodicPrompts(now: time) }
+            check(store, delegate)
+            delegate.checkInTimer?.invalidate()
+            delegate.cancelEscalation()
+        }
+    }
+
+    @Test func opensTheLunchCheckInOnceAtLunchTime() {
+        run([monday(11, 59)]) { store, delegate in
+            #expect(store.checkInRequest.reason == .manual, "not yet")
+            #expect(!delegate.isCheckInDue)
+        }
+        run([monday(12, 0)]) { store, delegate in
+            #expect(store.checkInRequest.reason == .beforeLunch)
+            #expect(store.lastLunchPromptDate == "2026-10-26")
+            #expect(delegate.isCheckInDue, "menu bar shows it as due")
+            #expect(delegate.escalationTask != nil, "a notification follows if unanswered")
+            #expect(delegate.checkInTimer != nil, "regular interval restarts after lunch")
+        }
+    }
+
+    @Test func laterTicksTheSameDayDoNotAskAgain() {
+        run([monday(12, 0)]) { store, delegate in
+            store.requestCheckIn(.timer) // answered, then a regular check-in came
+            delegate.checkPeriodicPrompts(now: monday(12, 1))
+            delegate.checkPeriodicPrompts(now: monday(12, 30))
+            #expect(store.checkInRequest.reason == .timer, "lunch is asked once per day")
+        }
+    }
+
+    @Test func skippedWhileAwayOrOnWeekends() {
+        run([monday(12, 0)], configure: { store, delegate in
+            store.awayDetectionEnabled = true
+            delegate.awayTracker.wentAway(at: monday(11, 40)) // already left for lunch
+        }) { store, _ in
+            #expect(store.checkInRequest.reason == .manual)
+            #expect(store.lastLunchPromptDate == "", "still pending if you come back within the window")
+        }
+        let saturday = AppTime.calendar.date(byAdding: .day, value: -2, to: monday(12, 0))!
+        run([saturday]) { store, _ in
+            #expect(store.checkInRequest.reason == .manual)
+        }
+    }
+
+    @Test func morningPromptOnTheSameTickDelaysLunchByOneTick() {
+        run([monday(12, 0)], configure: { store, _ in
+            store.database.journal["2026-10-23"] = JournalItem(notes: "Friday, not booked")
+            store.morningPromptEnabled = true
+        }) { store, _ in
+            #expect(store.activePrompt == .morning(unbookedDay: "2026-10-23"))
+            #expect(store.checkInRequest.reason == .manual, "lunch waits for the next minute")
+        }
+        run([monday(12, 0), monday(12, 1)], configure: { store, _ in
+            store.database.journal["2026-10-23"] = JournalItem(notes: "Friday, not booked")
+            store.morningPromptEnabled = true
+        }) { store, _ in
+            #expect(store.checkInRequest.reason == .beforeLunch)
+        }
+    }
+}
+
