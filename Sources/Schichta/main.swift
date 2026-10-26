@@ -21,14 +21,21 @@ if CommandLine.arguments.contains("--generate-icon") {
     }
 } else if let idx = CommandLine.arguments.firstIndex(of: "--snapshot"), idx + 1 < CommandLine.arguments.count {
     // Dev tool: renders the main views offscreen as PNGs (layout check without screen recording).
+    // `--date YYYY-MM-DD` renders that day and its week instead of today.
     let outDir = URL(fileURLWithPath: CommandLine.arguments[idx + 1])
     try? FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
     _ = NSApplication.shared
     let store = SchichtaStore()
+    if let dateIdx = CommandLine.arguments.firstIndex(of: "--date"), dateIdx + 1 < CommandLine.arguments.count {
+        store.selectDay(CommandLine.arguments[dateIdx + 1])
+    }
 
     func render<V: View>(_ view: V, _ size: NSSize, _ name: String) {
         for (suffix, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
-            let host = NSHostingView(rootView: view)
+            // cacheDisplay skips the window's own background, which views without one (the week view) show through.
+            let host = NSHostingView(rootView: view
+                .background(Color(nsColor: .windowBackgroundColor))
+                .environment(\.colorScheme, appearance == .darkAqua ? .dark : .light))
             let win = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.titled, .fullSizeContentView], backing: .buffered, defer: false)
             win.appearance = NSAppearance(named: appearance)
             win.contentView = host

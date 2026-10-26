@@ -204,7 +204,7 @@ class SchichtaStore: ObservableObject {
     }
 
     /// `storeURL` and `defaults` are injectable so tests never touch real entries or settings.
-    init(storeURL: URL = AppPaths.support.appendingPathComponent("schichta.json"), defaults: UserDefaults = .standard) {
+    init(storeURL: URL = AppPaths.support.appendingPathComponent("schichta.json"), defaults: UserDefaults = AppPaths.defaults) {
         try? FileManager.default.createDirectory(at: storeURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         self.storeURL = storeURL
         self.defaults = defaults

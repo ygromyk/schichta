@@ -85,14 +85,28 @@ struct SchichtaError: LocalizedError {
 }
 
 enum AppPaths {
-    /// ~/Library/Application Support/Schichta (created on demand).
+    /// SCHICHTA_DATA_DIR runs Schichta on separate data (e.g. demo data for screenshots): the data folder
+    /// moves there and settings go to their own defaults domain, so real entries and settings stay untouched.
+    static let dataDirOverride: String? = ProcessInfo.processInfo.environment["SCHICHTA_DATA_DIR"].flatMap { $0.isEmpty ? nil : $0 }
+
+    /// ~/Library/Application Support/Schichta, or SCHICHTA_DATA_DIR (created on demand).
     static let support: URL = {
-        let base = (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
-            ?? FileManager.default.temporaryDirectory
-        let dir = base.appendingPathComponent("Schichta", isDirectory: true)
+        let dir: URL
+        if let dataDirOverride {
+            dir = URL(fileURLWithPath: dataDirOverride, isDirectory: true)
+        } else {
+            let base = (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
+                ?? FileManager.default.temporaryDirectory
+            dir = base.appendingPathComponent("Schichta", isDirectory: true)
+        }
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
     }()
+
+    /// The app's settings, or the `local.schichta.data-dir` domain when SCHICHTA_DATA_DIR is set.
+    static var defaults: UserDefaults {
+        dataDirOverride == nil ? .standard : UserDefaults(suiteName: "local.schichta.data-dir")!
+    }
 }
 
 /// Runs a program with a timeout and collects its output.

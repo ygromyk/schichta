@@ -106,7 +106,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Apply the saved time zone before the store computes "today".
-        AppTime.use(AppTime.zone(forIdentifier: UserDefaults.standard.string(forKey: SchichtaStore.timeZoneKey) ?? ""))
+        AppTime.use(AppTime.zone(forIdentifier: AppPaths.defaults.string(forKey: SchichtaStore.timeZoneKey) ?? ""))
         self.store = SchichtaStore()
         AppLanguage.current = store.appLanguage
         applyDockVisibility()

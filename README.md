@@ -18,7 +18,9 @@ model, and you can make it a fully local one.
 ## Contents
 
 - [Why Schichta?](#why-schichta)
+- [Quick start](#quick-start)
 - [Features](#features)
+- [Keyboard shortcuts](#keyboard-shortcuts)
 - [Privacy: what Schichta does and does not send](#privacy-what-schichta-does-and-does-not-send)
 - [AI-ready: bring your own model](#ai-ready-bring-your-own-model)
 - [Install](#install)
@@ -52,31 +54,68 @@ your Mac only through a destination you set up yourself: an AI command, a bookin
 hook. AI and booking requests are shown to you in full before anything is sent. Details in
 [Privacy](#privacy-what-schichta-does-and-does-not-send).
 
+## Quick start
+
+1. [Install](#install) Schichta and open it. Its icon appears in the menu bar.
+2. In **Settings › Work Hours & Prompts**, set your working days, hours, daily target and check-in interval.
+3. In **Settings › Git Repos & Inspector**, add the repositories you work in, optionally with a project name and a
+   default ticket each.
+4. Work as usual. When the check-in pops up, type one line and press Enter.
+5. At the end of the day, open the main window, confirm or fix the estimated entries, and book the
+   day: copy the draft, or send it to a [booking target](#integrations).
+
 ## Features
+
+### Capture during the day
 
 - **Menu bar check-ins.** A check-in panel pops up at your chosen interval without stealing the
   keyboard from what you're typing (or press `⌥⌘K` from any app). Save the answer as a timestamped
   note or directly as an estimated entry, or repeat the last one with one click. Unanswered check-ins
-  send a notification after 3 minutes that you can answer in place.
+  send a notification after 3 minutes that you can answer in place. A dot on the menu bar icon shows
+  that a check-in is due.
 - **Away and lunch.** After time away from the Mac (idle, sleep, locked screen) Schichta asks what the
   gap was: a meeting or a break. Before lunch it asks what you did in the morning.
-- **Week overview.** Totals against your weekly target, the week's balance and a running overtime
-  account, booked and open days, time per ticket and project. Copy the week as text, export the month
-  as CSV, or book all open days of the week to a booking target at once.
-- **Days off.** Mark a day as vacation, sick or holiday (right-click it in the week view): no target,
-  no reminders, never "not booked".
-- **Start at login** and an optional menu-bar-only mode without Dock icon, switchable in Settings.
-- **Day view.** Add entries with ticket, project and duration (`1:30`, `1,5` and `1.5` all work).
-  Use quick +/− buttons and a progress bar against your daily target.
-- **Estimates are flagged.** Anything guessed is marked *Estimated* and must be confirmed
-  before you book the day, so nothing invented slips through.
 - **Git activity.** Shows your own commits and HEAD reflog for the day from the repositories you
   pick. Each repository can carry a project name and a default ticket.
-- **Day-end summary.** A booking draft (date, total, description, ticket, duration) that you can
-  copy, save as TXT, or send to a booking target.
 - **Morning and end-of-day reminders** for days that are not booked yet.
+
+### Review the day
+
+- **Day view.** Add entries with ticket, project and duration (`1:30`, `1,5` and `1.5` all work).
+  Use quick +/− buttons and a progress bar against your daily target.
+- **Time step.** Every duration (typed, from a button, a check-in or an AI proposal) is rounded to
+  your time step: 1, 5, 10, 15 (default), 30 or 60 minutes, set in Settings › Work Hours & Prompts. The +/−
+  buttons and quick chips move by one step. Changing the step does not rewrite existing entries.
+- **Estimates are flagged.** Anything guessed is marked *Estimated* and must be confirmed
+  before you book the day, so nothing invented slips through.
 - **AI summary (optional).** Turns notes, Git activity and the day's Claude Code / Codex chats into
   editable proposals. See [AI-ready](#ai-ready-bring-your-own-model).
+- **Day-end summary.** A booking draft (date, total, description, ticket, duration) that you can
+  copy, save as TXT, or send to a booking target.
+
+### Week, month and balance
+
+- **Week overview.** Switch between Day and Week: totals against your weekly target, the week's
+  balance, booked and open days, open estimates, and time per ticket and project. Copy the week as
+  text.
+- **Overtime account.** Set a start date and an opening balance in Settings › Work Hours & Prompts, and the
+  week view shows your running balance from then on.
+- **Book a whole week.** Send every open day of the week to a booking target at once. Each day is
+  previewed first; days with unconfirmed estimates are skipped, entries changed after the preview
+  are not sent, and a day is only marked booked if
+  all of its requests succeed.
+- **Month CSV export.** Opens in Excel and Numbers as is: UTF-8 with BOM, and in German `;` as
+  separator with decimal commas. Cells that would start a spreadsheet formula are defused.
+- **Days off.** Mark a day as vacation, sick or holiday (right-click it in the week view, or use
+  the "…" menu): no target, no reminders, never "not booked".
+
+<p align="center">
+  <img src="docs/screenshots/week-overview.png" alt="Week overview: daily totals against the target, booked, open and vacation days, week balance, overtime account and time per ticket" width="820">
+</p>
+
+### Fits your Mac
+
+- **Start at login** and an optional menu-bar-only mode without Dock icon, switchable in Settings.
 - **Booking targets.** Connect Clockify or any HTTP time-tracking API through a JSON file,
   with no code changes.
 - **Your time zone.** Days start and end in the system time zone, or in one you pick in Settings.
@@ -92,6 +131,18 @@ hook. AI and booking requests are shown to you in full before anything is sent. 
     <td align="center"><sub>Tracked repositories with project name and default ticket</sub></td>
   </tr>
 </table>
+
+## Keyboard shortcuts
+
+| Shortcut | Action |
+| --- | --- |
+| `⌥⌘K` | Open the check-in from any app (no Accessibility permission needed) |
+| `⌘K` | Open the check-in while Schichta is active |
+| `⌘0` | Show the main window |
+| `⌘,` | Settings |
+| `⌘Return` | Save the entry in the day view |
+| `Return` | Save the check-in answer |
+| `Return` / `Esc` | Send / cancel in the AI and week-booking previews |
 
 ## Privacy: what Schichta does and does not send
 
@@ -223,6 +274,9 @@ Optional environment variables:
 | `SIGN_IDENTITY` | `-` (ad-hoc) | e.g. `Developer ID Application: Jane Doe (TEAMID)`; enables the hardened runtime |
 | `APP` | `Schichta.app` | Output path |
 
+If Schichta is running while you rebuild, quit it and open the new `Schichta.app`; the script
+warns you when the old build is still running.
+
 ## Integrations
 
 ### Booking targets (Clockify and any HTTP API)
@@ -290,6 +344,15 @@ cd adapters/bcs && npm install && npm test
 `test.sh` runs `swift test` (Swift Testing, `Tests/SchichtaTests`); with Xcode installed, plain
 `swift test` works too. Tests use a temporary database and their own user-defaults domains
 (`local.schichta.tests.*`), so they never touch your real entries or settings.
+
+**Screenshots.** Everything in `docs/screenshots` uses invented demo data. To run Schichta on
+separate data, set `SCHICHTA_DATA_DIR`: the data file then lives in that folder and settings go to
+the `local.schichta.data-dir` defaults domain. `--snapshot` renders the main views offscreen, in
+light and dark, without needing screen recording:
+
+```bash
+SCHICHTA_DATA_DIR=/tmp/schichta-demo "$(swift build --show-bin-path)/Schichta" --snapshot /tmp/shots --date 2026-10-22
+```
 
 ## Releasing
 
