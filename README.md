@@ -60,7 +60,12 @@ hook. AI and booking requests are shown to you in full before anything is sent. 
   send a notification after 3 minutes that you can answer in place.
 - **Away and lunch.** After time away from the Mac (idle, sleep, locked screen) Schichta asks what the
   gap was: a meeting or a break. Before lunch it asks what you did in the morning.
-- **Start at login**, switchable in Settings.
+- **Week overview.** Totals against your weekly target, the week's balance and a running overtime
+  account, booked and open days, time per ticket and project. Copy the week as text, export the month
+  as CSV, or book all open days of the week to a booking target at once.
+- **Days off.** Mark a day as vacation, sick or holiday (right-click it in the week view): no target,
+  no reminders, never "not booked".
+- **Start at login** and an optional menu-bar-only mode without Dock icon, switchable in Settings.
 - **Day view.** Add entries with ticket, project and duration (`1:30`, `1,5` and `1.5` all work).
   Use quick +/− buttons and a progress bar against your daily target.
 - **Estimates are flagged.** Anything guessed is marked *Estimated* and must be confirmed

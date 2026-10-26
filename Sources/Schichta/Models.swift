@@ -71,21 +71,44 @@ struct Entry: Identifiable, Codable, Equatable {
     }
 }
 
+/// A working day you don't work: no target, no prompts, never "not booked".
+enum Absence: String, Codable, CaseIterable {
+    case vacation, sick, holiday
+
+    func title(for language: AppLanguage) -> String {
+        switch self {
+        case .vacation: return LocalizedText("Urlaub", "Vacation").in(language)
+        case .sick: return LocalizedText("Krank", "Sick").in(language)
+        case .holiday: return LocalizedText("Feiertag", "Holiday").in(language)
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .vacation: return "sun.max"
+        case .sick: return "cross.case"
+        case .holiday: return "flag"
+        }
+    }
+}
+
 struct JournalItem: Codable, Equatable {
     var notes: String = ""
     var logs: String = ""
     var answer: String = ""
     var booked: Bool = false
+    var absence: Absence? = nil
 
     enum CodingKeys: String, CodingKey {
-        case notes, logs, answer, booked
+        case notes, logs, answer, booked, absence
     }
 
-    init(notes: String = "", logs: String = "", answer: String = "", booked: Bool = false) {
+    init(notes: String = "", logs: String = "", answer: String = "", booked: Bool = false, absence: Absence? = nil) {
         self.notes = notes
         self.logs = logs
         self.answer = answer
         self.booked = booked
+        self.absence = absence
     }
 
     init(from decoder: Decoder) throws {
@@ -94,6 +117,8 @@ struct JournalItem: Codable, Equatable {
         self.logs = try container.decodeIfPresent(String.self, forKey: .logs) ?? ""
         self.answer = try container.decodeIfPresent(String.self, forKey: .answer) ?? ""
         self.booked = try container.decodeIfPresent(Bool.self, forKey: .booked) ?? false
+        // Lenient: an unknown kind (from a newer version) reads as no absence instead of failing the whole file.
+        self.absence = (try? container.decodeIfPresent(Absence.self, forKey: .absence)) ?? nil
     }
 }
 

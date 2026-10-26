@@ -109,6 +109,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         AppTime.use(AppTime.zone(forIdentifier: UserDefaults.standard.string(forKey: SchichtaStore.timeZoneKey) ?? ""))
         self.store = SchichtaStore()
         AppLanguage.current = store.appLanguage
+        applyDockVisibility()
 
         // Set high-res native macOS app icon in Dock and Cmd+Tab switcher
         NSApp.applicationIconImage = AppIconGenerator.makeIcon(size: 512)
@@ -199,9 +200,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         appMenu.addItem(NSMenuItem.separator())
         appMenu.addItem(withTitle: isDe ? "Check-in öffnen" : "Open Check-in", action: #selector(openCheckInFromMenu), keyEquivalent: "k")
         appMenu.addItem(withTitle: isDe ? "Hauptfenster anzeigen" : "Show Main Window", action: #selector(showMainWindow(_:)), keyEquivalent: "0")
+        #if DEBUG
+        // Development only: release builds (swift build -c release) leave these out.
         appMenu.addItem(NSMenuItem.separator())
         appMenu.addItem(withTitle: isDe ? "Morgen-Prompt (Vortag) testen" : "Test Morning Prompt (Prev Day)", action: #selector(testMorningPromptFromMenu), keyEquivalent: "")
         appMenu.addItem(withTitle: isDe ? "Feierabend-Prompt testen" : "Test End-of-Day Prompt", action: #selector(testEndOfDayPromptFromMenu), keyEquivalent: "")
+        #endif
         appMenu.addItem(NSMenuItem.separator())
         appMenu.addItem(withTitle: isDe ? "Schichta beenden" : "Quit Schichta", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 
@@ -237,16 +241,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     func updateStatusItem(isDue: Bool) {
         guard let button = statusItem?.button else { return }
-        let symbolName = isDue ? "clock.badge.checkmark" : "clock"
-        let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
-        let img = (NSImage(systemSymbolName: symbolName, accessibilityDescription: "Schichta")
-            ?? NSImage(systemSymbolName: "clock", accessibilityDescription: "Schichta"))?
-            .withSymbolConfiguration(config)
-        img?.isTemplate = true
-        button.image = img
-        button.imagePosition = .imageLeading
-        button.font = NSFont.systemFont(ofSize: 12.5, weight: .medium)
-        button.title = isDue ? " Schichta •" : " Schichta"
+        let isDe = (store?.appLanguage ?? .de) == .de
+        let label = isDue ? (isDe ? "Schichta – Check-in fällig" : "Schichta – check-in due") : "Schichta"
+        let image = AppIconGenerator.statusBarIcon(due: isDue)
+        image.accessibilityDescription = label
+        button.image = image
+        button.imagePosition = .imageOnly
+        button.title = ""
+        button.toolTip = label
     }
 
     func setupCheckInPanel() {
@@ -606,6 +608,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         updateStatusItem(isDue: true)
         presentCheckIn(.back(period), activate: false)
         startCheckInTimer()
+    }
+
+    // MARK: - Dock icon
+
+    /// With the Dock icon hidden, Schichta lives in the menu bar only (the main window opens from the check-in panel).
+    func applyDockVisibility() {
+        let policy: NSApplication.ActivationPolicy = store.showInDock ? .regular : .accessory
+        guard NSApp.activationPolicy() != policy else { return }
+        NSApp.setActivationPolicy(policy)
+        if policy == .regular { NSApp.activate(ignoringOtherApps: true) }
     }
 
     // MARK: - Global shortcut

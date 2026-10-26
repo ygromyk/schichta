@@ -161,6 +161,9 @@ extension MainWindowView {
                             return store.t("Pausiert", "Paused")
                         }
                         let today = SchichtaCore.day()
+                        if let absence = store.absence(on: today) {
+                            return absence.title(for: store.appLanguage)
+                        }
                         if !store.isWorkingDay(today) {
                             return store.t("Wochenende", "Weekend")
                         }

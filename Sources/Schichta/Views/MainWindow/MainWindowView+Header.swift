@@ -64,13 +64,25 @@ extension MainWindowView {
                 Text("Schichta")
                     .font(.system(size: 15, weight: .bold))
 
-                Text(SchichtaCore.weekdayName(store.selectedDay, language: store.appLanguage))
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
+                if !isWeek {
+                    Text(SchichtaCore.weekdayName(store.selectedDay, language: store.appLanguage))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .layoutPriority(-1) // gives way first in a narrow window
+                }
             }
 
             Spacer(minLength: 16)
+
+            Picker("", selection: $store.mainViewMode) {
+                Text(store.t("Tag", "Day")).tag(MainViewMode.day)
+                Text(store.t("Woche", "Week")).tag(MainViewMode.week)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+            .help(store.t("Tagesansicht oder Wochenübersicht", "Day view or week overview"))
 
             // Center/right: date segment group
             datePickerCapsule
@@ -92,7 +104,7 @@ extension MainWindowView {
 
     var datePickerCapsule: some View {
         HStack(spacing: 2) {
-            Button(action: { store.moveDay(-1) }) {
+            Button(action: { isWeek ? store.moveWeek(-1) : store.moveDay(-1) }) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.primary)
@@ -100,15 +112,16 @@ extension MainWindowView {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help(store.t("Vorheriger Tag", "Previous day"))
+            .help(isWeek ? store.t("Vorherige Woche", "Previous week") : store.t("Vorheriger Tag", "Previous day"))
 
             Button(action: { showDatePickerPopover.toggle() }) {
                 HStack(spacing: 6) {
                     Image(systemName: "calendar")
                         .font(.system(size: 12))
                         .foregroundColor(SchichtaTheme.forestGreen)
-                    Text(SchichtaCore.formatGermanDate(store.selectedDay))
+                    Text(dateCapsuleLabel)
                         .font(.system(size: 12.5, weight: .semibold, design: .monospaced))
+                        .fixedSize()
                         .foregroundColor(.primary)
                 }
                 .padding(.horizontal, 8)
@@ -121,7 +134,7 @@ extension MainWindowView {
             }
             .help(store.t("Datum im Kalender wählen", "Select date in calendar"))
 
-            Button(action: { store.moveDay(1) }) {
+            Button(action: { isWeek ? store.moveWeek(1) : store.moveDay(1) }) {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.primary)
@@ -129,7 +142,7 @@ extension MainWindowView {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help(store.t("Nächster Tag", "Next day"))
+            .help(isWeek ? store.t("Nächste Woche", "Next week") : store.t("Nächster Tag", "Next day"))
 
             Divider()
                 .frame(height: 16)
@@ -138,6 +151,7 @@ extension MainWindowView {
             Button(action: { store.selectToday() }) {
                 Text(store.t("Heute", "Today"))
                     .font(.system(size: 11.5, weight: .medium))
+                    .fixedSize()
                     .foregroundColor(.primary)
                     .padding(.horizontal, 8)
                     .frame(height: 26)
@@ -153,30 +167,48 @@ extension MainWindowView {
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.08), lineWidth: 1))
     }
 
+    var isWeek: Bool { store.mainViewMode == .week }
+
+    /// Icon and title; only the icon when the header runs out of room (the tooltip keeps the meaning).
+    func compactLabel(_ title: String, icon: String) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                Text(title).fixedSize()
+            }
+            Image(systemName: icon)
+        }
+        .font(.system(size: 12.5, weight: .semibold))
+    }
+
+    /// "26.10.2026", or in the week view "KW 44 · 26.10.–01.11.".
+    var dateCapsuleLabel: String {
+        guard isWeek else { return SchichtaCore.formatGermanDate(store.selectedDay) }
+        let week = store.weekSummary(containing: store.selectedDay)
+        let short = { (day: String) in String(SchichtaCore.formatGermanDate(day).prefix(6)) }
+        return store.t("KW \(week.weekNumber) · \(short(week.start))–\(short(week.end))",
+                       "W\(week.weekNumber) · \(short(week.start))–\(short(week.end))")
+    }
+
     var headerActionButtons: some View {
         HStack(spacing: 8) {
+            // AI and analysis work on one day: hidden in the week view
+            if !isWeek {
             Button(action: { showAISheet = true }) {
-                HStack(spacing: 5) {
-                    Image(systemName: "wand.and.stars")
-                    Text(store.t("KI", "AI"))
-                }
-                .font(.system(size: 12.5, weight: .semibold))
+                compactLabel(store.t("KI", "AI"), icon: "wand.and.stars")
             }
             .buttonStyle(.bordered)
             .controlSize(.regular)
             .help(store.t("Tag mit Notizen, Git und Claude-/Codex-Chats per KI zusammenfassen", "Summarize the day from notes, Git and Claude/Codex chats via AI"))
 
             Button(action: { store.synthesizeDayAction() }) {
-                HStack(spacing: 5) {
-                    Image(systemName: "sparkles")
-                    Text(store.t("Tag auswerten", "Analyze day"))
-                }
-                .font(.system(size: 12.5, weight: .semibold))
+                compactLabel(store.t("Tag auswerten", "Analyze day"), icon: "sparkles")
             }
             .buttonStyle(.borderedProminent)
             .tint(SchichtaTheme.forestGreen)
             .controlSize(.regular)
             .help(store.t("Lokale Git-Commits, Reflogs und Notizen automatisch auswerten", "Automatically analyze local Git commits, reflogs and notes"))
+            }
 
             Button(action: { appDelegate()?.openSettingsWindow() }) {
                 Image(systemName: "gearshape")
@@ -190,14 +222,21 @@ extension MainWindowView {
             .help(store.t("Einstellungen… (⌘,)", "Settings… (⌘,)"))
 
             Menu {
-                Button(action: { appDelegate()?.triggerCheckInPrompt() }) {
+                Button(action: { appDelegate()?.showCheckInPanel() }) {
                     Label(store.t("Check-in öffnen (⌘K)", "Open check-in (⌘K)"), systemImage: "clock")
+                }
+
+                Menu {
+                    absenceMenuItems(for: store.selectedDay)
+                } label: {
+                    Label(store.t("\(SchichtaCore.formatGermanDate(store.selectedDay)) markieren als", "Mark \(SchichtaCore.formatGermanDate(store.selectedDay)) as"), systemImage: "calendar.badge.minus")
                 }
 
                 Button(action: { appDelegate()?.openSettingsWindow() }) {
                     Label(store.t("Einstellungen… (⌘,)", "Settings… (⌘,)"), systemImage: "gearshape")
                 }
 
+                #if DEBUG
                 Divider()
 
                 Button(action: { store.triggerMorningPromptManually() }) {
@@ -207,8 +246,13 @@ extension MainWindowView {
                 Button(action: { store.triggerEndOfDayPromptManually() }) {
                     Label(store.t("Feierabend-Prompt testen", "Test end-of-day prompt"), systemImage: "sunset")
                 }
+                #endif
 
                 Divider()
+
+                Button(action: { store.exportMonthCSV(window: NSApp.keyWindow) }) {
+                    Label(store.t("Monat als CSV exportieren…", "Export month as CSV…"), systemImage: "tablecells")
+                }
 
                 Button(action: { store.exportBackup(window: NSApp.keyWindow) }) {
                     Label(store.t("Sicherung exportieren...", "Export backup..."), systemImage: "square.and.arrow.up")

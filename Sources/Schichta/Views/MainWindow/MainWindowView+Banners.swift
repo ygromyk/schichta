@@ -31,6 +31,23 @@ extension MainWindowView {
         .bannerStyle(.red)
     }
 
+    // MARK: - Day off
+
+    func absenceBanner(_ absence: Absence, day: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: absence.icon)
+                .foregroundColor(.purple)
+                .font(.system(size: 16))
+            Text(store.t("\(SchichtaCore.formatGermanDate(day)) ist als \(absence.title(for: .de)) markiert: kein Soll, keine Erinnerungen.",
+                         "\(SchichtaCore.formatGermanDate(day)) is marked as \(absence.title(for: .en).lowercased()): no target, no reminders."))
+                .font(.system(size: 12, weight: .medium))
+            Spacer()
+            Button(store.t("Aufheben", "Undo")) { store.setAbsence(nil, on: day) }
+                .controlSize(.small)
+        }
+        .bannerStyle(.purple)
+    }
+
     // MARK: - Prompt Banners
 
     func morningPromptBanner(unbookedDay: String) -> some View {

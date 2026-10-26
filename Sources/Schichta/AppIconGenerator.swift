@@ -11,6 +11,54 @@ enum AppIconGenerator {
         return rep.representation(using: .png, properties: [:])
     }
 
+    /// Menu bar glyph: the app icon's clock ring, interval arc and "S", drawn as a template image so macOS
+    /// tints it for light and dark menu bars. `due` cuts a dot into the ring's top right (a check-in is waiting).
+    static func statusBarIcon(due: Bool) -> NSImage {
+        let size = NSSize(width: 18, height: 18)
+        let image = NSImage(size: size, flipped: false) { rect in
+            let center = CGPoint(x: rect.midX, y: rect.midY)
+            let radius: CGFloat = 7.6
+
+            // Faint full ring, bold half arc from 12 to 6 o'clock: the check-in interval
+            let ring = NSBezierPath(ovalIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
+            ring.lineWidth = 1.2
+            NSColor.black.withAlphaComponent(0.35).setStroke()
+            ring.stroke()
+
+            let arc = NSBezierPath()
+            arc.appendArc(withCenter: center, radius: radius, startAngle: 90, endAngle: -90, clockwise: true)
+            arc.lineWidth = 1.8
+            arc.lineCapStyle = .round
+            NSColor.black.setStroke()
+            arc.stroke()
+
+            // The "S": two stacked bowls meeting at the clock's center, as in the app icon
+            let bowl: CGFloat = 2.15
+            let s = NSBezierPath()
+            s.appendArc(withCenter: CGPoint(x: 0, y: bowl), radius: bowl, startAngle: 35, endAngle: 270, clockwise: false)
+            s.appendArc(withCenter: CGPoint(x: 0, y: -bowl), radius: bowl, startAngle: 90, endAngle: -145, clockwise: true)
+            s.transform(using: AffineTransform(m11: 1.3, m12: 0, m21: 0, m22: 1, tX: center.x, tY: center.y))
+            s.lineWidth = 1.7
+            s.lineCapStyle = .round
+            s.lineJoinStyle = .round
+            s.stroke()
+
+            if due {
+                // Knock a gap into the ring, then the dot, so it reads as a badge at 18 pt
+                let dotCenter = CGPoint(x: rect.maxX - 2.8, y: rect.maxY - 2.8)
+                let gap = NSBezierPath(ovalIn: CGRect(x: dotCenter.x - 3.3, y: dotCenter.y - 3.3, width: 6.6, height: 6.6))
+                NSGraphicsContext.current?.compositingOperation = .clear
+                gap.fill()
+                NSGraphicsContext.current?.compositingOperation = .sourceOver
+                NSColor.black.setFill()
+                NSBezierPath(ovalIn: CGRect(x: dotCenter.x - 2.3, y: dotCenter.y - 2.3, width: 4.6, height: 4.6)).fill()
+            }
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }
+
     static func makeIcon(size: CGFloat = 512) -> NSImage {
         let image = NSImage(size: NSSize(width: size, height: size))
         image.lockFocus()

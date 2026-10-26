@@ -31,15 +31,16 @@ final class BookingTargetsModel: ObservableObject {
         entries.map { "\($0.id)|\($0.ticket)|\($0.description)|\($0.minutes)|\($0.estimated)|\($0.project)" }.joined(separator: "\n")
     }
 
-    func reload() {
+    /// Reads every target file in the folder (an empty folder gets the example as a template).
+    static func loadTargets() -> [Loaded] {
         let fm = FileManager.default
-        try? fm.createDirectory(at: Self.folder, withIntermediateDirectories: true)
-        let files = (try? fm.contentsOfDirectory(at: Self.folder, includingPropertiesForKeys: nil)) ?? []
+        try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        let files = (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
         // Empty folder: drop in the example as a template (*.example.json is never loaded).
         if files.isEmpty, let example = Bundle.main.url(forResource: "clockify.example", withExtension: "json") {
-            try? fm.copyItem(at: example, to: Self.folder.appendingPathComponent("clockify.example.json"))
+            try? fm.copyItem(at: example, to: folder.appendingPathComponent("clockify.example.json"))
         }
-        targets = files
+        return files
             .filter { $0.pathExtension == "json" && !$0.lastPathComponent.hasSuffix(".example.json") }
             .sorted { $0.lastPathComponent < $1.lastPathComponent }
             .map { url in
@@ -50,6 +51,10 @@ final class BookingTargetsModel: ObservableObject {
                     return Loaded(id: id, target: nil, error: error.localizedDescription)
                 }
             }
+    }
+
+    func reload() {
+        targets = Self.loadTargets()
         secretSet = targets.compactMap { $0.target?.auth.secretName }
             .reduce(into: [:]) { $0[$1] = TargetSecrets.exists($1) }
         previews = [:]

@@ -46,6 +46,10 @@ class SchichtaStore: ObservableObject {
 
     // 3. Normal work hours & target
     @Setting("Schichta.DailyTargetMinutes", clamp: { max(60, min(1440, $0)) }) var dailyTargetMinutes: Int = 480
+    /// Overtime account: counted from this day (YYYY-MM-DD), or from the first entry when empty.
+    @Setting("Schichta.OvertimeStartDate") var overtimeStartDate: String = ""
+    /// Balance carried in on the start date, in minutes (negative = minus hours).
+    @Setting("Schichta.OvertimeOpeningMinutes") var overtimeOpeningMinutes: Int = 0
     @Setting("Schichta.WorkStartHour") var workStartHour: Int = 9
     @Setting("Schichta.WorkStartMinute") var workStartMinute: Int = 0
     @Setting("Schichta.WorkEndHour") var workEndHour: Int = 17
@@ -76,6 +80,10 @@ class SchichtaStore: ObservableObject {
     /// Ask "what was that?" after time away from the Mac (idle, sleep, locked screen).
     @Setting("Schichta.AwayDetectionEnabled") var awayDetectionEnabled: Bool = true
     @Setting("Schichta.AwayMinimumMinutes", clamp: { max(5, min(60, $0)) }) var awayMinimumMinutes: Int = 10
+    /// Off: no Dock icon and no ⌘Tab entry; Schichta stays in the menu bar.
+    @Setting("Schichta.ShowInDock") var showInDock: Bool = true {
+        didSet { appDelegate()?.applyDockVisibility() }
+    }
     /// ⌥⌘K opens the check-in from any app.
     @Setting("Schichta.GlobalHotKeyEnabled") var globalHotKeyEnabled: Bool = true {
         didSet { appDelegate()?.updateGlobalHotKey() }
@@ -108,6 +116,7 @@ class SchichtaStore: ObservableObject {
     @Published var aiQuestions: [String] = []
     @Published var lastHookResult: String = ""
     @Published var settingsSelectedTab: SettingsTab = .general
+    @Published var mainViewMode: MainViewMode = .day
 
     // Inspector
     @Published var inspectedGitResult: GitActivityResult? = nil
@@ -137,10 +146,35 @@ class SchichtaStore: ObservableObject {
         (error as? SchichtaError)?.text.in(appLanguage) ?? error.localizedDescription
     }
 
+    /// A day you're expected to work: a working weekday that isn't marked as vacation, sick or holiday.
+    /// Targets, prompts and "not booked" all follow this.
     func isWorkingDay(_ dayStr: String) -> Bool {
+        isScheduledWorkday(dayStr) && absence(on: dayStr) == nil
+    }
+
+    /// One of the working weekdays from Settings, regardless of absences.
+    func isScheduledWorkday(_ dayStr: String) -> Bool {
         guard SchichtaCore.isValidDate(dayStr) else { return false }
         let weekday = AppTime.calendar.component(.weekday, from: SchichtaCore.date(fromDay: dayStr))
         return workingDays.contains(weekday)
+    }
+
+    func absence(on day: String) -> Absence? {
+        database.journal[day]?.absence
+    }
+
+    /// Marks `day` as vacation, sick or holiday, or (nil) as a normal day again.
+    func setAbsence(_ absence: Absence?, on day: String) {
+        var item = database.journal[day] ?? JournalItem()
+        item.absence = absence
+        database.journal[day] = item
+        save()
+        let date = SchichtaCore.formatGermanDate(day)
+        if let absence {
+            showToast(t("\(date): \(absence.title(for: .de))", "\(date): \(absence.title(for: .en))"))
+        } else {
+            showToast(t("\(date) ist wieder ein Arbeitstag.", "\(date) is a working day again."))
+        }
     }
 
     func isCurrentlyWithinWorkingHours(_ now: Date = Date()) -> Bool {

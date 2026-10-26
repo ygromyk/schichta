@@ -15,6 +15,7 @@ struct MainWindowView: View {
     @State var showDatePickerPopover: Bool = false
     @State var showTargetsSheet: Bool = false
     @State var showAISheet: Bool = false
+    @State var showWeekBooking: Bool = false
 
     // Confirmations
     @State var entryToDelete: Entry? = nil
@@ -57,40 +58,13 @@ struct MainWindowView: View {
                 endOfDayPromptBanner(day: day)
             }
 
-            // Top Status Metrics Bar (4 Tiles)
-            topMetricsBar
-                .padding(.horizontal, 20)
-                .padding(.top, 14)
-                .padding(.bottom, 12)
-
-            Divider()
-
-            // Main Two-Column View
-            HSplitView {
-                // Left Column: Scrollable Task Management
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        // 1. Quick Entry Form
-                        entryFormCard
-
-                        // 2. Recognized Proposals (if any)
-                        if !store.proposals.isEmpty || store.isSynthesizing || hasAISummaryForDay {
-                            proposalsCard
-                        }
-
-                        // 3. Today's Entries
-                        entriesListCard
-
-                        // 4. Daily Notes
-                        notesCard
-                    }
-                    .padding(20)
+            if store.mainViewMode == .week {
+                weekOverview
+            } else {
+                if let absence = store.absence(on: store.selectedDay) {
+                    absenceBanner(absence, day: store.selectedDay)
                 }
-                .frame(minWidth: 500)
-
-                // Right Column: Inspector (BCS Report)
-                inspectorColumn
-                    .frame(width: 350)
+                dayView
             }
         }
         .frame(minWidth: 950, minHeight: 650)
@@ -100,6 +74,9 @@ struct MainWindowView: View {
         .onChange(of: store.selectedDay) {
             self.notesText = store.journalForSelectedDay().notes
             self.resetForm()
+        }
+        .sheet(isPresented: $showWeekBooking) {
+            WeekBookingSheet(store: store, week: store.weekSummary(containing: store.selectedDay), isPresented: $showWeekBooking)
         }
         .sheet(isPresented: $showAISheet) {
             AISummarySheet(store: store, isPresented: $showAISheet)
@@ -153,6 +130,47 @@ struct MainWindowView: View {
             }
         } message: { entry in
             Text(store.t("Möchtest du „\(entry.description)“ wirklich löschen?", "Do you really want to delete „\(entry.description)“?"))
+        }
+    }
+
+    /// Metrics, entry form, entries and notes for the selected day, with the inspector on the right.
+    var dayView: some View {
+        VStack(spacing: 0) {
+            // Top Status Metrics Bar (4 Tiles)
+            topMetricsBar
+                .padding(.horizontal, 20)
+                .padding(.top, 14)
+                .padding(.bottom, 12)
+
+            Divider()
+
+            // Main Two-Column View
+            HSplitView {
+                // Left Column: Scrollable Task Management
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        // 1. Quick Entry Form
+                        entryFormCard
+
+                        // 2. Recognized Proposals (if any)
+                        if !store.proposals.isEmpty || store.isSynthesizing || hasAISummaryForDay {
+                            proposalsCard
+                        }
+
+                        // 3. Today's Entries
+                        entriesListCard
+
+                        // 4. Daily Notes
+                        notesCard
+                    }
+                    .padding(20)
+                }
+                .frame(minWidth: 500)
+
+                // Right Column: Inspector (BCS Report)
+                inspectorColumn
+                    .frame(width: 350)
+            }
         }
     }
 

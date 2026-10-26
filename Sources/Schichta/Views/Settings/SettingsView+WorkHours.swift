@@ -134,6 +134,10 @@ extension SettingsView {
 
                     Toggle(store.t("Automatische Prompts nur an Arbeitstagen & innerhalb der Arbeitszeit", "Automatic prompts only on work days & during work hours"), isOn: $store.onlyPromptDuringWorkHours)
                         .font(.system(size: 12))
+
+                    Divider()
+
+                    OvertimeAccountSettings(store: store)
                 }
                 .padding(10)
             }
@@ -247,5 +251,75 @@ extension SettingsView {
                 .padding(10)
             }
         }
+    }
+}
+
+/// Start date and opening balance of the overtime account (shown in the week view).
+struct OvertimeAccountSettings: View {
+    @ObservedObject var store: SchichtaStore
+    @State private var openingText = ""
+    @State private var openingInvalid = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(store.t("Überstundenkonto ab:", "Overtime account from:"))
+                    .font(.system(size: 12, weight: .medium))
+                Spacer()
+                Toggle(store.t("Festes Startdatum", "Fixed start date"), isOn: Binding(
+                    get: { !store.overtimeStartDate.isEmpty },
+                    set: { store.overtimeStartDate = $0 ? store.overtimeStart() : "" }
+                ))
+                .font(.system(size: 12))
+                if !store.overtimeStartDate.isEmpty {
+                    DatePicker("", selection: Binding(
+                        get: { SchichtaCore.date(fromDay: store.overtimeStart()) },
+                        set: { store.overtimeStartDate = SchichtaCore.day(from: $0) }
+                    ), displayedComponents: .date)
+                    .labelsHidden()
+                    .frame(width: 120)
+                } else {
+                    Text(store.t("erster Eintrag (\(SchichtaCore.formatGermanDate(store.overtimeStart())))", "first entry (\(SchichtaCore.formatGermanDate(store.overtimeStart())))"))
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+            HStack {
+                Text(store.t("Startsaldo:", "Opening balance:"))
+                    .font(.system(size: 12, weight: .medium))
+                Spacer()
+                TextField("+0:00", text: $openingText)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 12, design: .monospaced))
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 90)
+                    .onSubmit(applyOpening)
+                    .help(store.t("z. B. +12:30 oder -4:00, mit Enter übernehmen", "e.g. +12:30 or -4:00, Enter to apply"))
+                Text(store.t("Konto heute: \(SchichtaCore.formatSignedTime(store.overtimeBalance()))", "Account today: \(SchichtaCore.formatSignedTime(store.overtimeBalance()))"))
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundColor(.secondary)
+                    .frame(width: 170, alignment: .trailing)
+            }
+            if openingInvalid {
+                Text(store.t("Bitte als +12:30, -4:00 oder 1,5 eingeben.", "Please enter as +12:30, -4:00 or 1.5."))
+                    .font(.system(size: 11))
+                    .foregroundColor(.orange)
+            }
+            Text(store.t("Saldo = Startsaldo + Erfasst − Soll für jeden Tag seit dem Startdatum. Urlaub, Krank und Feiertage haben kein Soll.",
+                         "Balance = opening balance + logged − target for every day since the start date. Vacation, sick and holidays have no target."))
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+        }
+        .onAppear { openingText = SchichtaCore.formatSignedTime(store.overtimeOpeningMinutes) }
+    }
+
+    private func applyOpening() {
+        guard let minutes = SchichtaCore.parseSignedHours(openingText) else {
+            openingInvalid = true
+            return
+        }
+        openingInvalid = false
+        store.overtimeOpeningMinutes = minutes
+        openingText = SchichtaCore.formatSignedTime(minutes)
     }
 }

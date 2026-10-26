@@ -267,6 +267,7 @@ extension MainWindowView {
                                 Text(store.t("Ohne Ticket", "No ticket"))
                                     .font(.system(size: 10, weight: .semibold))
                                     .foregroundColor(.secondary)
+                                    .fixedSize()
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 3)
                                     .background(Color(nsColor: .controlColor))
@@ -275,36 +276,44 @@ extension MainWindowView {
                                 Text(entry.ticket)
                                     .font(.system(size: 10, weight: .bold))
                                     .foregroundColor(.white)
+                                    .fixedSize()
                                     .padding(.horizontal, 7)
                                     .padding(.vertical, 3)
                                     .background(SchichtaTheme.forestGreen)
                                     .cornerRadius(4)
                             }
 
-                            // Project Badge (if matched)
+                            // Project label and description: the label only when the description still keeps
+                            // 110 pt, so a narrow window neither breaks words nor pushes the buttons off the row.
                             let proj = !entry.project.isEmpty ? entry.project : SchichtaCore.resolveProjectName(for: entry, repos: store.trackedRepos)
-                            if !proj.isEmpty {
-                                Text(proj)
-                                    .font(.system(size: 9.5, weight: .semibold))
-                                    .foregroundColor(SchichtaTheme.forestGreen)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2.5)
-                                    .background(SchichtaTheme.forestGreen.opacity(0.12))
-                                    .cornerRadius(4)
-                            }
-
-                            // Description
-                            Text(entry.description)
+                            let description = Text(entry.description)
                                 .font(.system(size: 13))
                                 .lineLimit(2)
-
-                            Spacer()
+                                .frame(minWidth: 110, idealWidth: 110, maxWidth: .infinity, alignment: .leading)
+                            ViewThatFits(in: .horizontal) {
+                                HStack(spacing: 8) {
+                                    if !proj.isEmpty {
+                                        Text(proj)
+                                            .font(.system(size: 9.5, weight: .semibold))
+                                            .fixedSize()
+                                            .foregroundColor(SchichtaTheme.forestGreen)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2.5)
+                                            .background(SchichtaTheme.forestGreen.opacity(0.12))
+                                            .cornerRadius(4)
+                                    }
+                                    description
+                                }
+                                description
+                            }
+                            .help(proj)
 
                             // Estimated Tag / Confirm Button
                             if entry.estimated {
                                 Button(action: { store.confirmEstimate(id: entry.id) }) {
                                     HStack(spacing: 3) {
                                         Text(store.t("Geschätzt", "Estimated"))
+                                            .fixedSize() // never break the word in a narrow window
                                         Image(systemName: "checkmark")
                                     }
                                     .font(.system(size: 10, weight: .medium))
@@ -337,7 +346,8 @@ extension MainWindowView {
                             }
                             .buttonStyle(.borderless)
                             .font(.system(size: 11))
-                            .help(store.t("+30 Minuten hinzufügen", "+30 minutes add"))
+                            .fixedSize()
+                            .help(store.t("+30 Minuten hinzufügen", "Add 30 minutes"))
 
                             // Edit & Delete
                             Button(action: { startEditing(entry) }) {

@@ -72,6 +72,9 @@ extension SettingsView {
                     Toggle(store.t("Check-in überall mit \(GlobalHotKey.displayName) öffnen", "Open the check-in from any app with \(GlobalHotKey.displayName)"), isOn: $store.globalHotKeyEnabled)
                         .font(.system(size: 12))
 
+                    Toggle(store.t("Im Dock anzeigen (aus: nur Statusleiste)", "Show in Dock (off: menu bar only)"), isOn: $store.showInDock)
+                        .font(.system(size: 12))
+
                     Toggle(store.t("Beim Anmelden starten", "Start at login"), isOn: Binding(
                         get: { LoginItem.isEnabled },
                         set: { enabled in

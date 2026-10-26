@@ -53,6 +53,30 @@ enum SchichtaCore {
         return minutes
     }
 
+    /// A signed hour amount such as "+12:30", "-4:00", "−1,5" or "20" (hours), for balances beyond 24 hours.
+    static func parseSignedHours(_ input: String) -> Int? {
+        var s = input.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "−", with: "-")
+        guard !s.isEmpty else { return nil }
+        var sign = 1
+        if s.hasPrefix("-") { sign = -1; s.removeFirst() } else if s.hasPrefix("+") { s.removeFirst() }
+        s = s.trimmingCharacters(in: .whitespaces)
+        if s.hasSuffix("h") { s.removeLast() }
+        if s.range(of: #"^\d{1,4}:[0-5]\d$"#, options: .regularExpression) != nil {
+            let parts = s.split(separator: ":").compactMap { Int($0) }
+            return sign * (parts[0] * 60 + parts[1])
+        }
+        if s.range(of: #"^\d{1,4}([.,]\d{1,2})?$"#, options: .regularExpression) != nil,
+           let hours = Double(s.replacingOccurrences(of: ",", with: ".")) {
+            return sign * Int((hours * 60).rounded())
+        }
+        return nil
+    }
+
+    /// "+1:30" / "−2:00" (true minus sign), for balances.
+    static func formatSignedTime(_ minutes: Int) -> String {
+        (minutes < 0 ? "−" : "+") + formatTime(abs(minutes))
+    }
+
     /// Limits for duration buttons and inline editing: at least 5 minutes, at most 24 hours.
     static func clampDuration(_ minutes: Int) -> Int {
         max(5, min(1440, minutes))
