@@ -2,14 +2,42 @@ import Foundation
 import Testing
 @testable import Schichta
 
+/// Tests with Berlin-specific expectations pin the app zone. No test pins any other zone,
+/// so tests running in parallel always agree on it.
+func pinBerlin() {
+    AppTime.use(TimeZone(identifier: "Europe/Berlin")!)
+}
+
+@Suite("Time zone")
+struct TimeZoneTests {
+    @Test func dayBoundsCoverTheDSTSwitch() throws {
+        let berlin = AppTime.State(TimeZone(identifier: "Europe/Berlin")!)
+        let bounds = try Activity.bounds("2026-10-25", in: berlin)
+        #expect(bounds.0 == "2026-10-25T00:00:00+02:00")
+        #expect(bounds.1 == "2026-10-25T23:59:59+01:00", "25 hours: clocks go back")
+        #expect(throws: (any Error).self) { try Activity.bounds("2026-02-30", in: berlin) }
+    }
+
+    @Test func dayBoundsFollowTheConfiguredZone() throws {
+        let newYork = AppTime.State(TimeZone(identifier: "America/New_York")!)
+        let bounds = try Activity.bounds("2026-10-26", in: newYork)
+        #expect(bounds.0 == "2026-10-26T00:00:00-04:00")
+        #expect(bounds.1 == "2026-10-26T23:59:59-04:00")
+        // 23:30 in New York is already the next day in Berlin.
+        let lateEvening = try #require(newYork.isoSeconds.date(from: "2026-10-26T23:30:00-04:00"))
+        #expect(newYork.day.string(from: lateEvening) == "2026-10-26")
+        #expect(AppTime.State(TimeZone(identifier: "Europe/Berlin")!).day.string(from: lateEvening) == "2026-10-27")
+    }
+
+    @Test func emptySettingMeansSystemZone() {
+        #expect(AppTime.zone(forIdentifier: "") == TimeZone.current)
+        #expect(AppTime.zone(forIdentifier: "Asia/Tokyo").identifier == "Asia/Tokyo")
+        #expect(AppTime.zone(forIdentifier: "Not/AZone") == TimeZone.current, "unknown identifiers fall back to the system zone")
+    }
+}
+
 @Suite("Git activity")
 struct GitActivityTests {
-    @Test func dayBoundsCoverTheDSTSwitch() throws {
-        let bounds = try Activity.bounds("2026-10-25")
-        #expect(bounds.0 == "2026-10-25T00:00:00+02:00")
-        #expect(bounds.1 == "2026-10-25T23:59:59+01:00")
-        #expect(throws: (any Error).self) { try Activity.bounds("2026-02-30") }
-    }
 
     @Test func nothingIsReadWithoutTrackedRepos() throws {
         let result = try Activity.readRepos("2026-10-12", repos: [], authorFilter: nil)

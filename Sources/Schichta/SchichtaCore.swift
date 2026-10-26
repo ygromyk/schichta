@@ -70,40 +70,38 @@ enum SchichtaCore {
         return "\(parts[2]).\(parts[1]).\(parts[0])"
     }
 
-    private static let weekdayFormatters = Dictionary(uniqueKeysWithValues: AppLanguage.allCases.map {
-        ($0, Berlin.formatter("EEEE", locale: $0.localeIdentifier))
-    })
-    private static let fullDateFormatters = Dictionary(uniqueKeysWithValues: AppLanguage.allCases.map {
-        ($0, Berlin.formatter($0 == .de ? "EEEE, d. MMMM yyyy" : "EEEE, MMMM d, yyyy", locale: $0.localeIdentifier))
-    })
-
     static func weekdayName(_ day: String, language: AppLanguage = .de) -> String {
-        weekdayFormatters[language]!.string(from: dateFromBerlinDay(day))
+        let time = AppTime.state
+        return time.weekday[language]!.string(from: time.day.date(from: day) ?? Date())
     }
 
     static func formatFullDate(_ day: String, language: AppLanguage = .de) -> String {
-        guard let date = Berlin.day.date(from: day) else { return day }
-        return fullDateFormatters[language]!.string(from: date)
+        let time = AppTime.state
+        guard let date = time.day.date(from: day) else { return day }
+        return time.fullDate[language]!.string(from: date)
     }
 
     static func isValidDate(_ s: String) -> Bool {
+        let day = AppTime.day
         guard s.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil,
-              let d = Berlin.day.date(from: s) else { return false }
-        return Berlin.day.string(from: d) == s
+              let d = day.date(from: s) else { return false }
+        return day.string(from: d) == s
     }
 
-    static func berlinDay(from date: Date = Date()) -> String {
-        Berlin.day.string(from: date)
+    /// The calendar day (YYYY-MM-DD) of `date` in the app's time zone.
+    static func day(from date: Date = Date()) -> String {
+        AppTime.day.string(from: date)
     }
 
-    static func dateFromBerlinDay(_ day: String) -> Date {
-        Berlin.day.date(from: day) ?? Date()
+    /// Midnight at the start of `day` in the app's time zone.
+    static func date(fromDay day: String) -> Date {
+        AppTime.day.date(from: day) ?? Date()
     }
 
-    /// Tag `offset` Tage vor/nach `day` (YYYY-MM-DD), DST-sicher über den Berlin-Kalender.
+    /// The day `offset` days before/after `day` (YYYY-MM-DD), DST-safe via the app calendar.
     static func addDays(_ offset: Int, to day: String) -> String {
-        let date = Berlin.calendar.date(byAdding: .day, value: offset, to: dateFromBerlinDay(day)) ?? dateFromBerlinDay(day)
-        return berlinDay(from: date)
+        let start = date(fromDay: day)
+        return self.day(from: AppTime.calendar.date(byAdding: .day, value: offset, to: start) ?? start)
     }
 
     static func bcsReport(day: String, entries: [Entry]) -> String {

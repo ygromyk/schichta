@@ -207,7 +207,7 @@ extension SettingsView {
                                         statPill(label: store.t("\(commitCount) Commits", "\(commitCount) commits"), icon: "checkmark.circle", color: commitCount > 0 ? SchichtaTheme.forestGreen : .secondary)
                                         statPill(label: store.t(hasDiff ? "Diff vorhanden" : "Kein Diff", hasDiff ? "Diff found" : "No diff"), icon: "doc.badge.gearshape", color: hasDiff ? .blue : .secondary)
                                         statPill(label: store.t("\(reflogCount) HEAD-Logs", "\(reflogCount) HEAD logs"), icon: "arrow.triangle.branch", color: reflogCount > 0 ? .purple : .secondary)
-                                        if store.selectedDay == SchichtaCore.berlinDay() {
+                                        if store.selectedDay == SchichtaCore.day() {
                                             statPill(label: store.t("\(wtCount) uncommittet", "\(wtCount) uncommitted"), icon: "pencil.circle", color: wtCount > 0 ? .orange : .secondary)
                                         }
                                     }

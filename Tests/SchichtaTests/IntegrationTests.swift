@@ -54,6 +54,7 @@ struct BookingTargetTests {
     ]
 
     func prepare(_ json: String, secret: @escaping (String) -> String? = { _ in nil }) throws -> [PreparedRequest] {
+        pinBerlin()
         let target = try BookingTarget.parse(id: "test", data: Data(json.utf8))
         return try TargetRenderer.prepare(target: target, day: "2026-10-26", entries: entries, author: "Max Mustermann",
                                           workStart: (9, 0), repos: [], secret: secret)
@@ -144,6 +145,7 @@ struct AISummaryTests {
     }
 
     @Test func readsChatsOnlyFromTrackedRepos() throws {
+        pinBerlin()
         let home = FileManager.default.temporaryDirectory.appendingPathComponent("schichta-chat-test-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: home) }
         let claudeDir = home.appendingPathComponent(".claude/projects/-work-app")
@@ -180,7 +182,7 @@ struct AISummaryTests {
 
         #expect(ChatActivity.read(day: "2026-10-26", repos: [], home: home).isEmpty)
         let evidence = ChatActivity.formatEvidence(chats)
-        #expect(evidence.contains("Claude Code · App (feature/x) · 09:00–10:30"), "times in the app's time zone")
+        #expect(evidence.contains("Claude Code · App (feature/x) · 09:00–10:30"), "times in the app's time zone (Berlin here)")
     }
 
     @Test func builtInToolsAreLockedDown() {

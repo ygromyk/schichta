@@ -21,7 +21,7 @@ extension SchichtaStore {
 
     func isDayUnbooked(_ day: String) -> Bool {
         guard SchichtaCore.isValidDate(day) else { return false }
-        let today = SchichtaCore.berlinDay()
+        let today = SchichtaCore.day()
         guard day <= today else { return false }
         let item = database.journal[day]
         if item?.booked == true { return false }
@@ -35,7 +35,7 @@ extension SchichtaStore {
             !(database.journal[day]?.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
     }
 
-    func previousWorkingDay(before today: String = SchichtaCore.berlinDay()) -> String {
+    func previousWorkingDay(before today: String = SchichtaCore.day()) -> String {
         // Arbeitstage der letzten 14 Tage, neuester zuerst.
         let workDays = (1...14).map { SchichtaCore.addDays(-$0, to: today) }.filter(isWorkingDay)
         let isBooked = { (day: String) in self.database.journal[day]?.booked == true }
@@ -47,7 +47,7 @@ extension SchichtaStore {
             ?? SchichtaCore.addDays(-1, to: today)
     }
 
-    func unbookedPreviousDay(today: String = SchichtaCore.berlinDay()) -> String? {
+    func unbookedPreviousDay(today: String = SchichtaCore.day()) -> String? {
         let prev = previousWorkingDay(before: today)
         guard prev < today else { return nil }
         if isDayUnbooked(prev) {

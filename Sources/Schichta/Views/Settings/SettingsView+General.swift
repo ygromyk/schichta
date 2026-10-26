@@ -27,6 +27,28 @@ extension SettingsView {
                 .padding(10)
             }
 
+            GroupBox(label: Label(store.t("Zeitzone", "Time Zone"), systemImage: "globe.europe.africa")) {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text(store.t("Tage und Uhrzeiten in:", "Days and times in:"))
+                            .font(.system(size: 13, weight: .medium))
+                        Spacer()
+                        Picker("", selection: $store.timeZoneIdentifier) {
+                            Text(store.t("System (\(TimeZone.current.identifier))", "System (\(TimeZone.current.identifier))")).tag("")
+                            Divider()
+                            ForEach(TimeZone.knownTimeZoneIdentifiers.sorted(), id: \.self) { id in
+                                Text(id).tag(id)
+                            }
+                        }
+                        .frame(width: 260)
+                    }
+                    Text(store.t("Bestimmt, wann ein Tag beginnt und endet (Git-Abfragen, Check-ins, Erinnerungen) und in welcher Zeit Uhrzeiten angezeigt werden.", "Decides when a day starts and ends (Git queries, check-ins, reminders) and in which zone times are shown."))
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                .padding(10)
+            }
+
             GroupBox(label: Label(store.t("Check-in Verhalten", "Check-in Behavior"), systemImage: "clock")) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {

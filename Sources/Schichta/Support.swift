@@ -2,30 +2,63 @@ import Foundation
 
 // MARK: - Shared Helpers (Zeitzone, Fehler, Pfade, Prozesse)
 
-/// Alle Tage und Uhrzeiten der App gelten in Europe/Berlin.
-enum Berlin {
-    static let timeZone = TimeZone(identifier: "Europe/Berlin")!
+/// All days (YYYY-MM-DD) and times use one time zone: the system zone unless another is chosen in Settings.
+/// Calendar and formatters live in one immutable `State` behind a lock, so switching zones while a
+/// background Git read formats dates never mixes two zones.
+enum AppTime {
+    final class State {
+        let timeZone: TimeZone
+        let calendar: Calendar
+        let day: DateFormatter          // yyyy-MM-dd
+        let isoSeconds: DateFormatter   // 2026-10-26T09:00:00+01:00
+        let clock: DateFormatter        // HH:mm
+        let weekday: [AppLanguage: DateFormatter]
+        let fullDate: [AppLanguage: DateFormatter]
 
-    static let calendar: Calendar = {
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = timeZone
-        return cal
-    }()
-
-    /// Erzeugt einen Formatter in Berlin-Zeit. Geteilte Instanzen nur lesend nutzen, dann sind sie threadsicher.
-    static func formatter(_ format: String, locale: String = "en_US_POSIX") -> DateFormatter {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: locale)
-        f.timeZone = timeZone
-        f.dateFormat = format
-        f.isLenient = false
-        return f
+        init(_ zone: TimeZone) {
+            timeZone = zone
+            var cal = Calendar(identifier: .gregorian)
+            cal.timeZone = zone
+            calendar = cal
+            func formatter(_ format: String, locale: String = "en_US_POSIX") -> DateFormatter {
+                let f = DateFormatter()
+                f.locale = Locale(identifier: locale)
+                f.timeZone = zone
+                f.dateFormat = format
+                f.isLenient = false
+                return f
+            }
+            day = formatter("yyyy-MM-dd")
+            isoSeconds = formatter("yyyy-MM-dd'T'HH:mm:ssXXXXX")
+            clock = formatter("HH:mm")
+            weekday = Dictionary(uniqueKeysWithValues: AppLanguage.allCases.map { ($0, formatter("EEEE", locale: $0.localeIdentifier)) })
+            fullDate = Dictionary(uniqueKeysWithValues: AppLanguage.allCases.map {
+                ($0, formatter($0 == .de ? "EEEE, d. MMMM yyyy" : "EEEE, MMMM d, yyyy", locale: $0.localeIdentifier))
+            })
+        }
     }
 
-    /// YYYY-MM-DD
-    static let day = formatter("yyyy-MM-dd")
-    static let isoSeconds = formatter("yyyy-MM-dd'T'HH:mm:ssXXXXX")
-    static let clock = formatter("HH:mm")
+    private static let lock = NSLock()
+    private static var current = State(.current)
+
+    /// The active state; read once per operation so all values come from the same zone.
+    static var state: State { lock.withLock { current } }
+    static var timeZone: TimeZone { state.timeZone }
+    static var calendar: Calendar { state.calendar }
+    static var day: DateFormatter { state.day }
+    static var isoSeconds: DateFormatter { state.isoSeconds }
+    static var clock: DateFormatter { state.clock }
+
+    /// Switches the app's time zone. Called by the app at launch and from Settings, and by tests that pin a zone.
+    static func use(_ zone: TimeZone) {
+        let next = State(zone)
+        lock.withLock { current = next }
+    }
+
+    /// Settings value: a time zone identifier, or "" for the system zone.
+    static func zone(forIdentifier identifier: String) -> TimeZone {
+        identifier.isEmpty ? .current : (TimeZone(identifier: identifier) ?? .current)
+    }
 }
 
 struct SchichtaError: LocalizedError {

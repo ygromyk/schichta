@@ -62,12 +62,13 @@ struct StoreTests {
     }
 
     @Test func promptsOnlyDuringWorkingHours() {
+        pinBerlin()
         withTestStore { store in
             store.workStartHour = 9; store.workStartMinute = 0
             store.workEndHour = 17; store.workEndMinute = 0
             store.onlyPromptDuringWorkHours = true
             func at(_ day: Int, _ hour: Int, _ minute: Int) -> Date {
-                Berlin.calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour, minute: minute))!
+                AppTime.calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour, minute: minute))!
             }
             #expect(store.isCurrentlyWithinWorkingHours(at(26, 10, 30)))
             #expect(!store.isCurrentlyWithinWorkingHours(at(26, 8, 30)))

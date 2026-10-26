@@ -3,12 +3,14 @@ import Foundation
 // MARK: - Git & Activity Log Reader
 
 enum Activity {
-    static func bounds(_ day: String) throws -> (String, String) {
-        guard SchichtaCore.isValidDate(day), let start = Berlin.day.date(from: day) else {
+    /// First and last second of `day` as ISO timestamps for `git --since/--until`.
+    static func bounds(_ day: String, in time: AppTime.State = AppTime.state) throws -> (String, String) {
+        guard day.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil,
+              let start = time.day.date(from: day), time.day.string(from: start) == day else {
             throw SchichtaError("Ungültiges Datum")
         }
-        let end = Berlin.calendar.date(byAdding: .day, value: 1, to: start)!.addingTimeInterval(-1)
-        return (Berlin.isoSeconds.string(from: start), Berlin.isoSeconds.string(from: end))
+        let end = time.calendar.date(byAdding: .day, value: 1, to: start)!.addingTimeInterval(-1)
+        return (time.isoSeconds.string(from: start), time.isoSeconds.string(from: end))
     }
 
     /// Git-Autor aus `git config user.name`, damit kein Name im Code steht.
@@ -30,7 +32,7 @@ enum Activity {
         let (start, end) = try bounds(day)
         let author = (authorFilter ?? gitUserName()).trimmingCharacters(in: .whitespacesAndNewlines)
         let authorArg = author.isEmpty ? "--all" : "--author=\(author)"
-        let isToday = (day == SchichtaCore.berlinDay())
+        let isToday = (day == SchichtaCore.day())
 
         var repoResults: [[String: Any]] = []
 
@@ -84,7 +86,7 @@ enum Activity {
 
         return [
             "date": day,
-            "timezone": "Europe/Berlin",
+            "timezone": AppTime.timeZone.identifier,
             "repositories": repoResults,
             "scope": "Direkt aus der Desktop-App gelesen, ohne Server. Lokale Git-Referenzen; kein Fetch. Eigene Commits, Diff-Statistik, Reflogs und Working-Tree je Tracked-Repository."
         ]

@@ -69,6 +69,7 @@ hook. AI and booking requests are shown to you in full before anything is sent. 
   editable proposals. See [AI-ready](#ai-ready-bring-your-own-model).
 - **Booking targets.** Connect Clockify or any HTTP time-tracking API through a JSON file,
   with no code changes.
+- **Your time zone.** Days start and end in the system time zone, or in one you pick in Settings.
 - **English and German UI**, plus light and dark mode.
 
 <table>

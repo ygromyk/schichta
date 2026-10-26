@@ -123,7 +123,7 @@ enum TargetRenderer {
         guard !entries.isEmpty else { throw SchichtaError("Keine Einträge für \(SchichtaCore.formatGermanDate(day)).") }
 
         // Schichta speichert nur Dauern: Start/Ende werden ab Arbeitsbeginn lückenlos hintereinander gelegt.
-        guard var cursor = Berlin.calendar.date(bySettingHour: workStart.hour, minute: workStart.minute, second: 0, of: SchichtaCore.dateFromBerlinDay(day)) else {
+        guard var cursor = AppTime.calendar.date(bySettingHour: workStart.hour, minute: workStart.minute, second: 0, of: SchichtaCore.date(fromDay: day)) else {
             throw SchichtaError("Arbeitsbeginn ungültig.")
         }
         let iso = ISO8601DateFormatter() // UTC, z. B. 2026-10-26T08:00:00Z
@@ -138,7 +138,7 @@ enum TargetRenderer {
                 "minutes": e.minutes, "hours": hours(e.minutes), "duration": SchichtaCore.formatTime(e.minutes),
                 "estimated": e.estimated, "project": SchichtaCore.resolveProjectName(for: e, repos: repos),
                 "start": iso.string(from: start), "end": iso.string(from: end),
-                "startTime": Berlin.clock.string(from: start), "endTime": Berlin.clock.string(from: end)
+                "startTime": AppTime.clock.string(from: start), "endTime": AppTime.clock.string(from: end)
             ]
         }
         let total = entries.reduce(0) { $0 + $1.minutes }

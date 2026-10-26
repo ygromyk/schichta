@@ -15,7 +15,7 @@ func appDelegate() -> AppDelegate? {
 
 class SchichtaStore: ObservableObject {
     @Published var database: Database = Database()
-    @Published var selectedDay: String = SchichtaCore.berlinDay()
+    @Published var selectedDay: String = SchichtaCore.day()
     @Published var selectedDate: Date = Date()
 
     // 1. Language
@@ -23,6 +23,18 @@ class SchichtaStore: ObservableObject {
         didSet {
             defaults.set(appLanguage.rawValue, forKey: "Schichta.AppLanguage")
             appDelegate()?.updateMenuLanguage()
+        }
+    }
+
+    static let timeZoneKey = "Schichta.TimeZone"
+
+    /// Time zone for day boundaries and times: an identifier such as "America/New_York", or "" for the system zone.
+    /// Changing it switches the app-wide `AppTime`; the store's init does not, so tests can create stores freely.
+    @Published var timeZoneIdentifier: String {
+        didSet {
+            defaults.set(timeZoneIdentifier, forKey: SchichtaStore.timeZoneKey)
+            AppTime.use(AppTime.zone(forIdentifier: timeZoneIdentifier))
+            selectDay(selectedDay)
         }
     }
 
@@ -208,16 +220,16 @@ class SchichtaStore: ObservableObject {
 
     func isWorkingDay(_ dayStr: String) -> Bool {
         guard SchichtaCore.isValidDate(dayStr) else { return false }
-        let weekday = Berlin.calendar.component(.weekday, from: SchichtaCore.dateFromBerlinDay(dayStr))
+        let weekday = AppTime.calendar.component(.weekday, from: SchichtaCore.date(fromDay: dayStr))
         return workingDays.contains(weekday)
     }
 
     func isCurrentlyWithinWorkingHours(_ now: Date = Date()) -> Bool {
-        let today = SchichtaCore.berlinDay(from: now)
+        let today = SchichtaCore.day(from: now)
         guard isWorkingDay(today) else { return false }
         guard onlyPromptDuringWorkHours else { return true }
 
-        let time = Berlin.calendar.dateComponents([.hour, .minute], from: now)
+        let time = AppTime.calendar.dateComponents([.hour, .minute], from: now)
         let curTotal = time.hour! * 60 + time.minute!
         let startTotal = workStartHour * 60 + workStartMinute
         let endTotal = workEndHour * 60 + workEndMinute
@@ -239,6 +251,7 @@ class SchichtaStore: ObservableObject {
             initialLang = .de
         }
         self.appLanguage = initialLang
+        self.timeZoneIdentifier = defaults.string(forKey: SchichtaStore.timeZoneKey) ?? ""
 
         // Working Days (1=Sun, 2=Mon... Standard: Mo-Fr [2, 3, 4, 5, 6])
         if let savedDays = defaults.array(forKey: "Schichta.WorkingDays") as? [Int], !savedDays.isEmpty {

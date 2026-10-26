@@ -87,14 +87,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     static func checkInWindowString(for date: Date = Date(), intervalMinutes: Int = 30, language: AppLanguage = .de) -> String {
         let start = date.addingTimeInterval(-Double(intervalMinutes * 60))
         let suffix = language == .de ? "\(intervalMinutes) Min. Check-in" : "\(intervalMinutes) min check-in"
-        return "\(Berlin.clock.string(from: start)) – \(Berlin.clock.string(from: date)) · \(suffix)"
+        return "\(AppTime.clock.string(from: start)) – \(AppTime.clock.string(from: date)) · \(suffix)"
     }
 
     static func checkInCurrentTimeString(for date: Date = Date()) -> String {
-        Berlin.clock.string(from: date)
+        AppTime.clock.string(from: date)
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Apply the saved time zone before the store computes "today".
+        AppTime.use(AppTime.zone(forIdentifier: UserDefaults.standard.string(forKey: SchichtaStore.timeZoneKey) ?? ""))
         self.store = SchichtaStore()
 
         // Set high-res native macOS app icon in Dock and Cmd+Tab switcher
@@ -408,8 +410,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     func checkPeriodicPrompts() {
         guard let store = store else { return }
         let now = Date()
-        let today = SchichtaCore.berlinDay(from: now)
-        let time = Berlin.calendar.dateComponents([.hour, .minute], from: now)
+        let today = SchichtaCore.day(from: now)
+        let time = AppTime.calendar.dateComponents([.hour, .minute], from: now)
         let currentHour = time.hour!
         let currentTotalMinutes = currentHour * 60 + time.minute!
 

@@ -48,7 +48,7 @@ extension SchichtaStore {
 
     func exportBackup(window: NSWindow?) {
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "Schichta-Sicherung-\(SchichtaCore.berlinDay()).json"
+        panel.nameFieldStringValue = "Schichta-Sicherung-\(SchichtaCore.day()).json"
         panel.canCreateDirectories = true
         panel.allowedContentTypes = [.json]
         present(panel, window: window, onURL: { url in

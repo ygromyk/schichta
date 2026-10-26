@@ -160,7 +160,7 @@ extension MainWindowView {
                         if !store.timerEnabled {
                             return store.t("Pausiert", "Paused")
                         }
-                        let today = SchichtaCore.berlinDay()
+                        let today = SchichtaCore.day()
                         if !store.isWorkingDay(today) {
                             return store.t("Wochenende", "Weekend")
                         }

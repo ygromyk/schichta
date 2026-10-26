@@ -6,12 +6,12 @@ extension SchichtaStore {
     func selectDay(_ day: String) {
         guard SchichtaCore.isValidDate(day) else { return }
         self.selectedDay = day
-        self.selectedDate = SchichtaCore.dateFromBerlinDay(day)
+        self.selectedDate = SchichtaCore.date(fromDay: day)
         self.proposals.removeAll()
     }
 
     func selectDate(_ date: Date) {
-        let day = SchichtaCore.berlinDay(from: date)
+        let day = SchichtaCore.day(from: date)
         selectDay(day)
     }
 
@@ -130,7 +130,7 @@ extension SchichtaStore {
         let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else { return }
         let cleanTicket = ticket.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        let today = SchichtaCore.berlinDay()
+        let today = SchichtaCore.day()
         let effectiveMinutes = max(1, min(1440, minutes))
 
         if mode == .both {

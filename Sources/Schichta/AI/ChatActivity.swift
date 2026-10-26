@@ -54,8 +54,8 @@ enum ChatActivity {
     }
 
     static func dayRange(_ day: String) -> (Date, Date) {
-        let start = Berlin.calendar.startOfDay(for: SchichtaCore.dateFromBerlinDay(day))
-        return (start, Berlin.calendar.date(byAdding: .day, value: 1, to: start)!)
+        let start = AppTime.calendar.startOfDay(for: SchichtaCore.date(fromDay: day))
+        return (start, AppTime.calendar.date(byAdding: .day, value: 1, to: start)!)
     }
 
     /// Liest Claude-Code- und Codex-Sitzungen des Tages, aber nur aus getrackten Repositories
@@ -89,7 +89,7 @@ enum ChatActivity {
     private static func codexFiles(home: URL, day: String, since: Date) -> [URL] {
         // Codex legt Sitzungen nach Startdatum ab; Sitzungen über Mitternacht liegen im Vortag.
         let fm = FileManager.default
-        let previous = SchichtaCore.berlinDay(from: since.addingTimeInterval(-3600))
+        let previous = SchichtaCore.day(from: since.addingTimeInterval(-3600))
         return [previous, day].flatMap { d -> [URL] in
             let dir = home.appendingPathComponent(".codex/sessions/" + d.replacingOccurrences(of: "-", with: "/"))
             return ((try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.contentModificationDateKey])) ?? [])
@@ -181,7 +181,7 @@ enum ChatActivity {
     static func formatEvidence(_ sessions: [ChatSession]) -> String {
         guard !sessions.isEmpty else { return "(keine Chat-Sitzungen in getrackten Repositories)" }
         return sessions.map { s in
-            let head = "\(s.tool) · \(s.project)\(s.branch.isEmpty ? "" : " (\(s.branch))") · \(Berlin.clock.string(from: s.start))–\(Berlin.clock.string(from: s.end)) · aktiv ca. \(SchichtaCore.formatTime(s.activeMinutes)) h"
+            let head = "\(s.tool) · \(s.project)\(s.branch.isEmpty ? "" : " (\(s.branch))") · \(AppTime.clock.string(from: s.start))–\(AppTime.clock.string(from: s.end)) · aktiv ca. \(SchichtaCore.formatTime(s.activeMinutes)) h"
             return ([head] + s.prompts.map { "  - \($0)" }).joined(separator: "\n")
         }.joined(separator: "\n\n")
     }
