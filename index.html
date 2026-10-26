@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f2f3f5">
+<title>Zeitbuch · Dein Arbeitstag, sortiert</title>
+<script>if(window.webkit?.messageHandlers?.zeitbuch)document.documentElement.classList.add('macos-app');</script>
+<link rel="stylesheet" href="style.css">
+<script src="core.js" defer></script><script src="app.js" defer></script>
+</head>
+<body>
+<header><a class="brand" href="./index.html"><span class="logo">z.</span>zeitbuch<span class="local">LOKAL</span></a><div class="tools"><button id="backup">Sicherung exportieren</button><label class="button" for="restore">Importieren</label><input type="file" id="restore" accept="application/json,.json" hidden></div></header>
+<main>
+<div class="intro"><div class="eyebrow">WENIGER NACHDENKEN AM FEIERABEND</div><h1>Dein Tag. Gut festgehalten.</h1><p>Zwischendurch eintragen. Zum Schluss prüfen und übernehmen.</p></div>
+<div class="daybar"><div class="date-control"><button id="previous" aria-label="Vorheriger Tag">←</button><input id="day" type="date" aria-label="Ausgewählter Tag"><button id="next" aria-label="Nächster Tag">→</button><button id="today">Heute</button></div><span id="day-name"></span></div>
+<section class="stats" aria-label="Tagesübersicht"><div><span>ERFASSTE ZEIT</span><strong id="total">00:00<span> h</span></strong></div><div><span>TÄTIGKEITEN</span><strong id="count">0</strong></div><div><span>NOCH ZU PRÜFEN</span><strong id="estimates">0</strong></div><div class="status-stat"><span>SPEICHERUNG</span><p id="save-state">In diesem Browser</p></div></section>
+<div id="notice" role="status" aria-live="polite"></div>
+<div class="columns"><section class="work">
+<article class="card journal-card"><div class="eyebrow">NOTIZEN → CHATGPT → BUCHUNGSVORSCHLÄGE</div><h2>Erzähl von deinem Tag.</h2><p class="muted">Stichpunkte reichen. Notiere auch Abstimmungen, Analysen und ungefähre Zeiten, die nicht in Git stehen.</p>
+<label for="notes">Deine Tagesnotizen</label><textarea id="notes" rows="5" maxlength="100000" placeholder="Heute Vormittag am Kunden-Replay gearbeitet. Danach etwa 30 Minuten mit dem Team die Fehlermeldungen besprochen. Ticket müsste PROJ-2800 sein …"></textarea>
+<div class="journal-actions"><button id="save-notes">Notizen speichern</button><button id="load-logs">Git-Logs für diesen Tag laden</button></div><p id="journal-status" class="small" role="status">Notizen werden beim Tippen lokal gespeichert.</p>
+<details><summary>Git-Logs ansehen oder ergänzen</summary><label for="activity">Aktivitäten aus beiden Repositories</label><textarea id="activity" rows="7" maxlength="150000" placeholder="Git-Logs laden oder relevante Auszüge hier einfügen."></textarea><p>Nur Commit-Zusammenfassungen und Branch-Aktivitäten, keine Dateiinhalte. Fehlende Quellen werden ausgewiesen.</p></details>
+<button id="prepare-analysis" class="primary wide">Analyseauftrag für diesen Chat vorbereiten</button>
+<div id="prompt-panel" hidden><p class="muted">Prüfe den Inhalt, kopiere ihn und füge ihn hier im Chat ein. Die App sendet nichts automatisch an ChatGPT.</p><textarea id="analysis-prompt" readonly rows="7" aria-label="Analyseauftrag"></textarea><button id="copy-analysis" class="wide">Analyseauftrag kopieren</button></div>
+<details id="answer-panel"><summary>ChatGPT-Antwort übernehmen</summary><p>Die JSON-Antwort aus diesem Chat hier einfügen. Du prüfst jeden Vorschlag, bevor er als Eintrag gespeichert wird.</p><label for="ai-answer">Strukturierte Antwort</label><textarea id="ai-answer" rows="6" maxlength="200000" placeholder='{"date":"2026-10-26","entries":[…],"questions":[]}'></textarea><button id="parse-answer" class="wide">Vorschläge anzeigen</button><div id="proposals"></div></details>
+</article>
+<article class="card entry-card"><div class="section-heading"><h2 id="form-title">Was hast du gemacht?</h2><span class="small">Ein Eintrag pro Tätigkeit</span></div>
+<form id="entry-form"><div class="fields"><label>Ticket <span class="optional">optional</span><input id="ticket" list="tickets" placeholder="PROJ-2800" maxlength="100"><datalist id="tickets"></datalist></label><label>Dauer<input id="duration" inputmode="decimal" placeholder="1:30 oder 1,5" required autocomplete="off"></label></div>
+<label>Tätigkeit<textarea id="description" rows="3" placeholder="Zum Beispiel: Kunden-Replay getestet und Fehlerbehandlung verbessert" maxlength="4000" required></textarea></label>
+<div class="form-footer"><label class="check"><input type="checkbox" id="estimated">Zeit ist noch geschätzt</label><div><button type="button" id="cancel" hidden>Abbrechen</button><button type="submit" class="primary" id="save-entry">＋ Eintrag speichern</button></div></div>
+</form></article>
+<article class="card list-card"><div class="section-heading"><h2>Deine Einträge</h2><span id="list-date" class="small"></span></div><div id="entries"></div></article>
+</section>
+<aside class="card closing"><div class="eyebrow">TAGESABSCHLUSS</div><h2>Bereit für die Buchung.</h2><p class="muted">Deine Angaben als Buchungsentwurf. Alle Zeiten im Format HH:MM.</p><div id="review" class="review"></div><label for="output" class="small">BUCHUNGSENTWURF</label><textarea id="output" readonly rows="15" aria-label="Buchungsentwurf"></textarea><button class="primary wide" id="copy">Tagesentwurf kopieren</button><button class="wide" id="download">Als Text herunterladen</button><details><summary>Wie geht es weiter?</summary><p>Prüfe zuerst die vorhandenen Buchungen des Tages in deinem Buchungssystem und trage dann den Entwurf ein. Die App überträgt nichts automatisch.</p></details></aside></div>
+<footer><span class="dot"></span> Nur auf deinem Gerät · Keine Anmeldung · Keine Übertragung <span>Browserdaten können gelöscht werden. Sichere deine Einträge regelmäßig.</span></footer>
+</main>
+</body></html>

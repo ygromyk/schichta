@@ -1,0 +1,15 @@
+{
+  "name": "Clockify (Beispiel)",
+  "_hinweis": "Als clockify.json speichern, Workspace-ID eintragen und den API-Key in Zeitbuch (Einstellungen > Integrationen) im Schlüsselbund speichern. Platzhalter: date, dateFormatted, author, totalMinutes, totalHours, totalDuration, entries; pro Eintrag entry.id, entry.ticket, entry.description, entry.minutes, entry.hours, entry.duration, entry.estimated, entry.project, entry.start/entry.end (UTC), entry.startTime/entry.endTime (HH:mm). {{map.ticket}} übersetzt das Ticket über die map-Tabelle.",
+  "method": "POST",
+  "url": "https://api.clockify.me/api/v1/workspaces/DEINE-WORKSPACE-ID/time-entries",
+  "mode": "perEntry",
+  "auth": { "type": "header", "header": "X-Api-Key", "secret": "clockify-api-key" },
+  "body": {
+    "start": "{{entry.start}}",
+    "end": "{{entry.end}}",
+    "description": "{{entry.ticket}} {{entry.description}}",
+    "billable": true
+  },
+  "map": {}
+}

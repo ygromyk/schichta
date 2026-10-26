@@ -1,0 +1,15 @@
+{
+  "url": "https://bcs.example.com",
+  "username": "dein.login",
+  "mapping": [
+    { "source": "ticket", "regex": "^PROJ-", "taskId": "1234567890123" },
+    { "source": "description", "regex": "daily|standup", "taskId": "1234567890124" }
+  ],
+  "defaultTaskId": null,
+  "onExisting": "refuse",
+  "allowEstimated": false,
+  "presence": { "set": true, "breakMinutes": 60 },
+  "ticketField": "effortAttr1",
+  "chromePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "timeoutMs": 30000
+}
