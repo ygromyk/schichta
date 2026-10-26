@@ -24,7 +24,6 @@ model, and you can make it a fully local one.
 - [Build from source](#build-from-source)
 - [Integrations: booking targets, hooks, Projektron BCS](#integrations)
 - [Where your data lives](#where-your-data-lives)
-- [Browser version (no install)](#browser-version-no-install)
 - [Development](#development)
 - [Releasing](#releasing)
 
@@ -235,29 +234,7 @@ estimates and already-booked days by default. Plug it in as a shell hook.
 To back up, copy the folder. To uninstall, delete the app, that folder and
 `~/Library/Preferences/local.schichta.plist`.
 
-## Browser version (no install)
-
-The repo also contains a minimal web version (`index.html`, `app.js`, `core.js`). Open
-`index.html` directly in a browser to track time into the browser's `localStorage`. To load Git
-activity, start the local read-only server:
-
-```bash
-SCHICHTA_REPOS=~/code/repo-a:~/code/repo-b python3 server.py
-```
-
-Then open <http://127.0.0.1:8765>. The server binds to `127.0.0.1` only and rejects cross-origin
-and DNS-rebinding requests. `SCHICHTA_AUTHOR` overrides the author filter, which defaults to
-`git config user.name`.
-
 ## Development
-
-```bash
-node --test core.test.cjs
-```
-
-```bash
-python3 -m unittest server_test.py
-```
 
 ```bash
 Schichta.app/Contents/MacOS/Schichta --self-test
@@ -267,8 +244,8 @@ Schichta.app/Contents/MacOS/Schichta --self-test
 cd adapters/bcs && npm install && npm test
 ```
 
-The desktop self-test reads the app's real user defaults, so run it on a profile with default
-settings (CI does).
+The desktop self-test uses a temporary database and its own user-defaults domain
+(`local.schichta.selftest`), so it never touches your real entries or settings.
 
 ## Releasing
 

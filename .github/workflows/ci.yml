@@ -22,11 +22,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Test web core and Git server
-        run: |
-          node --test core.test.cjs
-          python3 -m unittest server_test.py
-
       - name: Build app
         env:
           APP: dist/Schichta.app

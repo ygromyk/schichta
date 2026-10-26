@@ -37,11 +37,6 @@ jobs:
           echo "DMG=dist/Schichta-$VERSION.dmg" >> "$GITHUB_ENV"
           xcrun swiftc --version
 
-      - name: Test web core and Git server
-        run: |
-          node --test core.test.cjs
-          python3 -m unittest server_test.py
-
       - name: Import Developer ID certificate
         id: cert
         env:
