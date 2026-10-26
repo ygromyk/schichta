@@ -7,6 +7,8 @@ struct ProposalRowView: View {
     @State var proposal: ProposedEntry
     var onAccept: (ProposedEntry) -> Void
     var language: AppLanguage = .de
+    /// Size of the ± buttons, in minutes (the time step from Settings).
+    var step: Int = 15
 
     @State private var timeStr: String = ""
 
@@ -54,9 +56,9 @@ struct ProposalRowView: View {
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 130)
 
-                StepButton(increase: false, size: 15, help: t("−15 Minuten (mind. 5 Min.)", "−15 minutes (min. 5 min.)")) {
+                StepButton(increase: false, size: 15, help: t("−\(step) Minuten", "−\(step) minutes")) {
                     let cur = (try? SchichtaCore.parseMinutes(timeStr)) ?? proposal.minutes
-                    let next = SchichtaCore.clampDuration(cur - 15)
+                    let next = SchichtaCore.snapDuration(cur - step, step: step)
                     timeStr = SchichtaCore.formatTime(next)
                     proposal.minutes = next
                 }
@@ -67,9 +69,9 @@ struct ProposalRowView: View {
                     .multilineTextAlignment(.center)
                     .frame(width: 58)
 
-                StepButton(increase: true, size: 15, help: t("+15 Minuten", "+15 minutes")) {
+                StepButton(increase: true, size: 15, help: t("+\(step) Minuten", "+\(step) minutes")) {
                     let cur = (try? SchichtaCore.parseMinutes(timeStr)) ?? proposal.minutes
-                    let next = SchichtaCore.clampDuration(cur + 15)
+                    let next = SchichtaCore.snapDuration(cur + step, step: step)
                     timeStr = SchichtaCore.formatTime(next)
                     proposal.minutes = next
                 }

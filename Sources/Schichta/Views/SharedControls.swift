@@ -92,7 +92,8 @@ struct InlineDurationField: View {
             text = SchichtaCore.formatTime(entry.minutes)
             return
         }
-        if let mins = try? SchichtaCore.parseMinutes(trimmed) {
+        if let typed = try? SchichtaCore.parseMinutes(trimmed) {
+            let mins = store.snapDuration(typed)
             if mins != entry.minutes {
                 store.setEntryMinutes(id: entry.id, minutes: mins)
             }

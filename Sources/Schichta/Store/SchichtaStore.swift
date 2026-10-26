@@ -55,6 +55,9 @@ class SchichtaStore: ObservableObject {
     @Setting("Schichta.WorkEndHour") var workEndHour: Int = 17
     @Setting("Schichta.WorkEndMinute") var workEndMinute: Int = 0
     @Setting("Schichta.OnlyPromptDuringWorkHours") var onlyPromptDuringWorkHours: Bool = true
+    static let timeSteps = [1, 5, 10, 15, 30, 60]
+    /// Every booked duration is a multiple of this (see `snapDuration`); also the size of the ± buttons.
+    @Setting("Schichta.TimeStepMinutes", clamp: { SchichtaStore.timeSteps.contains($0) ? $0 : 15 }) var timeStepMinutes: Int = 15
 
     // 4. Prompts & Check-in settings
     @Setting("Schichta.TimerEnabled") var timerEnabled: Bool = true {
@@ -103,6 +106,17 @@ class SchichtaStore: ObservableObject {
     /// Preselected on first launch with the first installed built-in tool (see `prepareDefaults`).
     @Setting("Schichta.AICommand") var aiCommand: String = ""
     @Setting("Schichta.AIToolId") var aiToolId: String = ""
+
+    /// `minutes` rounded to the time step.
+    func snapDuration(_ minutes: Int) -> Int {
+        SchichtaCore.snapDuration(minutes, step: timeStepMinutes)
+    }
+
+    /// Quick duration buttons: 15m to 2h, rounded to the time step (duplicates dropped).
+    var durationPresets: [Int] {
+        var seen = Set<Int>()
+        return [15, 30, 45, 60, 90, 120].map(snapDuration).filter { seen.insert($0).inserted }
+    }
 
     var hasExternalHookConfigured: Bool {
         !hookShellCommand.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||

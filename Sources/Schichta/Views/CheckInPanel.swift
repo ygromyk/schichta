@@ -171,7 +171,7 @@ struct CheckInPopoverView: View {
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
 
-                    StepButton(increase: false, size: 16, help: store.t("−15 Minuten (mind. 5 Min.)", "−15 minutes (min. 5 min.)")) { adjustDuration(delta: -15) }
+                    StepButton(increase: false, size: 16, help: store.t("−\(store.timeStepMinutes) Minuten", "−\(store.timeStepMinutes) minutes")) { adjustDuration(steps: -1) }
 
                     TextField("0:15", text: $durationText)
                         .textFieldStyle(.roundedBorder)
@@ -179,14 +179,13 @@ struct CheckInPopoverView: View {
                         .multilineTextAlignment(.center)
                         .frame(width: 58)
 
-                    StepButton(increase: true, size: 16, help: store.t("+15 Minuten", "+15 minutes")) { adjustDuration(delta: 15) }
+                    StepButton(increase: true, size: 16, help: store.t("+\(store.timeStepMinutes) Minuten", "+\(store.timeStepMinutes) minutes")) { adjustDuration(steps: 1) }
 
                     Spacer(minLength: 4)
 
-                    quickChipButton("15m") { setDuration(15) }
-                    quickChipButton("30m") { setDuration(30) }
-                    quickChipButton("45m") { setDuration(45) }
-                    quickChipButton("1h") { setDuration(60) }
+                    ForEach(store.durationPresets.prefix(4), id: \.self) { minutes in
+                        quickChipButton(SchichtaCore.durationLabel(minutes)) { setDuration(minutes) }
+                    }
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
@@ -341,9 +340,9 @@ struct CheckInPopoverView: View {
         .buttonStyle(.plain)
     }
 
-    private func adjustDuration(delta: Int) {
+    private func adjustDuration(steps: Int) {
         let cur = (try? SchichtaCore.parseMinutes(durationText)) ?? store.reminderIntervalMinutes
-        let next = SchichtaCore.clampDuration(cur + delta)
+        let next = store.snapDuration(cur + steps * store.timeStepMinutes)
         durationText = SchichtaCore.formatTime(next)
     }
 

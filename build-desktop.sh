@@ -16,6 +16,9 @@ rm -rf "$APP/Contents/Resources"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 echo "Compiling Schichta $VERSION (swift build)..."
+# Replace the binary as a new file instead of overwriting it in place: macOS caches a binary's code signature
+# per file, so overwriting the copy a running Schichta uses gets the new one killed ("Killed: 9") on launch.
+rm -f "$APP/Contents/MacOS/Schichta"
 if [ "${UNIVERSAL:-}" = "1" ]; then
     # Build per architecture and merge with lipo: `--arch a --arch b` needs Xcode, this works with the Command Line Tools.
     BINARIES=()
@@ -79,3 +82,6 @@ if [ -z "${CI:-}" ] && [ "$SIGN_IDENTITY" = "-" ]; then
     /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$(cd "$(dirname "$APP")" && pwd)/$(basename "$APP")" || true
 fi
 echo "Built: $APP"
+if pgrep -f "$(cd "$(dirname "$APP")" && pwd)/$(basename "$APP")/Contents/MacOS/Schichta" >/dev/null; then
+    echo "Note: Schichta is still running the previous build. Quit it and open $APP again."
+fi

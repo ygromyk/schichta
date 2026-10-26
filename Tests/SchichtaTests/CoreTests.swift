@@ -17,6 +17,21 @@ struct CoreTests {
         #expect(throws: (any Error).self) { try SchichtaCore.parseMinutes(input) }
     }
 
+    @Test("Durations snap to the nearest step, at least one step, at most 24 hours", arguments: [
+        (22, 15, 15), (23, 15, 30), (65, 15, 60), (68, 15, 75), (0, 15, 15), (-10, 15, 15),
+        (1500, 15, 1440), (44, 30, 30), (45, 30, 60), (5, 10, 10), (1439, 60, 1440), (7, 1, 7),
+    ])
+    func snapsDurations(minutes: Int, step: Int, expected: Int) {
+        #expect(SchichtaCore.snapDuration(minutes, step: step) == expected)
+    }
+
+    @Test func labelsDurations() {
+        #expect(SchichtaCore.durationLabel(15) == "15m")
+        #expect(SchichtaCore.durationLabel(60) == "1h")
+        #expect(SchichtaCore.durationLabel(90) == "1,5h")
+        #expect(SchichtaCore.durationLabel(80) == "01:20")
+    }
+
     @Test func formatsTimesAndDates() {
         #expect(SchichtaCore.formatTime(90) == "01:30")
         #expect(SchichtaCore.formatTime(65) == "01:05")

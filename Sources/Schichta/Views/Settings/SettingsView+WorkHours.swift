@@ -91,6 +91,22 @@ extension SettingsView {
                     Divider()
 
                     HStack {
+                        Text(store.t("Zeitraster:", "Time step:"))
+                            .font(.system(size: 12, weight: .medium))
+                        Spacer()
+                        Picker("", selection: $store.timeStepMinutes) {
+                            ForEach(SchichtaStore.timeSteps, id: \.self) { mins in
+                                Text("\(mins) min").tag(mins)
+                            }
+                        }
+                        .frame(width: 85)
+                    }
+                    .help(store.t("Alle Dauern werden auf dieses Raster gerundet; auch die ±-Knöpfe springen um diesen Wert. Bestehende Einträge bleiben, bis du sie änderst.",
+                                  "All durations are rounded to this step, and the ± buttons move by it. Existing entries stay as they are until you change them."))
+
+                    Divider()
+
+                    HStack {
                         Text(store.t("Arbeitszeit-Fenster:", "Work hours window:"))
                             .font(.system(size: 12, weight: .medium))
                         Spacer()

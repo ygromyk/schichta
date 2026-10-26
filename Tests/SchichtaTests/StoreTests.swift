@@ -142,4 +142,40 @@ struct StoreTests {
             _ = SettingsView(store: store)
         }
     }
+
+    @Test func everyDurationFollowsTheTimeStep() throws {
+        try withTestStore { store in
+            #expect(store.timeStepMinutes == 15, "default")
+            store.timeStepMinutes = 7
+            #expect(store.timeStepMinutes == 15, "only offered steps are kept")
+            store.selectDay("2026-10-26")
+
+            store.addEntry(ticket: "PROJ-1", description: "Typed 0:50", minutes: 50, estimated: false)
+            let id = try #require(store.entriesForSelectedDay().first?.id)
+            #expect(store.entriesForSelectedDay().first?.minutes == 45)
+
+            store.adjustEntryMinutes(id: id, steps: 2)
+            #expect(store.entriesForSelectedDay().first?.minutes == 75)
+            store.setEntryMinutes(id: id, minutes: 83)
+            #expect(store.entriesForSelectedDay().first?.minutes == 90)
+
+            store.timeStepMinutes = 30
+            store.updateEntry(id: id, ticket: "PROJ-1", description: "Edited", minutes: 100, estimated: false)
+            #expect(store.entriesForSelectedDay().first?.minutes == 90)
+            #expect(store.durationPresets == [30, 60, 90, 120])
+        }
+    }
+
+    @Test func proposalsAndCheckInsAreRounded() {
+        withTestStore { store in
+            store.selectDay(SchichtaCore.day())
+            store.handleCheckIn(text: "Review", ticket: "", mode: .both, timeStr: "10:00", minutes: 20)
+            #expect(store.entriesForSelectedDay().first?.minutes == 15)
+
+            let open = ProposedEntry(id: "ai-0", ticket: "", description: "Unclear", minutes: 0, source: LocalizedText("KI", "AI"))
+            let timed = ProposedEntry(id: "ai-1", ticket: "", description: "Fix", minutes: 52, source: LocalizedText("KI", "AI"))
+            store.applyAISummary(AISummary.Result(summary: "", proposals: [open, timed], questions: []), day: store.selectedDay)
+            #expect(store.proposals.map(\.minutes) == [0, 45], "time open stays open")
+        }
+    }
 }

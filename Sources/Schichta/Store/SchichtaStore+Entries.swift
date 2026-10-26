@@ -53,6 +53,7 @@ extension SchichtaStore {
         let cleanTicket = ticket.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         let cleanDesc = description.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanDesc.isEmpty else { return }
+        let minutes = snapDuration(minutes)
 
         let daySum = entriesForSelectedDay().reduce(0) { $0 + $1.minutes }
         if daySum + minutes > 1440 {
@@ -75,7 +76,7 @@ extension SchichtaStore {
 
         database.entries[idx].ticket = cleanTicket
         database.entries[idx].description = cleanDesc
-        database.entries[idx].minutes = minutes
+        database.entries[idx].minutes = snapDuration(minutes)
         database.entries[idx].estimated = estimated
         if let p = project {
             database.entries[idx].project = p
@@ -97,10 +98,12 @@ extension SchichtaStore {
         showToast(t("Schätzung bestätigt.", "Estimate confirmed."))
     }
 
-    func adjustEntryMinutes(id: String, delta: Int) {
+    /// Moves the duration by `steps` time steps; an off-step duration (from before the setting) lands on the grid.
+    func adjustEntryMinutes(id: String, steps: Int) {
         guard let idx = database.entries.firstIndex(where: { $0.id == id }) else { return }
         let current = database.entries[idx].minutes
-        let updated = SchichtaCore.clampDuration(current + delta)
+        let delta = steps * timeStepMinutes
+        let updated = snapDuration(current + delta)
         guard updated != current else { return }
         database.entries[idx].minutes = updated
         save()
@@ -110,7 +113,7 @@ extension SchichtaStore {
 
     func setEntryMinutes(id: String, minutes: Int) {
         guard let idx = database.entries.firstIndex(where: { $0.id == id }) else { return }
-        let updated = SchichtaCore.clampDuration(minutes)
+        let updated = snapDuration(minutes)
         guard updated != database.entries[idx].minutes else { return }
         database.entries[idx].minutes = updated
         save()
@@ -131,7 +134,7 @@ extension SchichtaStore {
         guard !cleanText.isEmpty else { return }
         let cleanTicket = ticket.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         let today = SchichtaCore.day()
-        let effectiveMinutes = max(1, min(1440, minutes))
+        let effectiveMinutes = snapDuration(minutes)
 
         if mode == .both {
             // Check if today already has an identical entry (same ticket and same text)
@@ -140,7 +143,7 @@ extension SchichtaStore {
                 $0.ticket == cleanTicket &&
                 $0.description.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == cleanText.lowercased()
             }) {
-                let newMin = min(1440, database.entries[idx].minutes + effectiveMinutes)
+                let newMin = snapDuration(database.entries[idx].minutes + effectiveMinutes)
                 database.entries[idx].minutes = newMin
             } else {
                 var entry = Entry(date: today, ticket: cleanTicket, description: cleanText, minutes: effectiveMinutes, estimated: true)
@@ -172,7 +175,7 @@ extension SchichtaStore {
             switch outcome {
             case .success(let loaded):
                 let synth = AutoSynthesizer.synthesizeDay(day: day, journal: loaded.journal, gitResult: loaded.result, existingEntries: existing, language: self.appLanguage)
-                self.proposals = synth
+                self.proposals = synth.map { self.snapped($0) }
                 self.showToast(self.t("\(synth.count) Tätigkeiten automatisch erkannt.", "\(synth.count) activities automatically recognized."))
             case .failure(let error):
                 self.showToast(self.t("Fehler bei Git-Auswertung: \(error.localizedDescription)", "Git analysis error: \(error.localizedDescription)"))
@@ -185,8 +188,15 @@ extension SchichtaStore {
         aiSummaryText = result.summary
         aiQuestions = result.questions
         // Replace earlier AI proposals, keep local ones (Git/check-in).
-        proposals = proposals.filter { !$0.id.hasPrefix("ai-") } + result.proposals
+        proposals = proposals.filter { !$0.id.hasPrefix("ai-") } + result.proposals.map(snapped)
         showToast(t("\(result.proposals.count) KI-Vorschläge – bitte prüfen.", "\(result.proposals.count) AI proposals – please review."))
+    }
+
+    /// A proposal with its duration on the time step; "time open" (0) stays open.
+    private func snapped(_ prop: ProposedEntry) -> ProposedEntry {
+        var prop = prop
+        if prop.minutes > 0 { prop.minutes = snapDuration(prop.minutes) }
+        return prop
     }
 
     func acceptProposal(_ prop: ProposedEntry) {

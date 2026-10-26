@@ -72,7 +72,7 @@ extension MainWindowView {
                             .foregroundColor(.secondary)
                             .fixedSize()
 
-                        StepButton(increase: false, size: 15, help: store.t("−15 Minuten (mind. 5 Min.)", "−15 minutes (min. 5 min.)")) { addMinutesToDuration(-15) }
+                        StepButton(increase: false, size: 15, help: store.t("−\(store.timeStepMinutes) Minuten", "−\(store.timeStepMinutes) minutes")) { addStepsToDuration(-1) }
 
                         TextField("0:15", text: $formDuration)
                             .textFieldStyle(.roundedBorder)
@@ -80,15 +80,12 @@ extension MainWindowView {
                             .multilineTextAlignment(.center)
                             .frame(width: 58)
 
-                        StepButton(increase: true, size: 15, help: store.t("+15 Minuten", "+15 minutes")) { addMinutesToDuration(15) }
+                        StepButton(increase: true, size: 15, help: store.t("+\(store.timeStepMinutes) Minuten", "+\(store.timeStepMinutes) minutes")) { addStepsToDuration(1) }
 
                         HStack(spacing: 3) {
-                            Button("15m") { formDuration = "00:15" }
-                            Button("30m") { formDuration = "00:30" }
-                            Button("45m") { formDuration = "00:45" }
-                            Button("1h") { formDuration = "01:00" }
-                            Button("1,5h") { formDuration = "01:30" }
-                            Button("2h") { formDuration = "02:00" }
+                            ForEach(store.durationPresets, id: \.self) { minutes in
+                                Button(SchichtaCore.durationLabel(minutes)) { formDuration = SchichtaCore.formatTime(minutes) }
+                            }
                         }
                         .buttonStyle(.borderless)
                         .font(.system(size: 11))
@@ -227,7 +224,7 @@ extension MainWindowView {
                 ForEach(store.proposals) { prop in
                     ProposalRowView(proposal: prop, onAccept: { p in
                         store.acceptProposal(p)
-                    }, language: store.appLanguage)
+                    }, language: store.appLanguage, step: store.timeStepMinutes)
                 }
             }
         }
@@ -327,27 +324,27 @@ extension MainWindowView {
                                 .help(store.t("Klicken um Schätzung als bestätigt zu markieren", "Click to confirm estimate"))
                             }
 
-                            // Quick −15m
-                            StepButton(increase: false, size: 15, help: store.t("−15 Minuten (mind. 5 Min.)", "−15 minutes (min. 5 min.)")) {
-                                store.adjustEntryMinutes(id: entry.id, delta: -15)
+                            // One step less
+                            StepButton(increase: false, size: 15, help: store.t("−\(store.timeStepMinutes) Minuten", "−\(store.timeStepMinutes) minutes")) {
+                                store.adjustEntryMinutes(id: entry.id, steps: -1)
                             }
 
                             // Inline Duration Field
                             InlineDurationField(entry: entry, store: store)
 
-                            // Quick +15m
-                            StepButton(increase: true, size: 15, help: store.t("+15 Minuten", "+15 minutes")) {
-                                store.adjustEntryMinutes(id: entry.id, delta: 15)
+                            // One step more
+                            StepButton(increase: true, size: 15, help: store.t("+\(store.timeStepMinutes) Minuten", "+\(store.timeStepMinutes) minutes")) {
+                                store.adjustEntryMinutes(id: entry.id, steps: 1)
                             }
 
-                            // Quick +30m
-                            Button("+30m") {
-                                store.adjustEntryMinutes(id: entry.id, delta: 30)
+                            // Two steps more
+                            Button("+" + SchichtaCore.durationLabel(2 * store.timeStepMinutes)) {
+                                store.adjustEntryMinutes(id: entry.id, steps: 2)
                             }
                             .buttonStyle(.borderless)
                             .font(.system(size: 11))
                             .fixedSize()
-                            .help(store.t("+30 Minuten hinzufügen", "Add 30 minutes"))
+                            .help(store.t("+\(2 * store.timeStepMinutes) Minuten hinzufügen", "Add \(2 * store.timeStepMinutes) minutes"))
 
                             // Edit & Delete
                             Button(action: { startEditing(entry) }) {

@@ -176,12 +176,9 @@ struct MainWindowView: View {
 
     // MARK: - Form Helper
 
-    func addMinutesToDuration(_ mins: Int) {
-        if let current = try? SchichtaCore.parseMinutes(formDuration) {
-            formDuration = SchichtaCore.formatTime(SchichtaCore.clampDuration(current + mins))
-        } else {
-            formDuration = SchichtaCore.formatTime(max(5, mins))
-        }
+    func addStepsToDuration(_ steps: Int) {
+        let current = (try? SchichtaCore.parseMinutes(formDuration)) ?? 0
+        formDuration = SchichtaCore.formatTime(store.snapDuration(current + steps * store.timeStepMinutes))
     }
 
     func startEditing(_ entry: Entry) {
@@ -195,7 +192,7 @@ struct MainWindowView: View {
     func resetForm() {
         editingEntryId = nil
         formTicket = ""
-        formDuration = "0:15"
+        formDuration = SchichtaCore.formatTime(store.timeStepMinutes)
         formDescription = ""
         formEstimated = false
     }

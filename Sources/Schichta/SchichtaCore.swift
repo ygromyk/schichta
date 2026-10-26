@@ -77,9 +77,19 @@ enum SchichtaCore {
         (minutes < 0 ? "−" : "+") + formatTime(abs(minutes))
     }
 
-    /// Limits for duration buttons and inline editing: at least 5 minutes, at most 24 hours.
-    static func clampDuration(_ minutes: Int) -> Int {
-        max(5, min(1440, minutes))
+    /// Rounds a duration to the nearest multiple of `step` (halves round up): at least one step, at most 24 hours.
+    static func snapDuration(_ minutes: Int, step: Int) -> Int {
+        let step = max(1, step)
+        let snapped = (max(0, minutes) + step / 2) / step * step
+        return max(step, min(1440 / step * step, snapped))
+    }
+
+    /// Short label for duration buttons: "15m", "1h", "1,5h", "1:20".
+    static func durationLabel(_ minutes: Int) -> String {
+        if minutes < 60 { return "\(minutes)m" }
+        if minutes % 60 == 0 { return "\(minutes / 60)h" }
+        if minutes % 30 == 0 { return "\(minutes / 60),5h" }
+        return formatTime(minutes)
     }
 
     static func formatTime(_ minutes: Int) -> String {

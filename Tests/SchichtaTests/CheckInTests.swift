@@ -92,7 +92,7 @@ struct CheckInPromptTests {
             store.logBreak(period)
             let notes = try #require(store.database.journal["2026-10-26"]?.notes)
             #expect(notes == "- 12:05–13:10 Pause")
-            #expect(store.prefilledMinutes(for: .back(period)) == 65)
+            #expect(store.prefilledMinutes(for: .back(period)) == 60, "65 minutes away, rounded to the 15-minute step")
 
             let proposals = AutoSynthesizer.synthesizeDay(
                 day: "2026-10-26", journal: JournalItem(notes: notes),

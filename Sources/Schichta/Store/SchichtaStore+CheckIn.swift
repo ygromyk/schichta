@@ -74,11 +74,11 @@ extension SchichtaStore {
     func prefilledMinutes(for reason: CheckInReason, now: Date = Date()) -> Int {
         switch reason {
         case .manual, .timer:
-            return reminderIntervalMinutes
+            return snapDuration(reminderIntervalMinutes)
         case .beforeLunch:
-            return minutesSinceLastCheckIn(now: now) ?? reminderIntervalMinutes
+            return snapDuration(minutesSinceLastCheckIn(now: now) ?? reminderIntervalMinutes)
         case .back(let period):
-            return SchichtaCore.clampDuration(period.minutes)
+            return snapDuration(period.minutes)
         }
     }
 
@@ -91,7 +91,7 @@ extension SchichtaStore {
             .last
         let (hour, minute) = lastTime ?? (workStartHour, workStartMinute)
         guard let since = AppTime.calendar.date(bySettingHour: hour, minute: minute, second: 0, of: now), since < now else { return nil }
-        return SchichtaCore.clampDuration(Int(now.timeIntervalSince(since) / 60))
+        return min(1440, Int(now.timeIntervalSince(since) / 60))
     }
 
     /// Hour and minute of a check-in note line ("- 09:30 (30 Min.): …").
