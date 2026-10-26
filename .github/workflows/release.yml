@@ -34,6 +34,7 @@ jobs:
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "BUILD_NUMBER=$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
           echo "ZIP=dist/Schichta-$VERSION-macOS.zip" >> "$GITHUB_ENV"
+          echo "DMG=dist/Schichta-$VERSION.dmg" >> "$GITHUB_ENV"
           xcrun swiftc --version
 
       - name: Test web core and Git server
@@ -92,12 +93,34 @@ jobs:
         run: |
           # ditto keeps the bundle's symlinks, permissions and signature intact (zip -r does not).
           ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
-          cd dist && shasum -a 256 "$(basename "$ZIP")" > SHA256SUMS.txt && cat SHA256SUMS.txt
+          # Drag-to-install DMG: the app next to a link to /Applications.
+          STAGE="$RUNNER_TEMP/dmg"
+          mkdir -p "$STAGE" && ditto "$APP" "$STAGE/Schichta.app" && ln -s /Applications "$STAGE/Applications"
+          hdiutil create -volname "Schichta $VERSION" -srcfolder "$STAGE" -fs HFS+ -format UDZO -ov "$DMG"
+
+      - name: Sign, notarize and staple DMG
+        if: steps.cert.outputs.signed == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          codesign --force --timestamp --sign "$SIGN_IDENTITY" "$DMG"
+          xcrun notarytool submit "$DMG" --wait \
+            --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD"
+          xcrun stapler staple "$DMG"
+          spctl --assess --type open --context context:primary-signature --verbose "$DMG"
+
+      - name: Checksums
+        run: |
+          cd dist && shasum -a 256 "$(basename "$DMG")" "$(basename "$ZIP")" > SHA256SUMS.txt && cat SHA256SUMS.txt
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: ${{ env.ZIP }}
+          subject-path: |
+            ${{ env.DMG }}
+            ${{ env.ZIP }}
 
       - name: Publish GitHub Release
         env:
@@ -105,7 +128,7 @@ jobs:
         run: |
           PRERELEASE=""
           case "$VERSION" in *-*) PRERELEASE="--prerelease" ;; esac
-          gh release create "$GITHUB_REF_NAME" "$ZIP" dist/SHA256SUMS.txt \
+          gh release create "$GITHUB_REF_NAME" "$DMG" "$ZIP" dist/SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --title "Schichta $VERSION" \
             --generate-notes --verify-tag $PRERELEASE
 

@@ -127,7 +127,9 @@ Any command that reads the prompt on stdin and prints JSON works, for example
 
 ### Download (recommended)
 
-1. Open the [**latest release**](../../releases/latest) and download `Schichta-<version>-macOS.zip`.
+1. Open the [**latest release**](../../releases/latest) and download **`Schichta-<version>.dmg`**.
+   It is a universal app, so the same file runs natively on Apple silicon and Intel.
+   (`Schichta-<version>-macOS.zip` contains the same app for scripted installs.)
 2. *(Optional, recommended)* Verify the download:
 
    ```bash
@@ -135,12 +137,13 @@ Any command that reads the prompt on stdin and prints JSON works, for example
    ```
 
    ```bash
-   gh attestation verify Schichta-*-macOS.zip --repo <owner>/schichta
+   gh attestation verify Schichta-*.dmg --repo ygromyk/schichta
    ```
 
-   The second command proves that the zip was built by this repository's GitHub Actions workflow
-   from the tagged commit ([build provenance](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations)).
-3. Unzip and move **Schichta.app** to `/Applications`.
+   The first command needs `SHA256SUMS.txt` from the release next to the download; it warns about
+   any file you did not download. The second proves that the file was built by this repository's
+   GitHub Actions workflow from the tagged commit ([build provenance](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations)).
+3. Open the DMG and drag **Schichta** onto **Applications**.
 4. Open it. **Schichta** appears in the menu bar.
 
 **Requirements:** macOS 14 Sonoma or later, on Apple silicon or Intel (universal binary).
@@ -276,14 +279,16 @@ version tag is pushed:
 git tag -a v1.2.0 -m "Schichta 1.2.0" && git push origin v1.2.0
 ```
 
-The workflow runs all tests, builds a universal app with the tag's version, zips it with
-`ditto`, writes `SHA256SUMS.txt`, creates a [build-provenance
+The workflow runs all tests and builds a universal app with the tag's version. It then packages
+the app as a drag-to-install DMG (`hdiutil`) and as a zip (`ditto`), writes `SHA256SUMS.txt`,
+creates a [build-provenance
 attestation](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations)
 and publishes a GitHub Release with generated notes. Tags with a suffix such as `v1.2.0-beta.1`
 become pre-releases.
 
 **Signing and notarization (optional).** Add these repository secrets and the workflow signs
-with your Developer ID, notarizes and staples the app. Without them it ships ad-hoc signed builds.
+with your Developer ID, then notarizes and staples both the app and the DMG. Without them it ships
+ad-hoc signed builds.
 
 | Secret | Content |
 | --- | --- |
