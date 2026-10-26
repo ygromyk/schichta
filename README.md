@@ -26,6 +26,7 @@ model, and you can make it a fully local one.
 - [Where your data lives](#where-your-data-lives)
 - [Development](#development)
 - [Releasing](#releasing)
+- [License](#license)
 
 ## Features
 
@@ -273,3 +274,7 @@ ad-hoc signed builds.
 | `MACOS_CERTIFICATE_PASSWORD` | Password of that `.p12` |
 | `MACOS_SIGN_IDENTITY` | e.g. `Developer ID Application: Jane Doe (TEAMID)` |
 | `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_PASSWORD` | For `notarytool`; the password is an [app-specific password](https://support.apple.com/102654) |
+
+## License
+
+[MIT](LICENSE) © 2026 Yurii Gromyk

@@ -2,6 +2,7 @@
   "name": "schichta-bcs-adapter",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "Bucht Schichta-Tage in Projektron BCS (Browser-Automatisierung über die BCS-Weboberfläche).",
   "type": "module",
   "bin": {
