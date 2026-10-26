@@ -1,6 +1,6 @@
 {
   "url": "https://bcs.example.com",
-  "username": "dein.login",
+  "username": "your.login",
   "mapping": [
     { "source": "ticket", "regex": "^PROJ-", "taskId": "1234567890123" },
     { "source": "description", "regex": "daily|standup", "taskId": "1234567890124" }
