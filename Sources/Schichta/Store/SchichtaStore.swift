@@ -6,7 +6,7 @@ enum ActivePrompt: Equatable {
     case endOfDay(day: String)
 }
 
-/// Der laufende AppDelegate; `nil` in Tests, wo keine NSApplication gestartet wurde.
+/// The running AppDelegate; `nil` in tests, where no NSApplication was started.
 func appDelegate() -> AppDelegate? {
     NSApp?.delegate as? AppDelegate
 }
@@ -236,7 +236,7 @@ class SchichtaStore: ObservableObject {
         return curTotal >= startTotal && curTotal <= endTotal
     }
 
-    /// `storeURL` und `defaults` sind austauschbar, damit der Selbsttest nie die echten Daten und Einstellungen berührt.
+    /// `storeURL` and `defaults` are injectable so tests never touch real entries or settings.
     init(storeURL: URL = AppPaths.support.appendingPathComponent("schichta.json"), defaults: UserDefaults = .standard) {
         try? FileManager.default.createDirectory(at: storeURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         self.storeURL = storeURL
@@ -253,7 +253,7 @@ class SchichtaStore: ObservableObject {
         self.appLanguage = initialLang
         self.timeZoneIdentifier = defaults.string(forKey: SchichtaStore.timeZoneKey) ?? ""
 
-        // Working Days (1=Sun, 2=Mon... Standard: Mo-Fr [2, 3, 4, 5, 6])
+        // Working days (1=Sun, 2=Mon...; default Mon-Fri [2, 3, 4, 5, 6])
         if let savedDays = defaults.array(forKey: "Schichta.WorkingDays") as? [Int], !savedDays.isEmpty {
             self.workingDays = Set(savedDays)
         } else {
@@ -323,7 +323,7 @@ class SchichtaStore: ObservableObject {
            !decoded.isEmpty {
             initialRepos = decoded
         } else {
-            // Keine vorkonfigurierten Repos; Nutzer fügt sie in den Einstellungen hinzu.
+            // No preconfigured repos; the user adds them in Settings.
             initialRepos = []
         }
         self.trackedRepos = initialRepos
@@ -335,7 +335,7 @@ class SchichtaStore: ObservableObject {
             self.aiCommand = savedCommand
             self.aiToolId = defaults.string(forKey: "Schichta.AIToolId") ?? ""
         } else {
-            // Erster Start: das erste installierte eingebaute Werkzeug vorauswählen (Senden bleibt manuell).
+            // First launch: preselect the first installed built-in tool (sending stays manual).
             let firstInstalled = AITools.builtIns().first(where: \.installed)
             self.aiCommand = firstInstalled?.command ?? ""
             self.aiToolId = firstInstalled?.id ?? ""
@@ -373,7 +373,7 @@ class SchichtaStore: ObservableObject {
             let data = try encoder.encode(valid)
             try data.write(to: storeURL, options: .atomic)
         } catch {
-            NSLog("Fehler beim Speichern der Schichta-Datenbank: %@", error.localizedDescription)
+            NSLog("Could not save the Schichta database: %@", error.localizedDescription)
         }
     }
 

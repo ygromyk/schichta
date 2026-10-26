@@ -3,7 +3,7 @@ import SwiftUI
 
 // MARK: - Shared Controls
 
-/// −/+ Knopf neben Dauer- und Intervallfeldern.
+/// −/+ button next to duration and interval fields.
 struct StepButton: View {
     let increase: Bool
     var size: CGFloat = 15
@@ -22,7 +22,7 @@ struct StepButton: View {
 }
 
 extension View {
-    /// Rahmen der vier Kacheln in der Kennzahlenleiste.
+    /// Frame of the four tiles in the metrics bar.
     func tileStyle() -> some View {
         padding(.horizontal, 14)
             .padding(.vertical, 10)
@@ -32,7 +32,7 @@ extension View {
             .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.primary.opacity(0.08), lineWidth: 1))
     }
 
-    /// Farbiger Hinweisbalken (Morgen-/Feierabend-Prompt) unter der Kopfzeile.
+    /// Colored banner (morning / end-of-day prompt) below the header.
     func bannerStyle(_ color: Color) -> some View {
         padding(10)
             .background(color.opacity(0.12))

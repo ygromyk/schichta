@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Shared Helpers (Zeitzone, Fehler, Pfade, Prozesse)
+// MARK: - Shared Helpers (time zone, errors, paths, processes)
 
 /// All days (YYYY-MM-DD) and times use one time zone: the system zone unless another is chosen in Settings.
 /// Calendar and formatters live in one immutable `State` behind a lock, so switching zones while a
@@ -68,7 +68,7 @@ struct SchichtaError: LocalizedError {
 }
 
 enum AppPaths {
-    /// ~/Library/Application Support/Schichta (wird bei Bedarf angelegt).
+    /// ~/Library/Application Support/Schichta (created on demand).
     static let support: URL = {
         let base = (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
             ?? FileManager.default.temporaryDirectory
@@ -78,10 +78,10 @@ enum AppPaths {
     }()
 }
 
-/// Startet ein Programm mit Zeitlimit und sammelt die Ausgabe.
-/// stdin wird nebenläufig geschrieben und das Zeitlimit vorher gestartet: Liest der Befehl stdin nicht,
-/// blockiert sonst das Schreiben einer vollen Pipe (> 64 KB) für immer. Die stdin-Pipe löst kein SIGPIPE aus
-/// (F_SETNOSIGPIPE), ein vorzeitig beendeter Befehl führt daher nur zu einem Schreibfehler statt zum Absturz.
+/// Runs a program with a timeout and collects its output.
+/// stdin is written concurrently and the timeout is armed first: if the command never reads stdin,
+/// writing into a full pipe (> 64 KB) would otherwise block forever. The stdin pipe never raises SIGPIPE
+/// (F_SETNOSIGPIPE), so a command that exits early causes a write error instead of a crash.
 enum Shell {
     struct Output {
         let status: Int32
@@ -130,7 +130,7 @@ enum Shell {
         let outData = out.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
         killer.cancel()
-        // Lese-Ende schließen, falls der Befehl beendet ist, ohne stdin zu lesen: Das hängende Schreiben bricht dann ab.
+        // Close the read end in case the command exited without reading stdin: a blocked write then fails.
         try? input?.fileHandleForReading.close()
         background.wait()
         return Output(status: process.terminationStatus, stdout: outData, stderr: errData)

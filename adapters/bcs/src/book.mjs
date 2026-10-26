@@ -1,4 +1,4 @@
-// Ablauf einer Buchung. Browser und Passwort werden hereingereicht, damit Tests einen Fake-BCS nutzen können.
+// Booking flow. Browser and password are passed in so tests can use a fake BCS.
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AdapterError, buildPlan, formatTasks, germanDate, hhmm, verifySaved } from './plan.mjs';
@@ -6,7 +6,7 @@ import { BcsClient } from './bcs-client.mjs';
 
 /**
  * @returns {Promise<{exitCode: number, lines: string[]}>}
- *   0 = gebucht bzw. Trockenlauf ok, 1 = Fehler, 2 = bewusst abgelehnt (Plan-Probleme, Tag schon belegt)
+ *   0 = booked or dry run ok, 1 = error, 2 = deliberately refused (plan problems, day already has entries)
  */
 export async function book({ payload, config, password, dryRun = false, replace = false, openClient = BcsClient.open }) {
   const plan = buildPlan(payload, config);
@@ -43,7 +43,7 @@ export async function book({ payload, config, password, dryRun = false, replace 
     if (config.presence.set) await client.setPresence(plan.totalMinutes, config.presence.breakMinutes);
     await client.save();
 
-    // Gegenprobe: Tag neu laden und vergleichen, was BCS tatsächlich gespeichert hat.
+    // Verification: reload the day and compare with what BCS actually saved.
     await client.openDay(plan.date);
     const mismatches = verifySaved(plan, await client.fetchTasks());
     if (mismatches.length) {

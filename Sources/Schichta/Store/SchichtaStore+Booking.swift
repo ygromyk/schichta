@@ -29,18 +29,18 @@ extension SchichtaStore {
         return hasActivity(day) || isWorkingDay(day)
     }
 
-    /// Einträge oder nicht-leere Tagesnotizen vorhanden.
+    /// Has entries or non-empty daily notes.
     func hasActivity(_ day: String) -> Bool {
         database.entries.contains(where: { $0.date == day }) ||
             !(database.journal[day]?.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
     }
 
     func previousWorkingDay(before today: String = SchichtaCore.day()) -> String {
-        // Arbeitstage der letzten 14 Tage, neuester zuerst.
+        // Working days of the last 14 days, newest first.
         let workDays = (1...14).map { SchichtaCore.addDays(-$0, to: today) }.filter(isWorkingDay)
         let isBooked = { (day: String) in self.database.journal[day]?.booked == true }
 
-        // 1. Ungebucht mit Einträgen/Notizen, 2. irgendein ungebuchter Arbeitstag, 3. letzter Arbeitstag, 4. gestern.
+        // 1. unbooked with entries/notes, 2. any unbooked working day, 3. last working day, 4. yesterday.
         return workDays.first(where: { !isBooked($0) && self.hasActivity($0) })
             ?? workDays.first(where: { !isBooked($0) })
             ?? workDays.first

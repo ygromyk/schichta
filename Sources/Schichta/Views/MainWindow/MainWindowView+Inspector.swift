@@ -10,7 +10,7 @@ extension MainWindowView {
         let totalMinutes = entries.reduce(0) { $0 + $1.minutes }
         let estimatesCount = entries.filter { $0.estimated }.count
 
-        // Scrollbar, damit bei kleiner Fensterhöhe nichts gequetscht oder abgeschnitten wird.
+        // Scrollable, so nothing is squeezed or cut off in a short window.
         return ScrollView { VStack(alignment: .leading, spacing: 14) {
             // Header
             VStack(alignment: .leading, spacing: 2) {
@@ -133,7 +133,7 @@ extension MainWindowView {
                 .controlSize(.regular)
                 .disabled(entries.isEmpty)
 
-                // Prominenter Status-Button / Toggle
+                // Prominent status button / toggle
                 bookingStatusCard
             }
 

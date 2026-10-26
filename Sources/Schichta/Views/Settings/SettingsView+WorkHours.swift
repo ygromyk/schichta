@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 extension SettingsView {
-    // MARK: - Tab 2: Arbeitszeit & Prompts
+    // MARK: - Tab 2: Work Hours & Prompts
 
     var workHoursAndPromptsTab: some View {
         VStack(alignment: .leading, spacing: 16) {

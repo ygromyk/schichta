@@ -3,7 +3,7 @@ import AppKit
 // MARK: - App Icon Generator (macOS Squircle with CoreGraphics)
 
 enum AppIconGenerator {
-    /// Kleines Icon für Kopfzeile, Banner und Check-in. Einmal gezeichnet statt bei jedem SwiftUI-Render.
+    /// Small icon for header, banners and check-in. Drawn once instead of on every SwiftUI render.
     static let small = makeIcon(size: 64)
 
     static func pngData(_ image: NSImage) -> Data? {
@@ -60,7 +60,7 @@ enum AppIconGenerator {
         innerStroke.lineWidth = max(1.0, size * 0.006)
         innerStroke.stroke()
 
-        // Combined "Z + Uhr" Design:
+        // Combined "S + clock" design:
         // 1. Crisp Clock Dial Ring in the center
         let center = CGPoint(x: squircleRect.midX, y: squircleRect.midY)
         let dialRadius = squircleRect.width * 0.34

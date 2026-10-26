@@ -4,9 +4,9 @@ import Foundation
 
 struct TrackedRepo: Identifiable, Codable, Equatable {
     var id: String = UUID().uuidString
-    var path: String          // Absoluter Pfad zum Git-Verzeichnis, z.B. "/Users/me/Projects/example-app"
-    var projectName: String   // Konfigurierbarer Projektname für Berichte & externe Hooks, z.B. "Example App" oder "Kundenprojekt"
-    var defaultTicket: String // Optionales Standard-Ticket für dieses Repo, falls Commit kein Ticket im Text hat (z.B. "PROJ-2800")
+    var path: String          // Absolute path of the Git directory, e.g. "/Users/me/Projects/example-app"
+    var projectName: String   // Project name for reports & external hooks, e.g. "Example App"
+    var defaultTicket: String // Optional default ticket for commits without a ticket in their message (e.g. "PROJ-2800")
     var enabled: Bool = true
 
     var folderName: String { URL(fileURLWithPath: path).lastPathComponent }

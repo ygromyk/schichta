@@ -53,7 +53,7 @@ extension MainWindowView {
 
     var customHeaderBar: some View {
         HStack(spacing: 14) {
-            // Links: App-Logo + "Schichta" + Ausgeschriebener Wochentag
+            // Left: app logo + "Schichta" + weekday
             HStack(spacing: 9) {
                 Image(nsImage: AppIconGenerator.small)
                     .resizable()
@@ -72,10 +72,10 @@ extension MainWindowView {
 
             Spacer(minLength: 16)
 
-            // Mitte/Rechts: Datums-Segmented-Gruppe
+            // Center/right: date segment group
             datePickerCapsule
 
-            // Ganz rechts: Aktionen sauber mit Abstand
+            // Far right: actions
             headerActionButtons
         }
         .padding(.leading, 82)

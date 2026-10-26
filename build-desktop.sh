@@ -1,23 +1,23 @@
 #!/bin/bash
-# Baut Schichta.app. Optionale Umgebungsvariablen (für Releases/CI):
-#   APP=pfad/Schichta.app   Ausgabeort (Standard: ./Schichta.app)
-#   VERSION=1.2.0           CFBundleShortVersionString (Standard: 1.0)
-#   BUILD_NUMBER=42         CFBundleVersion (Standard: 1)
-#   UNIVERSAL=1             arm64 + x86_64 statt nur der eigenen Architektur
-#   SIGN_IDENTITY="Developer ID Application: …"  statt Ad-hoc-Signatur (mit Hardened Runtime)
+# Builds Schichta.app. Optional environment variables (for releases/CI):
+#   APP=path/Schichta.app   output path (default: ./Schichta.app)
+#   VERSION=1.2.0           CFBundleShortVersionString (default: 1.0)
+#   BUILD_NUMBER=42         CFBundleVersion (default: 1)
+#   UNIVERSAL=1             arm64 + x86_64 instead of only the host architecture
+#   SIGN_IDENTITY="Developer ID Application: …"  instead of ad-hoc signing (with hardened runtime)
 set -euo pipefail
 cd "$(dirname "$0")"
 APP="${APP:-Schichta.app}"
 VERSION="${VERSION:-1.0}"
 BUILD_NUMBER="${BUILD_NUMBER:-1}"
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
-MIN_MACOS="14.0"  # onChange(of:initial:_:) braucht macOS 14
+MIN_MACOS="14.0"  # onChange(of:initial:_:) needs macOS 14
 rm -rf "$APP/Contents/Resources"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
-echo "Kompiliere Schichta $VERSION (swift build)..."
+echo "Compiling Schichta $VERSION (swift build)..."
 if [ "${UNIVERSAL:-}" = "1" ]; then
-    # Pro Architektur bauen und mit lipo zusammenführen: `--arch a --arch b` bräuchte Xcode, das hier nicht.
+    # Build per architecture and merge with lipo: `--arch a --arch b` needs Xcode, this works with the Command Line Tools.
     BINARIES=()
     for ARCH in arm64 x86_64; do
         BUILD=(swift build -c release --triple "$ARCH-apple-macosx$MIN_MACOS")
@@ -30,7 +30,7 @@ else
     cp "$(swift build -c release --show-bin-path)/Schichta" "$APP/Contents/MacOS/Schichta"
 fi
 
-echo "Erzeuge App-Icon (AppIcon.icns)..."
+echo "Creating app icon (AppIcon.icns)..."
 ICONSET="$(mktemp -d)/Schichta.iconset"
 "$APP/Contents/MacOS/Schichta" --generate-icon "$ICONSET"
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
@@ -38,7 +38,7 @@ rm -rf "$ICONSET"
 
 cp targets/*.example.json "$APP/Contents/Resources/"
 
-echo "Schreibe Info.plist..."
+echo "Writing Info.plist..."
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -56,18 +56,18 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </dict></plist>
 PLIST
 
-echo "Signiere $APP..."
+echo "Signing $APP..."
 xattr -cr "$APP"
 if [ "$SIGN_IDENTITY" = "-" ]; then
     codesign --force --sign - "$APP"
 else
-    # Hardened Runtime + sichere Zeitstempel sind Voraussetzung für die Notarisierung.
+    # Hardened runtime + secure timestamp are required for notarization.
     codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$APP"
 fi
 codesign --verify --strict "$APP"
 
-# Nur lokal: Finder-Icon setzen und bei LaunchServices registrieren. setIcon legt eine
-# Icon-Datei ins Bundle und würde eine Release-Signatur ungültig machen.
+# Local builds only: set the Finder icon and register with LaunchServices. setIcon writes an
+# icon file into the bundle, which would invalidate a release signature.
 if [ -z "${CI:-}" ] && [ "$SIGN_IDENTITY" = "-" ]; then
     APP_PATH="$APP" swift -e 'import Cocoa
     let app = ProcessInfo.processInfo.environment["APP_PATH"]!
@@ -75,7 +75,7 @@ if [ -z "${CI:-}" ] && [ "$SIGN_IDENTITY" = "-" ]; then
         NSWorkspace.shared.setIcon(img, forFile: app, options: [])
     }'
     touch "$APP"
-    echo "Registriere $APP bei LaunchServices..."
+    echo "Registering $APP with LaunchServices..."
     /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$(cd "$(dirname "$APP")" && pwd)/$(basename "$APP")" || true
 fi
-echo "Desktop-App erfolgreich gebaut: $APP"
+echo "Built: $APP"

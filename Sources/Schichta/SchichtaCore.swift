@@ -53,7 +53,7 @@ enum SchichtaCore {
         return minutes
     }
 
-    /// Grenzen für Dauer-Knöpfe und Inline-Bearbeitung: mindestens 5 Minuten, höchstens 24 Stunden.
+    /// Limits for duration buttons and inline editing: at least 5 minutes, at most 24 hours.
     static func clampDuration(_ minutes: Int) -> Int {
         max(5, min(1440, minutes))
     }

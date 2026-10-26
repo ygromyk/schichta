@@ -3,7 +3,7 @@ import SwiftUI
 
 // MARK: - Schichta Theme
 
-/// Hauptaktion: grün gefüllt, solange aktiv; deaktiviert als normaler Rahmen-Button statt blass-grüner Fläche.
+/// Primary action: filled green while enabled; disabled it falls back to a bordered button instead of a pale green fill.
 struct ProminentWhenEnabled: ViewModifier {
     let enabled: Bool
 

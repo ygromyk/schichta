@@ -13,7 +13,7 @@ extension MainWindowView {
         let progress = min(1.0, Double(totalMinutes) / Double(target))
 
         return HStack(spacing: 12) {
-            // Tile 1: Erfasste Zeit
+            // Tile 1: logged time
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Image(systemName: "clock.fill")
@@ -41,7 +41,7 @@ extension MainWindowView {
             }
             .tileStyle()
 
-            // Tile 2: Tätigkeiten
+            // Tile 2: activities
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Image(systemName: "list.bullet.clipboard.fill")
@@ -61,7 +61,7 @@ extension MainWindowView {
             }
             .tileStyle()
 
-            // Tile 3: Prüfstatus
+            // Tile 3: review status
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     if totalMinutes == 0 {
@@ -134,9 +134,9 @@ extension MainWindowView {
             }
             .tileStyle()
 
-            // Tile 4: Check-in Assistent & Feierabend-Prompt
+            // Tile 4: check-in assistant & end-of-day prompt
             VStack(alignment: .leading, spacing: 4) {
-                // Zeile 1: Header
+                // Row 1: header
                 HStack(alignment: .center, spacing: 5) {
                     Image(systemName: "bell.badge.fill")
                         .foregroundColor(.purple)
@@ -154,7 +154,7 @@ extension MainWindowView {
                         .labelsHidden()
                 }
 
-                // Zeile 2: Hauptwert
+                // Row 2: main value
                 HStack(alignment: .center, spacing: 4) {
                     let assistantStatusText: String = {
                         if !store.timerEnabled {
@@ -188,7 +188,7 @@ extension MainWindowView {
                     }
                 }
 
-                // Zeile 3: Subtext unten
+                // Row 3: subtext
                 HStack {
                     Text(store.t("Feierabend: \(store.endOfDayPromptTimeString) Uhr", "End of day: \(store.endOfDayPromptTimeString)"))
                         .font(.system(size: 11))

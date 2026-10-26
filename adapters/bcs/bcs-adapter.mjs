@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// schichta-bcs: bucht einen Schichta-Tag in Projektron BCS. Eigenständig; Schichta ruft es nur als Shell-Hook auf.
+// schichta-bcs: books a Schichta day into Projektron BCS. Standalone; Schichta only calls it as a shell hook.
 import { readFile } from 'node:fs/promises';
 import { AdapterError, DEFAULT_CONFIG_PATH, normalizeConfig, parsePayload, buildPlan, formatTasks, germanDate, hhmm } from './src/plan.mjs';
 import { getPassword, setPasswordInteractive } from './src/keychain.mjs';
@@ -79,7 +79,7 @@ async function main() {
         console.log([`Plan ${germanDate(plan.date)} · ${hhmm(plan.totalMinutes)}`, ...formatTasks(plan.tasks), ...plan.problems.map((p) => '  ✗ ' + p)].join('\n'));
         return plan.problems.length ? 2 : 0;
       }
-      // Browser-Abhängigkeit erst laden, wenn sie gebraucht wird (plan funktioniert ohne npm install).
+      // Load the browser dependency only when needed (plan works without npm install).
       const { book } = await import('./src/book.mjs');
       const result = await book({
         payload, config,

@@ -49,7 +49,7 @@ extension MainWindowView {
             icon: "plus.circle.fill"
         ) {
             VStack(alignment: .leading, spacing: 10) {
-                // Row 1: Ticket + Dauer nebeneinander
+                // Row 1: ticket + duration side by side
                 HStack(alignment: .center, spacing: 12) {
                     // Ticket Input
                     HStack(spacing: 4) {
@@ -65,7 +65,7 @@ extension MainWindowView {
                         }
                     }
 
-                    // Dauer Stepper & Quick-Buttons
+                    // Duration stepper & quick buttons
                     HStack(spacing: 5) {
                         Text(store.t("Dauer:", "Duration:"))
                             .font(.system(size: 11, weight: .medium))
@@ -97,7 +97,7 @@ extension MainWindowView {
                     }
                 }
 
-                // Recent Tickets (wenn vorhanden)
+                // Recent tickets (if any)
                 let recents = store.recentTickets()
                 if !recents.isEmpty {
                     HStack(spacing: 5) {
@@ -122,11 +122,11 @@ extension MainWindowView {
                     }
                 }
 
-                // Row 2: Beschreibungsfeld
+                // Row 2: description field
                 TextField(store.t("Woran hast du gearbeitet? (z. B. Abstimmung Architektur)", "What did you work on? (e.g. Architecture sync)"), text: $formDescription)
                     .textFieldStyle(.roundedBorder)
 
-                // Row 3: Fußzeile mit Checkbox + Speichern-Button
+                // Row 3: footer with checkbox + save button
                 HStack {
                     Toggle(store.t("Zeit ist geschätzt (vor Buchung prüfen)", "Time is estimated (verify before booking)"), isOn: $formEstimated)
                         .toggleStyle(.checkbox)

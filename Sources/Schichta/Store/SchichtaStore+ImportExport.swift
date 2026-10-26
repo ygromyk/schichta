@@ -9,7 +9,7 @@ extension SchichtaStore {
         NSPasteboard.general.setString(text, forType: .string)
     }
 
-    /// Zeigt den Dialog als Sheet am Fenster (falls vorhanden), sonst modal, und ruft `onURL` nur bei „OK“ auf.
+    /// Shows the panel as a sheet on the window (if any), otherwise modally, and calls `onURL` only on "OK".
     func present(_ panel: NSSavePanel, window: NSWindow?, onURL: @escaping (URL) throws -> Void, failure: @escaping (Error) -> String) {
         let handler: (NSApplication.ModalResponse) -> Void = { result in
             guard result == .OK, let url = panel.url else { return }

@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 extension SettingsView {
-    // MARK: - Tab 1: Allgemein & Daten
+    // MARK: - Tab 1: General & Data
 
     var generalTab: some View {
         VStack(alignment: .leading, spacing: 16) {

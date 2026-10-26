@@ -2,11 +2,11 @@ import AppKit
 import SwiftUI
 
 extension SettingsView {
-    // MARK: - Tab 3: Git-Repos & Prüfung
+    // MARK: - Tab 3: Git Repos & Inspection
 
     var gitReposAndInspectorTab: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Sektion 1: Getrackte Repositories
+            // Section 1: tracked repositories
             GroupBox(label: Label(store.t("Getrackte Git-Repositories", "Tracked Git Repositories"), systemImage: "arrow.triangle.branch")) {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(store.t("Füge hier beliebige lokale Git-Verzeichnisse hinzu. Für jedes Repo kannst du den konfigurierten Projektnamen (für Entwurf & Hooks) sowie ein optionales Standard-Ticket festlegen.", "Add any local Git directories here. For each repo you can specify the project name (for draft & hooks) and an optional default ticket."))
@@ -120,7 +120,7 @@ extension SettingsView {
                 .padding(10)
             }
 
-            // Sektion 2: Lokaler Tages-Aktivitäts-Prüfer
+            // Section 2: local day activity inspector
             GroupBox(label: Label(store.t("Lokale Git-Prüfung für \(SchichtaCore.formatGermanDate(store.selectedDay))", "Local Git inspection for \(SchichtaCore.formatGermanDate(store.selectedDay))"), systemImage: "magnifyingglass")) {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(store.t("Prüft für den ausgewählten Tag alle aktivierten Repositories: Eigene Commits, Dateiänderungen, Branch-/HEAD-Reflogs und heute uncommittete Dateien im Working-Tree.", "Inspects all active repositories for the selected day: own commits, file diffs, branch/HEAD reflogs, and uncommitted working tree files."))
@@ -162,7 +162,7 @@ extension SettingsView {
                         .padding(.vertical, 4)
                     }
 
-                    // Stat Übersicht pro Repo
+                    // Stats per repo
                     if let gitRes = store.inspectedGitResult,
                        let repos = gitRes["repositories"] as? [[String: Any]],
                        !repos.isEmpty {
@@ -220,7 +220,7 @@ extension SettingsView {
                         }
                     }
 
-                    // Aufklappbares Detail-Log
+                    // Detailed log
                     let logs = store.journalForSelectedDay().logs
                     if !logs.isEmpty {
                         VStack(alignment: .leading, spacing: 4) {

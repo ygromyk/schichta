@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
-  "description": "Bucht Schichta-Tage in Projektron BCS (Browser-Automatisierung über die BCS-Weboberfläche).",
+  "description": "Books Schichta days into Projektron BCS (browser automation of the BCS web UI).",
   "type": "module",
   "bin": {
     "schichta-bcs": "./bcs-adapter.mjs"

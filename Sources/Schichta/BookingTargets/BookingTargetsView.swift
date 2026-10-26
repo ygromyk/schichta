@@ -26,7 +26,7 @@ final class BookingTargetsModel: ObservableObject {
         AppPaths.support.appendingPathComponent("targets", isDirectory: true)
     }
 
-    /// Fingerabdruck der Tageseinträge: Senden ist nur erlaubt, solange die Vorschau dazu passt.
+    /// Fingerprint of the day's entries: sending is only allowed while the preview still matches.
     static func signature(_ entries: [Entry]) -> String {
         entries.map { "\($0.id)|\($0.ticket)|\($0.description)|\($0.minutes)|\($0.estimated)|\($0.project)" }.joined(separator: "\n")
     }
@@ -35,7 +35,7 @@ final class BookingTargetsModel: ObservableObject {
         let fm = FileManager.default
         try? fm.createDirectory(at: Self.folder, withIntermediateDirectories: true)
         let files = (try? fm.contentsOfDirectory(at: Self.folder, includingPropertiesForKeys: nil)) ?? []
-        // Leerer Ordner: Beispiel als Vorlage hineinlegen (*.example.json wird nie geladen).
+        // Empty folder: drop in the example as a template (*.example.json is never loaded).
         if files.isEmpty, let example = Bundle.main.url(forResource: "clockify.example", withExtension: "json") {
             try? fm.copyItem(at: example, to: Self.folder.appendingPathComponent("clockify.example.json"))
         }

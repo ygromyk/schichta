@@ -1,6 +1,6 @@
-// Steuert die BCS-Weboberfläche (Tageserfassung). Selektoren und Ablauf stammen aus
-// projektron-bcs-cli (src/bcsClient.ts, Commit 8fd277ec), erweitert um Prüfungen:
-// Login-Fehler erkennen, angezeigtes Datum bestätigen, fehlende Task-Zeilen melden.
+// Drives the BCS web UI (daily time recording). Selectors and flow come from
+// projektron-bcs-cli (src/bcsClient.ts, commit 8fd277ec), extended with checks:
+// detect login failures, confirm the displayed date, report missing task rows.
 import puppeteer from 'puppeteer-core';
 import { AdapterError, germanDate } from './plan.mjs';
 
@@ -39,7 +39,7 @@ export class BcsClient {
     await this.page.type('#label_pwd', password);
     await Promise.all([this.page.waitForNavigation(), this.page.click('#loginbutton')]);
 
-    // BCS fragt nach Browser-Benachrichtigungen; nicht jede Instanz zeigt den Dialog.
+    // BCS asks about browser notifications; not every instance shows the dialog.
     const later = await this.page.waitForSelector('input.notificationPermissionLater', { timeout: 3000 }).catch(() => null);
     if (later) await later.click();
 
@@ -48,13 +48,13 @@ export class BcsClient {
     await this.page.waitForSelector(DATE_DISPLAY);
   }
 
-  /** Wechselt die Tageserfassung auf `date` (YYYY-MM-DD) und bestätigt das angezeigte Datum. */
+  /** Switches the daily time recording to `date` (YYYY-MM-DD) and confirms the displayed date. */
   async openDay(date) {
     const [year, month, day] = date.split('-').map(Number);
     await this.page.waitForSelector(DATE_DISPLAY);
     await Promise.all([
       this.page.evaluate(([field, y, m, d]) => {
-        // BCS-eigene Kalenderfunktion; Monat ist 0-basiert wie in JavaScript.
+        // BCS's own calendar function; the month is 0-based as in JavaScript.
         PopupCalendar.reloadPageByCalendar(field, y, m, d, field, `popupCalendarLink.${field}`);
       }, [DATE_FIELD, year, month - 1, day]),
       this.page.waitForSelector('a.dayHighlighted').then((link) => link.click()),
@@ -62,7 +62,7 @@ export class BcsClient {
     ]);
     await this.page.waitForSelector(DATE_DISPLAY);
 
-    // Schutz gegen Buchen auf den falschen Tag.
+    // Guard against booking onto the wrong day.
     const shown = await this.page.$eval(DATE_DISPLAY, (el) => el.textContent.trim());
     const variants = [germanDate(date), `${day}.${month}.${year}`];
     if (!variants.some((v) => shown.includes(v))) {
@@ -86,7 +86,7 @@ export class BcsClient {
     await this.page.$$eval('a.cleanTimeRecordingRow_Link', (links) => links.forEach((a) => a.click()));
   }
 
-  /** Füllt pro Task die letzte Zeile der Task-Gruppe und legt per „+“ eine neue leere Zeile an (wie die CLI). */
+  /** Fills the last row of each task group and adds a new empty row via "+" (like the CLI). */
   async fillTasks(tasks) {
     const ticketField = this.config.ticketField;
     for (const task of tasks) {
@@ -114,9 +114,9 @@ export class BcsClient {
   }
 
   /**
-   * Anwesenheit = gebuchte Zeit + Pause; zweite Zeile = Pause (wie die CLI).
-   * Werte direkt setzen statt tippen: Die CLI tippt hinter eine „0“, dann hängt das Ergebnis
-   * davon ab, wo der Cursor landet (aus 195 kann 1950 werden).
+   * Presence = booked time + break; the second row is the break (like the CLI).
+   * Values are set directly instead of typed: the CLI types after a "0", so the result
+   * depends on where the cursor lands (195 can become 1950).
    */
   async setPresence(totalMinutes, breakMinutes) {
     const values = [[1, totalMinutes + breakMinutes], [2, breakMinutes]];

@@ -13,7 +13,7 @@ enum Activity {
         return (time.isoSeconds.string(from: start), time.isoSeconds.string(from: end))
     }
 
-    /// Git-Autor aus `git config user.name`, damit kein Name im Code steht.
+    /// Git author from `git config user.name`, so no name is hard-coded.
     static func gitUserName() -> String {
         guard let output = try? Shell.run("/usr/bin/git", ["config", "--global", "user.name"], timeout: 5) else { return "" }
         return output.text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -61,19 +61,19 @@ enum Activity {
                 continue
             }
 
-            // 1. Eigene Commits
+            // 1. Own commits
             let commits = git(repoURL, ["log", "--all", "--since-as-filter=\(start)", "--until=\(end)", authorArg, "-n", "150", "--format=%h | Autorzeit: %aI | Commitzeit: %cI | %s"])
             repoDict["commits"] = commits
 
-            // 2. Geänderte Dateien / Diff-Statistik
+            // 2. Changed files / diff stats
             let changedFiles = git(repoURL, ["log", "--all", "--since-as-filter=\(start)", "--until=\(end)", authorArg, "--shortstat", "--oneline", "-n", "30"])
             repoDict["changed_files"] = changedFiles
 
-            // 3. Lokale Branch-/HEAD-Aktivitäten
+            // 3. Local branch/HEAD activity
             let head = git(repoURL, ["reflog", "show", "HEAD", "--since=\(start)", "--until=\(end)", "-n", "200", "--date=iso-strict", "--format=%gD | %gs"])
             repoDict["head_activity"] = head
 
-            // 4. Uncommitted Working-Tree-Änderungen (falls heute)
+            // 4. Uncommitted working-tree changes (today only)
             if isToday {
                 let wt = git(repoURL, ["status", "--short"])
                 repoDict["working_tree"] = wt

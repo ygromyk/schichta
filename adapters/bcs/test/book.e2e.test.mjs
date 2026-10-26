@@ -1,4 +1,4 @@
-// Ende-zu-Ende: echter Chrome (headless) gegen den Fake-BCS. Wird übersprungen, wenn Chrome oder puppeteer-core fehlt.
+// End to end: real headless Chrome against the fake BCS. Skipped when Chrome or puppeteer-core is missing.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
@@ -19,7 +19,7 @@ before(async () => {
   if (skip) return;
   bcs = await startFakeBcs({ initial: { '2026-10-27': [{ taskId: '222', minutes: 30, description: 'Schon da', ticket: '' }] } });
   config = normalizeConfig({
-    url: bcs.url, username: 'max', timeoutMs: 20000, // großzügig: kalter Chrome-Start unter Last
+    url: bcs.url, username: 'max', timeoutMs: 20000, // generous: cold Chrome start under load
     mapping: [{ source: 'ticket', regex: '^PROJ-', taskId: '111' }, { source: 'description', regex: 'daily', taskId: '222' }],
   });
 });
@@ -31,7 +31,7 @@ const payload = (date) => parsePayload(JSON.stringify({ date, entries: [
   { id: 'c', ticket: '', description: 'Daily', minutes: 15, estimated: false },
 ] }));
 
-test('bucht einen leeren Tag und bestätigt per Gegenprobe', { skip }, async () => {
+test('books an empty day and verifies it', { skip }, async () => {
   const result = await book({ payload: payload('2026-10-26'), config, password: 'geheim' });
   assert.equal(result.exitCode, 0, result.lines.join('\n'));
   const saved = bcs.state.days.get('2026-10-26');
@@ -43,7 +43,7 @@ test('bucht einen leeren Tag und bestätigt per Gegenprobe', { skip }, async () 
   assert.deepEqual(saved.presence, [135 + 60, 60], 'Anwesenheit = Summe + Pause, zweite Zeile = Pause');
 });
 
-test('lehnt einen schon belegten Tag ohne --replace ab', { skip }, async () => {
+test('refuses a day with entries without --replace', { skip }, async () => {
   const saves = bcs.state.saves;
   const result = await book({ payload: payload('2026-10-27'), config, password: 'geheim' });
   assert.equal(result.exitCode, 2);
@@ -51,7 +51,7 @@ test('lehnt einen schon belegten Tag ohne --replace ab', { skip }, async () => {
   assert.equal(bcs.state.saves, saves, 'darf nichts speichern');
 });
 
-test('Trockenlauf speichert nichts', { skip }, async () => {
+test('dry run saves nothing', { skip }, async () => {
   const saves = bcs.state.saves;
   const result = await book({ payload: payload('2026-10-27'), config, password: 'geheim', dryRun: true, replace: true });
   assert.equal(result.exitCode, 0);
@@ -59,7 +59,7 @@ test('Trockenlauf speichert nichts', { skip }, async () => {
   assert.equal(bcs.state.saves, saves);
 });
 
-test('--replace ersetzt vorhandene Einträge', { skip }, async () => {
+test('--replace replaces existing entries', { skip }, async () => {
   const result = await book({ payload: payload('2026-10-27'), config, password: 'geheim', replace: true });
   assert.equal(result.exitCode, 0, result.lines.join('\n'));
   const records = bcs.state.days.get('2026-10-27').records;
@@ -67,11 +67,11 @@ test('--replace ersetzt vorhandene Einträge', { skip }, async () => {
   assert.ok(!records.some((r) => r.description === 'Schon da'));
 });
 
-test('falsches Passwort wird als Login-Fehler gemeldet', { skip }, async () => {
+test('wrong password is reported as a login failure', { skip }, async () => {
   await assert.rejects(book({ payload: payload('2026-10-28'), config, password: 'falsch' }), /Login fehlgeschlagen/);
 });
 
-test('Plan-Probleme brechen ab, bevor ein Browser startet', async () => {
+test('plan problems stop before a browser starts', async () => {
   let opened = false;
   const p = parsePayload(JSON.stringify({ date: '2026-10-26', entries: [{ ticket: 'X-1', description: 'Unbekannt', minutes: 10 }] }));
   const cfg = normalizeConfig({ url: 'https://bcs.example.com', username: 'max' });

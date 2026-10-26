@@ -14,7 +14,7 @@ extension SchichtaStore {
         }
     }
 
-    /// Liest die Git-Aktivität eines Tages im Hintergrund, speichert sie als Tageslog und meldet das Ergebnis auf dem Main-Thread.
+    /// Reads a day's Git activity in the background, saves it as the day's log and reports back on the main thread.
     func loadGitActivity(for day: String, completion: @escaping (Result<(result: [String: Any], journal: JournalItem), Error>) -> Void) {
         let repos = trackedRepos
         let author = gitAuthorFilter
@@ -92,10 +92,10 @@ extension SchichtaStore {
                 env["SCHICHTA_TOTAL_HHMM"] = SchichtaCore.formatTime(totalMins)
                 env["SCHICHTA_JSON_FILE"] = exportURL.path
                 env["SCHICHTA_REPORT"] = SchichtaCore.bcsReport(day: day, entries: entries)
-                env["SCHICHTA_BCS_REPORT"] = env["SCHICHTA_REPORT"] // alter Name, für bestehende Skripte
+                env["SCHICHTA_BCS_REPORT"] = env["SCHICHTA_REPORT"] // old name, kept for existing scripts
 
                 do {
-                    // Großzügiges Zeitlimit: Adapter wie schichta-bcs starten einen Browser und loggen sich ein.
+                    // Generous timeout: adapters like schichta-bcs start a browser and log in.
                     let run = try Shell.run("/bin/zsh", ["-c", shellCmd], stdin: jsonData, environment: env, mergeStderr: true, timeout: 180)
                     let output = run.text.trimmingCharacters(in: .whitespacesAndNewlines)
                     if run.status == 0 {

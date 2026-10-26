@@ -1,4 +1,4 @@
-// Reine Logik ohne Browser/Netzwerk: Eingabe prüfen, Tickets auf BCS-Tasks abbilden, Ergebnis vergleichen.
+// Pure logic, no browser/network: validate input, map tickets to BCS tasks, compare results.
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -12,7 +12,7 @@ export class AdapterError extends Error {
   }
 }
 
-/** Liest das Schichta-Hook-Payload (stdin) und behält nur die Felder, die das Buchen braucht. */
+/** Reads the Schichta hook payload (stdin) and keeps only the fields booking needs. */
 export function parsePayload(text) {
   let data;
   try {
@@ -55,7 +55,7 @@ export function normalizeConfig(raw) {
   }
   if (typeof c.username !== 'string' || !c.username) throw new AdapterError('config.username fehlt.');
 
-  // Task-IDs landen in CSS-Selektoren: nur Ziffern zulassen.
+  // Task IDs end up in CSS selectors: allow digits only.
   const taskId = (value, where) => {
     const id = String(value);
     if (!/^\d+$/.test(id)) throw new AdapterError(`${where}: Task-ID "${id}" muss aus Ziffern bestehen.`);
@@ -93,7 +93,7 @@ export function normalizeConfig(raw) {
   };
 }
 
-/** Ordnet jeden Eintrag einem BCS-Task zu. Probleme werden gesammelt statt beim ersten abzubrechen. */
+/** Maps every entry to a BCS task. Problems are collected instead of stopping at the first. */
 export function buildPlan(payload, config) {
   const problems = [];
   const tasks = [];
@@ -129,7 +129,7 @@ export function formatTasks(tasks) {
   return tasks.map((t) => `  ${hhmm(t.minutes)}  Task ${t.taskId}  ${t.ticket ? '[' + t.ticket + '] ' : ''}${t.description}`);
 }
 
-/** Nach dem Speichern: Stimmen die Minuten pro Task in BCS mit dem Plan überein? */
+/** After saving: do the minutes per task in BCS match the plan? */
 export function verifySaved(plan, fetched) {
   const sum = (list) => list.reduce((acc, t) => acc.set(t.taskId, (acc.get(t.taskId) ?? 0) + t.minutes), new Map());
   const expected = sum(plan.tasks);

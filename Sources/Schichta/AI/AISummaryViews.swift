@@ -161,7 +161,7 @@ struct AISettingsSection: View {
                     .textFieldStyle(.roundedBorder)
                     .font(.system(size: 11, design: .monospaced))
                     .onChange(of: store.aiCommand) {
-                        // Von Hand geändert: nicht mehr die Vorlage, sondern ein eigener Befehl.
+                        // Edited by hand: no longer the template but a custom command.
                         if tools.first(where: { $0.id == store.aiToolId })?.command != store.aiCommand { store.aiToolId = "" }
                     }
                 HStack(spacing: 8) {

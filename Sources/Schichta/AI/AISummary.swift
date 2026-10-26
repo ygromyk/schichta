@@ -38,7 +38,7 @@ enum AISummary {
         """
     }
 
-    /// Nimmt das erste JSON-Objekt aus der Antwort (Modelle setzen gern Text oder ```-Blöcke drumherum).
+    /// Takes the first JSON object from the answer (models like to wrap it in text or ``` blocks).
     static func parse(_ output: String) throws -> Result {
         guard let open = output.firstIndex(of: "{"), let close = output.lastIndex(of: "}"), open < close,
               let obj = try? JSONSerialization.jsonObject(with: Data(output[open...close].utf8)) as? [String: Any] else {
@@ -66,8 +66,8 @@ enum AISummary {
         )
     }
 
-    /// Führt den Befehl über eine Login-Shell aus (damit Homebrew- & ~/.local-Pfade gefunden werden),
-    /// in einem leeren Arbeitsordner, Auftrag per stdin.
+    /// Runs the command through a login shell (so Homebrew and ~/.local paths are found),
+    /// in an empty working directory, with the request on stdin.
     static func run(command: String, prompt: String, timeout: TimeInterval = 300) throws -> String {
         let workDir = FileManager.default.temporaryDirectory.appendingPathComponent("schichta-ai", isDirectory: true)
         try? FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
@@ -80,9 +80,9 @@ enum AISummary {
     }
 }
 
-/// KI-Werkzeuge: eingebaute Vorlagen (Claude Code, Codex, Ollama) plus eigene JSON-Dateien in
-/// ~/Library/Application Support/Schichta/ai-tools/*.json mit {"name": "...", "command": "..."}.
-/// Der Befehl bekommt den Auftrag auf stdin und muss JSON ausgeben.
+/// AI tools: built-in templates (Claude Code, Codex, Ollama) plus custom JSON files in
+/// ~/Library/Application Support/Schichta/ai-tools/*.json with {"name": "...", "command": "..."}.
+/// The command gets the request on stdin and must print JSON.
 struct AITool: Identifiable, Equatable {
     let id: String
     let name: String
@@ -96,15 +96,15 @@ enum AITools {
         AppPaths.support.appendingPathComponent("ai-tools", isDirectory: true)
     }
 
-    /// Sucht ein Programm an den üblichen Orten (GUI-Apps erben den Shell-PATH nicht).
+    /// Looks for a program in the usual places (GUI apps don't inherit the shell PATH).
     static func locate(_ name: String, extra: [String] = []) -> String? {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let dirs = ["/opt/homebrew/bin", "/usr/local/bin", "\(home)/.local/bin", "\(home)/.npm-global/bin", "\(home)/.claude/local"]
         return (dirs.map { "\($0)/\(name)" } + extra).first(where: { FileManager.default.isExecutableFile(atPath: $0) })
     }
 
-    /// Werkzeuge, MCP und Nutzer-Hooks sind bei Claude aus, Codex läuft read-only:
-    /// Inhalte aus Chats/Commits sollen nichts ausführen können.
+    /// Tools, MCP and user hooks are off for Claude, Codex runs read-only:
+    /// content from chats/commits must not be able to execute anything.
     static func builtIns() -> [AITool] {
         let claude = locate("claude")
         let codex = locate("codex")
@@ -127,7 +127,7 @@ enum AITools {
         try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
         let exampleURL = folder.appendingPathComponent("beispiel.example.json")
         if !fm.fileExists(atPath: exampleURL.path) {
-            // Vorlage; *.example.json wird nie geladen.
+            // Template; *.example.json is never loaded.
             try? #"{ "name": "Ollama mit Qwen", "command": "ollama run --format json qwen2.5" }"#
                 .write(to: exampleURL, atomically: true, encoding: .utf8)
         }

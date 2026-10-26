@@ -2,11 +2,11 @@ import AppKit
 import SwiftUI
 
 extension SettingsView {
-    // MARK: - Tab 4: Integrationen & Hooks
+    // MARK: - Tab 4: Integrations & Hooks
 
     var integrationsAndHooksTab: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Sektion 1: Übersicht & Dokumentation
+            // Section 1: overview & documentation
             GroupBox(label: Label(store.t("Externe Integrationen & Webhooks", "External Integrations & Webhooks"), systemImage: "network")) {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(store.t("Integriere Schichta nahtlos mit deinen externen Tools (z. B. lokales Shell- oder Python-Skript, n8n, Zapier, Webhook oder eigener Adapter). Jedem Eintrag wird automatisch der zugehörige Projektname des Repos zugeordnet.", "Seamlessly integrate Schichta with external tools (e.g. local shell or Python scripts, n8n, Zapier, webhook, or your own adapter). Each entry is automatically mapped to its repository project name."))
@@ -46,7 +46,7 @@ extension SettingsView {
 
             AISettingsSection(store: store)
 
-            // Sektion 2: Konfiguration
+            // Section 2: configuration
             GroupBox(label: Label(store.t("Hook-Konfiguration", "Hook Configuration"), systemImage: "wrench.and.screwdriver")) {
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
@@ -81,7 +81,7 @@ extension SettingsView {
                 .padding(10)
             }
 
-            // Sektion 3: Hook Testen & Status
+            // Section 3: test hook & status
             GroupBox(label: Label(store.t("Hook testen & Live-Status", "Test Hook & Live Status"), systemImage: "bolt.fill")) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {

@@ -13,14 +13,14 @@ if CommandLine.arguments.contains("--generate-icon") {
     let targetURL = URL(fileURLWithPath: targetPath)
     do {
         try AppIconGenerator.generateIconSet(to: targetURL)
-        print("Icon-Set generiert unter: \(targetURL.path)")
+        print("Icon set written to: \(targetURL.path)")
         exit(0)
     } catch {
-        fputs("Fehler beim Erzeugen des Icon-Sets: \(error.localizedDescription)\n", stderr)
+        fputs("Could not create the icon set: \(error.localizedDescription)\n", stderr)
         exit(1)
     }
 } else if let idx = CommandLine.arguments.firstIndex(of: "--snapshot"), idx + 1 < CommandLine.arguments.count {
-    // Dev-Werkzeug: rendert die wichtigsten Ansichten offscreen als PNG (Layout-Prüfung ohne Bildschirmaufnahme).
+    // Dev tool: renders the main views offscreen as PNGs (layout check without screen recording).
     let outDir = URL(fileURLWithPath: CommandLine.arguments[idx + 1])
     try? FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
     _ = NSApplication.shared

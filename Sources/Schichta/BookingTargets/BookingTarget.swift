@@ -1,12 +1,12 @@
 import Foundation
 import Security
 
-// MARK: - Booking Targets (deklarative HTTP-Ziele)
+// MARK: - Booking Targets (declarative HTTP targets)
 //
-// Jede *.json in ~/Library/Application Support/Schichta/targets beschreibt ein Ziel:
-// wohin (method/url), wie authentifiziert (auth; der Wert liegt im Schlüsselbund, in der
-// Datei steht nur sein Name) und welcher JSON-Body aus unseren Feldern gebaut wird
-// (Platzhalter wie {{entry.ticket}}). Die App kennt kein Zielsystem; neue Systeme = neue Datei.
+// Every *.json in ~/Library/Application Support/Schichta/targets describes one target:
+// where to (method/url), how to authenticate (auth; the value lives in the Keychain, the
+// file only names it) and which JSON body is built from our fields
+// (placeholders like {{entry.ticket}}). The app knows no target system; a new system is a new file.
 
 enum TargetMode: String {
     case perEntry, perDay
@@ -49,7 +49,7 @@ struct BookingTarget {
         }
 
         let authObj = obj["auth"] as? [String: Any] ?? ["type": "none"]
-        // Schutz vor Klartext-Secrets in der Datei: nur der Name gehört hierher.
+        // Guard against plaintext secrets in the file: only the name belongs here.
         if authObj.keys.contains(where: { ["value", "token", "password", "key", "apiKey"].contains($0) }) {
             throw SchichtaError("Secrets gehören nicht in die Datei. Unter \"secret\" nur einen Namen angeben und den Wert in Schichta im Schlüsselbund speichern.")
         }
@@ -92,7 +92,7 @@ struct PreparedRequest {
     let maskedHeaders: Set<String>
     let label: String
 
-    /// Anzeige für die Vorschau; Auth-Header werden nie im Klartext gezeigt.
+    /// Text for the preview; auth headers are never shown in plain text.
     var previewText: String {
         var lines = ["\(method) \(url.absoluteString)"]
         for key in headers.keys.sorted() {
@@ -109,7 +109,7 @@ struct PreparedRequest {
 enum TargetRenderer {
     private static let placeholder = try! NSRegularExpression(pattern: #"\{\{\s*([A-Za-z0-9_.]+)\s*\}\}"#)
 
-    /// Baut aus Ziel + Tageseinträgen die konkreten Requests. Rein, ohne Netzwerk – Grundlage für Vorschau und Senden.
+    /// Builds the concrete requests from target + day entries. Pure, no network: the basis for preview and send.
     static func prepare(
         target: BookingTarget,
         day: String,
@@ -119,14 +119,14 @@ enum TargetRenderer {
         repos: [TrackedRepo],
         secret: (String) -> String?
     ) throws -> [PreparedRequest] {
-        _ = try Activity.bounds(day) // validiert das Datum
+        _ = try Activity.bounds(day) // validates the date
         guard !entries.isEmpty else { throw SchichtaError("Keine Einträge für \(SchichtaCore.formatGermanDate(day)).") }
 
-        // Schichta speichert nur Dauern: Start/Ende werden ab Arbeitsbeginn lückenlos hintereinander gelegt.
+        // Schichta only stores durations: start/end are laid out back to back from the start of the work day.
         guard var cursor = AppTime.calendar.date(bySettingHour: workStart.hour, minute: workStart.minute, second: 0, of: SchichtaCore.date(fromDay: day)) else {
             throw SchichtaError("Arbeitsbeginn ungültig.")
         }
-        let iso = ISO8601DateFormatter() // UTC, z. B. 2026-10-26T08:00:00Z
+        let iso = ISO8601DateFormatter() // UTC, e.g. 2026-10-26T08:00:00Z
         let hours: (Int) -> Double = { Double(Int((Double($0) / 60 * 100).rounded())) / 100 }
 
         let entryContexts: [[String: Any]] = entries.map { e in
@@ -209,12 +209,12 @@ enum TargetRenderer {
         case let s as String: return try renderString(s, ctx, map: map)
         case let d as [String: Any]: return try d.mapValues { try render($0, ctx, map: map) }
         case let a as [Any]: return try a.map { try render($0, ctx, map: map) }
-        default: return template // Zahlen, Bool, null bleiben unverändert
+        default: return template // numbers, bools and null stay unchanged
         }
     }
 
-    /// Ist der ganze String ein Platzhalter, bleibt der Typ erhalten (Zahl bleibt Zahl, Liste bleibt Liste);
-    /// sonst werden die Werte als Text eingesetzt.
+    /// If the whole string is one placeholder, the type is kept (a number stays a number, a list a list);
+    /// otherwise values are inserted as text.
     static func renderString(_ s: String, _ ctx: [String: Any], map: [String: String], encode: ((String) -> String)? = nil) throws -> Any {
         let ns = s as NSString
         let matches = placeholder.matches(in: s, range: NSRange(location: 0, length: ns.length))
@@ -237,7 +237,7 @@ enum TargetRenderer {
 
     static func lookup(_ path: String, _ ctx: [String: Any], map: [String: String]) throws -> Any {
         let parts = path.split(separator: ".").map(String.init)
-        // {{map.ticket}}: Wert des Eintragsfelds über die "map"-Tabelle der Zieldatei übersetzen.
+        // {{map.ticket}}: translate the entry field through the target file's "map" table.
         if parts.count == 2, parts[0] == "map" {
             let key = try stringValue(try lookup("entry." + parts[1], ctx, map: map), path: path)
             guard let mapped = map[key] else { throw SchichtaError("Keine Zuordnung in \"map\" für „\(key)“ ({{\(path)}}).") }
@@ -264,7 +264,7 @@ enum TargetRenderer {
     }
 }
 
-/// Secrets der Ziele im Login-Schlüsselbund (Dienst „Schichta.Targets“, Konto = Secret-Name).
+/// Target secrets in the login Keychain (service "Schichta.Targets", account = secret name).
 enum TargetSecrets {
     private static let service = "Schichta.Targets"
 
@@ -283,7 +283,7 @@ enum TargetSecrets {
         return String(data: data, encoding: .utf8)
     }
 
-    /// Prüft nur, ob ein Eintrag existiert, ohne den Wert zu lesen (kein Schlüsselbund-Dialog).
+    /// Only checks that an item exists, without reading the value (no Keychain prompt).
     static func exists(_ name: String) -> Bool {
         var q = query(name)
         q[kSecReturnAttributes as String] = true
@@ -305,7 +305,7 @@ final class TargetSender: NSObject, URLSessionTaskDelegate {
         let line: String
     }
 
-    // Keinen Weiterleitungen folgen: sonst könnte der Auth-Header an einen fremden Host gehen.
+    // Never follow redirects: the auth header could otherwise reach another host.
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
         completionHandler(nil)

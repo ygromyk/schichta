@@ -1,7 +1,7 @@
 import AppKit
 
 extension SchichtaStore {
-    /// Fügt ein Repo hinzu, sofern der Pfad noch nicht getrackt ist. Projektname ohne Angabe: Ordnername, "my-app" → "My App".
+    /// Adds a repo unless its path is already tracked. Without a project name: the folder name, "my-app" → "My App".
     @discardableResult
     func addTrackedRepo(path: String, projectName: String = "", defaultTicket: String = "") -> Bool {
         let cleanPath = path.trimmingCharacters(in: .whitespacesAndNewlines)

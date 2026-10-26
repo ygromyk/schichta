@@ -184,7 +184,7 @@ extension SchichtaStore {
         aiSummaryDay = day
         aiSummaryText = result.summary
         aiQuestions = result.questions
-        // Frühere KI-Vorschläge ersetzen, lokale (Git/Check-in) behalten.
+        // Replace earlier AI proposals, keep local ones (Git/check-in).
         proposals = proposals.filter { !$0.id.hasPrefix("ai-") } + result.proposals
         showToast(t("\(result.proposals.count) KI-Vorschläge – bitte prüfen.", "\(result.proposals.count) AI proposals – please review."))
     }
@@ -199,7 +199,7 @@ extension SchichtaStore {
     }
 
     func acceptAllProposals() {
-        // Vorschläge ohne Dauer (z. B. KI „Zeit offen“) bleiben zur Bearbeitung stehen.
+        // Proposals without a duration (e.g. AI "time open") stay for editing.
         for prop in proposals where prop.minutes > 0 {
             addEntry(ticket: prop.ticket, description: prop.description, minutes: prop.minutes, estimated: prop.estimated, project: prop.project)
         }

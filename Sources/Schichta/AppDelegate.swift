@@ -69,7 +69,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                 let attachment = try UNNotificationAttachment(identifier: "schichta-icon", url: tempIconURL, options: nil)
                 content.attachments = [attachment]
             } catch {
-                NSLog("Fehler beim Erstellen des Notification-Attachments: %@", error.localizedDescription)
+                NSLog("Could not create the notification attachment: %@", error.localizedDescription)
             }
         }
         return content
@@ -263,7 +263,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     func positionCheckInPanel(anchorButton: NSStatusBarButton? = nil) {
         guard let panel = checkInPanel else { return }
         let panelWidth: CGFloat = 380
-        // Höhe aus dem SwiftUI-Inhalt (Ticket-Chips etc. ändern sie), sonst sitzt der Inhalt mittig mit Lücke oben.
+        // Height from the SwiftUI content (ticket chips etc. change it); otherwise the content sits centered with a gap on top.
         let panelHeight = max(200, ceil(panel.contentView?.fittingSize.height ?? 320))
         let mouseLoc = NSEvent.mouseLocation
 
@@ -305,7 +305,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         checkInPanel?.orderOut(nil)
     }
 
-    /// Mitteilungen nur in der gebündelten App; ein nacktes Binary oder der Testlauf hat kein Notification Center.
+    /// Notifications only in the bundled app; a bare binary or the test run has no notification center.
     private var notificationsAvailable: Bool {
         Bundle.main.bundleURL.pathExtension == "app"
     }
@@ -317,7 +317,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
-    /// `id` mit Präfix "morning-prompt"/"endofday-prompt" öffnet beim Klick das Hauptfenster, sonst den Check-in.
+    /// An `id` prefixed "morning-prompt"/"endofday-prompt" opens the main window on click, anything else the check-in.
     private func postNotification(id: String, de: (title: String, body: String), en: (title: String, body: String)) {
         guard notificationsAvailable else { return }
         let text = (store?.appLanguage ?? .de) == .de ? de : en
@@ -393,7 +393,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         bringMainWindowToFront()
     }
 
-    // MARK: - Abschluss-Prompts (Morgen & Feierabend)
+    // MARK: - Day-closing prompts (morning & end of day)
 
     func startPromptTimer() {
         promptTimer?.invalidate()
@@ -415,7 +415,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         let currentHour = time.hour!
         let currentTotalMinutes = currentHour * 60 + time.minute!
 
-        // Prompt A: Morgen-Prompt (Vortag noch nicht gebucht)
+        // Prompt A: morning prompt (previous day not booked yet)
         if store.morningPromptEnabled && store.isWorkingDay(today) && currentHour >= store.morningPromptHour && store.lastMorningPromptDate != today {
             if let unbookedPrev = store.unbookedPreviousDay(today: today) {
                 store.lastMorningPromptDate = today
@@ -424,7 +424,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             }
         }
 
-        // Prompt B: Feierabend-Abschluss
+        // Prompt B: end-of-day sign-off
         let targetEndMinutes = store.workEndHour * 60 + store.workEndMinute
         if store.endOfDayPromptEnabled && store.isWorkingDay(today) && currentTotalMinutes >= targetEndMinutes && store.lastEndOfDayPromptDate != today {
             let isTodayBooked = store.database.journal[today]?.booked == true

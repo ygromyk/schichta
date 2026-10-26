@@ -1,10 +1,10 @@
 import Foundation
 
-// MARK: - KI-Zusammenfassung (Chat-Belege + frei konfigurierbarer CLI-Befehl)
+// MARK: - AI summary (chat evidence + freely configurable CLI command)
 //
-// Die App kennt keinen KI-Anbieter: Sie baut den Auftrag (Notizen, Git, Chat-Belege, bereits
-// Erfasstes), zeigt ihn als Vorschau und schickt ihn erst nach Klick per stdin an den
-// eingestellten Befehl (z. B. `claude -p`). Die JSON-Antwort wird zu bearbeitbaren Vorschlägen.
+// The app knows no AI provider: it builds the request (notes, Git, chat evidence, already
+// recorded entries), shows it as a preview and only after a click sends it via stdin to the
+// configured command (e.g. `claude -p`). The JSON answer becomes editable proposals.
 
 struct ChatSession: Equatable {
     let tool: String
@@ -27,7 +27,7 @@ enum SecretRedactor {
         (#"[A-Za-z0-9+/_-]{40,}={0,2}"#, "[ENTFERNT]")
     ].map { (try! NSRegularExpression(pattern: $0.0), $0.1) }
 
-    /// Entfernt offensichtliche Geheimnisse (Passwörter, Tokens, lange Schlüssel). Kein Ersatz für Sorgfalt, nur ein Netz.
+    /// Removes obvious secrets (passwords, tokens, long keys). A safety net, not a substitute for care.
     static func redact(_ text: String) -> String {
         rules.reduce(text) { result, rule in
             rule.0.stringByReplacingMatches(in: result, range: NSRange(result.startIndex..., in: result), withTemplate: rule.1)
@@ -36,7 +36,7 @@ enum SecretRedactor {
 }
 
 enum ChatActivity {
-    /// Pausen über 10 Minuten zählen nicht als aktive Chat-Zeit.
+    /// Gaps over 10 minutes do not count as active chat time.
     static let idleCutoff: TimeInterval = 10 * 60
     static let maxPromptsPerSession = 20
     static let maxPromptLength = 300
@@ -58,8 +58,8 @@ enum ChatActivity {
         return (start, AppTime.calendar.date(byAdding: .day, value: 1, to: start)!)
     }
 
-    /// Liest Claude-Code- und Codex-Sitzungen des Tages, aber nur aus getrackten Repositories
-    /// (private Projekte bleiben außen vor).
+    /// Reads the day's Claude Code and Codex sessions, but only from tracked repositories
+    /// (private projects stay out).
     static func read(day: String, repos: [TrackedRepo], home: URL = FileManager.default.homeDirectoryForCurrentUser) -> [ChatSession] {
         let enabled = repos.filter(\.enabled)
         guard !enabled.isEmpty else { return [] }
@@ -87,7 +87,7 @@ enum ChatActivity {
     }
 
     private static func codexFiles(home: URL, day: String, since: Date) -> [URL] {
-        // Codex legt Sitzungen nach Startdatum ab; Sitzungen über Mitternacht liegen im Vortag.
+        // Codex files sessions by start date; sessions spanning midnight live under the previous day.
         let fm = FileManager.default
         let previous = SchichtaCore.day(from: since.addingTimeInterval(-3600))
         return [previous, day].flatMap { d -> [URL] in
@@ -104,7 +104,7 @@ enum ChatActivity {
         }
     }
 
-    /// Echte Nutzereingaben: keine System-/Befehlshüllen wie <command-name> oder <environment_context>.
+    /// Real user input: no system/command wrappers such as <command-name> or <environment_context>.
     private static func cleanPrompt(_ text: String) -> String? {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty, !t.hasPrefix("<"), !t.hasPrefix("Caveat:") else { return nil }

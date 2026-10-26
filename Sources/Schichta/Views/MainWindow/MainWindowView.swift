@@ -45,7 +45,7 @@ struct MainWindowView: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
 
-            // Prompt Banners (Morgen- / Feierabend-Abschluss)
+            // Prompt banners (morning / end of day)
             if case .morning(let unbookedDay) = store.activePrompt {
                 morningPromptBanner(unbookedDay: unbookedDay)
             }

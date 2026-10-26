@@ -132,7 +132,7 @@ struct CheckInPopoverView: View {
 
                 Divider()
 
-                // Dauer & Quick-Chips
+                // Duration & quick chips
                 HStack(spacing: 6) {
                     Text(store.t("Dauer:", "Duration:"))
                         .font(.system(size: 11, weight: .medium))

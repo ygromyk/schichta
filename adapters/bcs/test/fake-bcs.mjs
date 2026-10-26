@@ -1,5 +1,5 @@
-// Minimaler Nachbau der BCS-Tageserfassung mit genau den Selektoren, die bcs-client.mjs nutzt.
-// Prüft unseren Ablauf (Login, Tageswechsel, Füllen, Speichern, Gegenprobe) – nicht, ob ein echtes BCS gleich aussieht.
+// Minimal replica of the BCS daily time recording with exactly the selectors bcs-client.mjs uses.
+// Checks our flow (login, day switch, filling, saving, verification), not whether a real BCS looks the same.
 import { createServer } from 'node:http';
 
 export function startFakeBcs({ username = 'max', password = 'geheim', initial = {} } = {}) {
