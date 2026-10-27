@@ -44,63 +44,133 @@ extension View {
     }
 }
 
+// MARK: - Duration Input
+
+/// Duration as two fields, hours : minutes. Tab moves from hours to minutes; a blank
+/// field becomes 00 when it loses focus; ↑/↓ change hours by 1 and minutes by `step`.
+struct DurationInput: View {
+    /// "HH:MM", the format `SchichtaCore.formatTime` writes and `parseMinutes` reads.
+    @Binding var text: String
+    /// Minute step for ↑/↓ in the minutes field (the time step from Settings).
+    var step: Int = 15
+    var fontSize: CGFloat = 12
+    var help: String = ""
+    /// Called on Enter and when focus leaves both fields.
+    var onCommit: () -> Void = {}
+
+    private enum Part: Hashable { case hours, minutes }
+    @FocusState private var focus: Part?
+    @State private var hours = "00"
+    @State private var minutes = "00"
+
+    var body: some View {
+        HStack(spacing: 0) {
+            field($hours, part: .hours)
+            Text(":")
+            field($minutes, part: .minutes)
+        }
+        .font(.system(size: fontSize, weight: .bold, design: .monospaced))
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
+        .background(focus != nil ? Color(nsColor: .textBackgroundColor) : Color(nsColor: .controlBackgroundColor).opacity(0.8))
+        .cornerRadius(4)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(focus != nil ? SchichtaTheme.forestGreen : Color(nsColor: .separatorColor), lineWidth: focus != nil ? 1.5 : 0.5)
+        )
+        .help(help)
+        .onAppear { load(text) }
+        .onChange(of: text) { _, new in
+            // Outside changes (± buttons, presets) only while the user isn't typing.
+            if focus == nil { load(new) }
+        }
+        .onChange(of: focus) { _, new in
+            // Re-format on every focus move: blank → 00, 75 minutes → 01:15.
+            load(SchichtaCore.formatTime(totalMinutes))
+            publish()
+            if new == nil { onCommit() }
+        }
+    }
+
+    private func field(_ value: Binding<String>, part: Part) -> some View {
+        TextField("00", text: value)
+            .textFieldStyle(.plain)
+            .multilineTextAlignment(.center)
+            .frame(width: fontSize * 1.5)
+            .focused($focus, equals: part)
+            .onChange(of: value.wrappedValue) { _, new in
+                let digits = String(new.filter(\.isNumber).prefix(2))
+                if digits != new { value.wrappedValue = digits }
+                publish()
+            }
+            .onKeyPress(.upArrow) { bump(part, by: 1); return .handled }
+            .onKeyPress(.downArrow) { bump(part, by: -1); return .handled }
+            .onSubmit {
+                load(SchichtaCore.formatTime(totalMinutes))
+                publish()
+                onCommit()
+            }
+    }
+
+    private var totalMinutes: Int { (Int(hours) ?? 0) * 60 + (Int(minutes) ?? 0) }
+
+    private func bump(_ part: Part, by delta: Int) {
+        let cur = totalMinutes
+        let next: Int
+        switch part {
+        case .hours:
+            next = cur + delta * 60
+            guard next >= 0, next <= 1440 else { return NSSound.beep() }
+        case .minutes:
+            // Same snapping as the ± buttons, so 0:45 ↑ carries over to 1:00.
+            next = SchichtaCore.snapDuration(cur + delta * step, step: step)
+        }
+        load(SchichtaCore.formatTime(next))
+        publish()
+    }
+
+    private func load(_ s: String) {
+        let total = (try? SchichtaCore.parseMinutes(s)) ?? 0
+        hours = String(format: "%02d", total / 60)
+        minutes = String(format: "%02d", total % 60)
+    }
+
+    private func publish() {
+        let formatted = SchichtaCore.formatTime(totalMinutes)
+        if text != formatted { text = formatted }
+    }
+}
+
 // MARK: - Inline Duration Field
 
 struct InlineDurationField: View {
     let entry: Entry
     @ObservedObject var store: SchichtaStore
     @State private var text: String = ""
-    @FocusState private var isFocused: Bool
 
     var body: some View {
-        TextField("0:15", text: $text)
-            .textFieldStyle(.plain)
-            .font(.system(size: 13, weight: .bold, design: .monospaced))
-            .multilineTextAlignment(.center)
-            .frame(width: 52)
-            .padding(.horizontal, 4)
-            .padding(.vertical, 2)
-            .background(isFocused ? Color(nsColor: .textBackgroundColor) : Color(nsColor: .controlBackgroundColor).opacity(0.8))
-            .cornerRadius(4)
-            .overlay(
-                RoundedRectangle(cornerRadius: 4)
-                    .stroke(isFocused ? SchichtaTheme.forestGreen : Color(nsColor: .separatorColor), lineWidth: isFocused ? 1.5 : 0.5)
-            )
-            .focused($isFocused)
-            .onSubmit {
-                commitChange()
-            }
-            .onChange(of: isFocused) { _, focused in
-                if !focused {
-                    commitChange()
-                }
-            }
-            .onAppear {
-                text = SchichtaCore.formatTime(entry.minutes)
-            }
-            .onChange(of: entry.minutes) { _, newMin in
-                if !isFocused {
-                    text = SchichtaCore.formatTime(newMin)
-                }
-            }
-            .help(store.t("Dauer direkt eintippen (z. B. 1:15 oder 45m) und mit Enter bestätigen", "Type duration directly (e.g. 1:15 or 45m) and press Enter to confirm"))
+        DurationInput(
+            text: $text, step: store.timeStepMinutes, fontSize: 13,
+            help: store.t("Dauer eintippen, Tab wechselt zu Minuten, ↑/↓ ändern den Wert; Enter bestätigt", "Type the duration, Tab moves to minutes, ↑/↓ change the value; Enter confirms"),
+            onCommit: commitChange
+        )
+        .onAppear {
+            text = SchichtaCore.formatTime(entry.minutes)
+        }
+        .onChange(of: entry.minutes) { _, newMin in
+            text = SchichtaCore.formatTime(newMin)
+        }
     }
 
     private func commitChange() {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
+        guard let typed = try? SchichtaCore.parseMinutes(text) else {
             text = SchichtaCore.formatTime(entry.minutes)
             return
         }
-        if let typed = try? SchichtaCore.parseMinutes(trimmed) {
-            let mins = store.snapDuration(typed)
-            if mins != entry.minutes {
-                store.setEntryMinutes(id: entry.id, minutes: mins)
-            }
-            text = SchichtaCore.formatTime(mins)
-        } else {
-            NSSound.beep()
-            text = SchichtaCore.formatTime(entry.minutes)
+        let mins = store.snapDuration(typed)
+        if mins != entry.minutes {
+            store.setEntryMinutes(id: entry.id, minutes: mins)
         }
+        text = SchichtaCore.formatTime(mins)
     }
 }

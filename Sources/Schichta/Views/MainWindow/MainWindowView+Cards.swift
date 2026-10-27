@@ -74,11 +74,7 @@ extension MainWindowView {
 
                         StepButton(increase: false, size: 15, help: store.t("−\(store.timeStepMinutes) Minuten", "−\(store.timeStepMinutes) minutes")) { addStepsToDuration(-1) }
 
-                        TextField("0:15", text: $formDuration)
-                            .textFieldStyle(.roundedBorder)
-                            .font(.system(size: 12, weight: .bold, design: .monospaced))
-                            .multilineTextAlignment(.center)
-                            .frame(width: 58)
+                        DurationInput(text: $formDuration, step: store.timeStepMinutes)
 
                         StepButton(increase: true, size: 15, help: store.t("+\(store.timeStepMinutes) Minuten", "+\(store.timeStepMinutes) minutes")) { addStepsToDuration(1) }
 

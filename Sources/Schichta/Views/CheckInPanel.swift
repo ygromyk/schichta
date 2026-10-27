@@ -173,11 +173,7 @@ struct CheckInPopoverView: View {
 
                     StepButton(increase: false, size: 16, help: store.t("−\(store.timeStepMinutes) Minuten", "−\(store.timeStepMinutes) minutes")) { adjustDuration(steps: -1) }
 
-                    TextField("0:15", text: $durationText)
-                        .textFieldStyle(.roundedBorder)
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .multilineTextAlignment(.center)
-                        .frame(width: 58)
+                    DurationInput(text: $durationText, step: store.timeStepMinutes)
 
                     StepButton(increase: true, size: 16, help: store.t("+\(store.timeStepMinutes) Minuten", "+\(store.timeStepMinutes) minutes")) { adjustDuration(steps: 1) }
 

@@ -63,11 +63,7 @@ struct ProposalRowView: View {
                     proposal.minutes = next
                 }
 
-                TextField("0:15", text: $timeStr)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .multilineTextAlignment(.center)
-                    .frame(width: 58)
+                DurationInput(text: $timeStr, step: step)
 
                 StepButton(increase: true, size: 15, help: t("+\(step) Minuten", "+\(step) minutes")) {
                     let cur = (try? SchichtaCore.parseMinutes(timeStr)) ?? proposal.minutes
