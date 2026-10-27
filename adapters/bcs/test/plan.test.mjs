@@ -22,7 +22,12 @@ test('parsePayload rejects broken input', () => {
   assert.throws(() => parsePayload('nope'), AdapterError);
   assert.throws(() => parsePayload('{"date":"26.10.2026","entries":[]}'), /YYYY-MM-DD/);
   assert.throws(() => payload([{ description: 'x', minutes: 0 }]), /minutes/);
-  assert.throws(() => payload([{ description: ' ', minutes: 5 }]), /description/);
+  assert.throws(() => payload([{ description: 42, minutes: 5 }]), /description/);
+});
+
+test('parsePayload accepts entries without a description', () => {
+  assert.equal(payload([{ ticket: 'PROJ-1', description: ' ', minutes: 15 }]).entries[0].description, '');
+  assert.equal(payload([{ ticket: 'PROJ-1', minutes: 15 }]).entries[0].description, '');
 });
 
 test('mapping: first matching rule wins, case-insensitive', () => {

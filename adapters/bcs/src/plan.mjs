@@ -26,13 +26,13 @@ export function parsePayload(text) {
     if (!Number.isInteger(e?.minutes) || e.minutes < 1 || e.minutes > 1440) {
       throw new AdapterError(`Eintrag ${i + 1}: "minutes" muss eine ganze Zahl zwischen 1 und 1440 sein.`);
     }
-    if (typeof e.description !== 'string' || !e.description.trim()) {
-      throw new AdapterError(`Eintrag ${i + 1}: "description" fehlt.`);
+    if (e.description != null && typeof e.description !== 'string') {
+      throw new AdapterError(`Eintrag ${i + 1}: "description" muss Text sein.`);
     }
     return {
       id: String(e.id ?? i),
       ticket: String(e.ticket ?? '').trim(),
-      description: e.description.trim(),
+      description: (e.description ?? '').trim(),
       minutes: e.minutes,
       estimated: e.estimated === true,
       project: String(e.projectName ?? e.project ?? '').trim(),

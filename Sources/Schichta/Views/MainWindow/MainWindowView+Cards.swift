@@ -279,8 +279,9 @@ extension MainWindowView {
                             // Project label and description: the label only when the description still keeps
                             // 110 pt, so a narrow window neither breaks words nor pushes the buttons off the row.
                             let proj = !entry.project.isEmpty ? entry.project : SchichtaCore.resolveProjectName(for: entry, repos: store.trackedRepos)
-                            let description = Text(entry.description)
+                            let description = Text(entry.description.isEmpty ? store.t("Ohne Beschreibung", "No description") : entry.description)
                                 .font(.system(size: 13))
+                                .foregroundColor(entry.description.isEmpty ? .secondary : .primary)
                                 .lineLimit(2)
                                 .frame(minWidth: 110, idealWidth: 110, maxWidth: .infinity, alignment: .leading)
                             ViewThatFits(in: .horizontal) {

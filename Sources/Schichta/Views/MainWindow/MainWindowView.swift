@@ -198,21 +198,15 @@ struct MainWindowView: View {
     }
 
     func saveForm() {
-        let trimmedDesc = formDescription.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedDesc.isEmpty else {
-            store.showToast(store.t("Bitte Beschreibung eingeben.", "Please enter a description."))
-            return
-        }
-
         guard let minutes = try? SchichtaCore.parseMinutes(formDuration) else {
             store.showToast(store.t("Ungültige Dauer. Bitte als 0:30, 1,5 oder 30m eingeben.", "Invalid duration. Please enter as 0:30, 1.5 or 30m."))
             return
         }
 
         if let editId = editingEntryId {
-            store.updateEntry(id: editId, ticket: formTicket, description: trimmedDesc, minutes: minutes, estimated: formEstimated)
+            store.updateEntry(id: editId, ticket: formTicket, description: formDescription, minutes: minutes, estimated: formEstimated)
         } else {
-            store.addEntry(ticket: formTicket, description: trimmedDesc, minutes: minutes, estimated: formEstimated)
+            store.addEntry(ticket: formTicket, description: formDescription, minutes: minutes, estimated: formEstimated)
         }
 
         resetForm()

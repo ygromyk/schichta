@@ -52,7 +52,6 @@ extension SchichtaStore {
     func addEntry(ticket: String, description: String, minutes: Int, estimated: Bool, project: String = "") {
         let cleanTicket = ticket.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         let cleanDesc = description.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanDesc.isEmpty else { return }
         let minutes = snapDuration(minutes)
 
         let daySum = entriesForSelectedDay().reduce(0) { $0 + $1.minutes }
@@ -72,7 +71,6 @@ extension SchichtaStore {
         guard let idx = database.entries.firstIndex(where: { $0.id == id }) else { return }
         let cleanTicket = ticket.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         let cleanDesc = description.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanDesc.isEmpty else { return }
 
         database.entries[idx].ticket = cleanTicket
         database.entries[idx].description = cleanDesc
