@@ -371,7 +371,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         guard notificationsAvailable else { return }
         let center = UNUserNotificationCenter.current()
         center.delegate = self
-        center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        // @Sendable keeps the callback off the main actor: it runs on a UserNotifications queue, and with SDKs
+        // before macOS 26 a closure written here would inherit main-actor isolation and trap at that check.
+        center.requestAuthorization(options: [.alert, .sound]) { @Sendable _, _ in }
         registerNotificationCategories()
     }
 
