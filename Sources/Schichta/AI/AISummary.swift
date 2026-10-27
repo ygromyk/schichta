@@ -21,8 +21,13 @@ enum AISummary {
         - Keine Dauer aus Abständen zwischen Commits ableiten, nicht auf acht Stunden auffüllen.
         - Ohne ausreichende Grundlage "minutes": null und eine Rückfrage in "questions".
         - Bereits Erfasstes nicht erneut vorschlagen. Ticket nur übernehmen, wenn es belegt ist.
+        Stil – super knapp und einfach:
+        - Einfache Worte, die auch Nicht-Entwickler verstehen. Keine Datei-, Funktions- oder Branch-Namen, kein Fachjargon.
+        - "description": höchstens 8 Wörter, Stichwortstil, Ticket nicht wiederholen (z. B. „Rundungsfehler im Warenkorb behoben“).
+        - "summary": ein Satz, höchstens 20 Wörter.
+        - "evidence": höchstens 8 Wörter. "questions": höchstens 3, je ein kurzer Satz.
         Antworte AUSSCHLIESSLICH mit einem JSON-Objekt ohne Markdown:
-        {"summary":"2–4 Sätze, was heute gemacht wurde","entries":[{"ticket":"Ticket oder leer","description":"Kurzer deutscher Buchungstext","minutes":90,"evidence":"Quelle und Unsicherheit"}],"questions":["Offene Frage"]}
+        {"summary":"Ein Satz, was heute gemacht wurde","entries":[{"ticket":"Ticket oder leer","description":"Kurzer Buchungstext","minutes":90,"evidence":"Quelle, Unsicherheit"}],"questions":["Kurze Frage"]}
 
         TAGESNOTIZEN:
         \(notes.isEmpty ? "(keine)" : SecretRedactor.redact(notes))
