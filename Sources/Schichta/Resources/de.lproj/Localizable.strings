@@ -501,6 +501,8 @@
 "settings.detectTimeAwayAskWhat" = "Abwesenheit erkennen: nach Rückkehr fragen, was die Lücke war";
 "settings.min" = "ab %1$@ min";
 "settings.idleTimeSleepAndThe" = "Leerlauf, Ruhezustand und Bildschirmsperre zählen als weg. Während du weg bist, gibt es keine Check-ins; ein unbeantworteter Check-in meldet sich nach 3 Minuten per Mitteilung.";
+"settings.notificationsDenied" = "Mitteilungen für Schichta sind in den Systemeinstellungen ausgeschaltet. Unbeantwortete Check-ins und Tages-Prompts erreichen dich nur über das Panel und die Menüleiste.";
+"settings.openSystemSettings" = "Systemeinstellungen öffnen";
 "settings.playShortSoundOnCheck" = "Kurzen Sound bei Check-in & Prompts abspielen";
 "settings.sound" = "Ton:";
 "settings.preview" = "Vorschau";

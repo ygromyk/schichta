@@ -231,6 +231,22 @@ extension SettingsView {
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
 
+                    if store.notificationsDenied {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Image(systemName: "bell.slash.fill")
+                                .foregroundColor(.orange)
+                            Text(store.t("settings.notificationsDenied"))
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Button(store.t("settings.openSystemSettings")) {
+                                appDelegate()?.openNotificationSystemSettings()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+                    }
+
                     Divider()
 
                     Toggle(store.t("settings.playShortSoundOnCheck"), isOn: $store.checkInSoundEnabled)

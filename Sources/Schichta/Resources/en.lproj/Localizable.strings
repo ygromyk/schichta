@@ -501,6 +501,8 @@
 "settings.detectTimeAwayAskWhat" = "Detect time away: ask what the gap was when you're back";
 "settings.min" = "≥ %1$@ min";
 "settings.idleTimeSleepAndThe" = "Idle time, sleep and the lock screen count as away. No check-ins while you're away; an unanswered check-in sends a notification after 3 minutes.";
+"settings.notificationsDenied" = "Notifications for Schichta are turned off in System Settings. Unanswered check-ins and day prompts reach you only through the panel and the menu bar.";
+"settings.openSystemSettings" = "Open System Settings";
 "settings.playShortSoundOnCheck" = "Play short sound on check-in & prompts";
 "settings.sound" = "Sound:";
 "settings.preview" = "Preview";

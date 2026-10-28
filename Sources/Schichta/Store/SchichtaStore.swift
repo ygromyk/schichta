@@ -140,7 +140,16 @@ class SchichtaStore: ObservableObject {
     @Published var inspectedGitResult: GitActivityResult? = nil
     @Published var isInspectingGit: Bool = false
 
-    @Published var activePrompt: ActivePrompt = .none
+    @Published var activePrompt: ActivePrompt = .none {
+        didSet {
+            // Banner closed or answered: the matching notification has nothing left to say.
+            if activePrompt == .none, oldValue != .none {
+                appDelegate()?.removeDayPromptNotification(for: oldValue)
+            }
+        }
+    }
+    /// Notifications turned off for Schichta in System Settings; shown as a hint in Settings. Not persisted.
+    @Published var notificationsDenied: Bool = false
     /// The current opening of the check-in panel; a new value resets the panel.
     @Published var checkInRequest = CheckInRequest(reason: .manual)
     @Published var proposals: [ProposedEntry] = []
