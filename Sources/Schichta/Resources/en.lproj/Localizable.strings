@@ -130,6 +130,7 @@
 /* Store/SchichtaStore+Entries.swift */
 "entries.errorDailyTotalCannotExceed" = "Error: Daily total cannot exceed 24 hours.";
 "entries.entryAdded" = "Entry added.";
+"entries.entriesCopiedFrom" = "%1$@ entries copied from %2$@ (as estimates).";
 "entries.entryUpdated" = "Entry updated.";
 "entries.entryDeleted" = "Entry deleted.";
 "entries.estimateConfirmed" = "Estimate confirmed.";
@@ -268,6 +269,8 @@
 "main.entries" = "%1$@ entries";
 "main.noEntriesForThisDay" = "No entries for this day yet.";
 "main.addAnActivityAboveOr" = "Add an activity above or use automatic analysis.";
+"main.copyEntriesFrom" = "Copy entries from %1$@";
+"main.copyEntriesFromHelp" = "Copies the entries of the last day that has entries to this day, as estimates.";
 "main.noTicket" = "No ticket";
 "main.noDescription" = "No description";
 "main.estimated" = "Estimated";
@@ -416,6 +419,7 @@
 "settings.definesWhetherCheckInsCreate" = "Defines whether check-ins create a billable activity immediately or only append to the day note.";
 "settings.openTheCheckInFrom" = "Open the check-in from any app with %1$@";
 "settings.showInDockOffMenu" = "Show in Dock (off: menu bar only)";
+"settings.showTodayInMenuBar" = "Show today's logged time in the menu bar";
 "settings.startAtLogin" = "Start at login";
 "settings.loginItemNotChanged" = "Login item not changed: %1$@";
 "settings.pleaseAllowItInSystem" = "Please allow it in System Settings › General › Login Items.";
@@ -531,6 +535,12 @@
 "app.menu.testMorningPrompt" = "Test Morning Prompt (Prev Day)";
 "app.menu.testEndOfDayPrompt" = "Test End-of-Day Prompt";
 "app.menu.quit" = "Quit Schichta";
+"app.menu.go" = "Go";
+"app.menu.previous" = "Previous";
+"app.menu.next" = "Next";
+"app.menu.today" = "Today";
+"app.menu.dayView" = "Day View";
+"app.menu.weekView" = "Week Overview";
 "app.menu.edit" = "Edit";
 "app.menu.undo" = "Undo";
 "app.menu.cut" = "Cut";

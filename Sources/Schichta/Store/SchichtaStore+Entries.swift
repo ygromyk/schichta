@@ -33,6 +33,16 @@ extension SchichtaStore {
         database.journal[selectedDay] ?? JournalItem()
     }
 
+    /// Minutes logged on `today` (the calendar day in the app's time zone by default).
+    func todayMinutes(today: String = SchichtaCore.day()) -> Int {
+        database.entries.reduce(0) { $0 + ($1.date == today ? $1.minutes : 0) }
+    }
+
+    /// The latest day before `day` that has entries, if any.
+    func lastDayWithEntries(before day: String) -> String? {
+        database.entries.lazy.map(\.date).filter { $0 < day }.max()
+    }
+
     func recentTickets() -> [String] {
         var seen = Set<String>()
         var list: [String] = []
@@ -65,6 +75,25 @@ extension SchichtaStore {
         database.entries.append(newEntry)
         save()
         showToast(t("entries.entryAdded"))
+    }
+
+    /// Copies the entries of `source` onto `target` (default: the selected day) as estimates.
+    /// Nothing is copied if the day would exceed 24 hours.
+    func copyEntries(from source: String, to target: String? = nil) {
+        let target = target ?? selectedDay
+        let originals = database.entries.filter { $0.date == source }
+        guard !originals.isEmpty else { return }
+        let existing = database.entries.reduce(0) { $0 + ($1.date == target ? $1.minutes : 0) }
+        if existing + originals.reduce(0, { $0 + $1.minutes }) > 1440 {
+            showToast(t("entries.errorDailyTotalCannotExceed"))
+            return
+        }
+        for original in originals {
+            database.entries.append(Entry(date: target, ticket: original.ticket, description: original.description,
+                                          minutes: original.minutes, estimated: true, project: original.project))
+        }
+        save()
+        showToast(t("entries.entriesCopiedFrom", "\(originals.count)", SchichtaCore.formatGermanDate(source)))
     }
 
     func updateEntry(id: String, ticket: String, description: String, minutes: Int, estimated: Bool, project: String? = nil) {
@@ -124,7 +153,7 @@ extension SchichtaStore {
         var item = database.journal[selectedDay] ?? JournalItem()
         item.notes = notes
         database.journal[selectedDay] = item
-        save()
+        saveSoon()
     }
 
     func handleCheckIn(text: String, ticket: String, mode: CheckInMode, timeStr: String, minutes: Int = 30) {

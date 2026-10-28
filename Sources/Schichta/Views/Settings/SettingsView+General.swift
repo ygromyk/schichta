@@ -75,6 +75,9 @@ extension SettingsView {
                     Toggle(store.t("settings.showInDockOffMenu"), isOn: $store.showInDock)
                         .font(.system(size: 12))
 
+                    Toggle(store.t("settings.showTodayInMenuBar"), isOn: $store.showTodayInMenuBar)
+                        .font(.system(size: 12))
+
                     Toggle(store.t("settings.startAtLogin"), isOn: Binding(
                         get: { LoginItem.isEnabled },
                         set: { enabled in

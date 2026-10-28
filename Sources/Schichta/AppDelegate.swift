@@ -107,6 +107,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         AppTime.clock.string(from: date)
     }
 
+    func applicationWillTerminate(_ notification: Notification) {
+        store?.flushPendingSave()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Apply the saved time zone before the store computes "today".
         AppTime.use(AppTime.zone(forIdentifier: AppPaths.defaults.string(forKey: SchichtaStore.timeZoneKey) ?? ""))
@@ -211,6 +215,29 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         appMenu.addItem(NSMenuItem.separator())
         appMenu.addItem(withTitle: t("app.menu.quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 
+        let goItem = NSMenuItem(); menu.addItem(goItem)
+        let goMenu = NSMenu(title: t("app.menu.go")); goItem.submenu = goMenu
+        let leftArrow = String(utf16CodeUnits: [unichar(NSLeftArrowFunctionKey)], count: 1)
+        let rightArrow = String(utf16CodeUnits: [unichar(NSRightArrowFunctionKey)], count: 1)
+        let goActions: [(String, Selector, String)?] = [
+            ("app.menu.previous", #selector(goPrevious), leftArrow),
+            ("app.menu.next", #selector(goNext), rightArrow),
+            ("app.menu.today", #selector(goToday), "t"),
+            nil,
+            ("app.menu.dayView", #selector(goDayView), "1"),
+            ("app.menu.weekView", #selector(goWeekView), "2")
+        ]
+        for action in goActions {
+            guard let (titleKey, selector, key) = action else {
+                goMenu.addItem(NSMenuItem.separator())
+                continue
+            }
+            let item = NSMenuItem(title: t(titleKey), action: selector, keyEquivalent: key)
+            item.keyEquivalentModifierMask = [.command, .option]
+            item.target = self
+            goMenu.addItem(item)
+        }
+
         let editItem = NSMenuItem(); menu.addItem(editItem)
         let editMenu = NSMenu(title: t("app.menu.edit")); editItem.submenu = editMenu
         let editActions: [(String, String, String)] = [
@@ -241,9 +268,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         let image = AppIconGenerator.statusBarIcon(due: isDue)
         image.accessibilityDescription = label
         button.image = image
-        button.imagePosition = .imageOnly
-        button.title = ""
+        if let store, store.showTodayInMenuBar {
+            button.title = " " + SchichtaCore.formatShortTime(store.todayMinutes())
+            button.imagePosition = .imageLeading
+            button.font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+        } else {
+            button.imagePosition = .imageOnly
+            button.title = ""
+        }
         button.toolTip = label
+    }
+
+    /// Redraws the menu bar item, e.g. after today's logged time changed.
+    func refreshStatusItem() {
+        updateStatusItem(isDue: isCheckInDue)
     }
 
     func setupCheckInPanel() {
@@ -527,6 +565,35 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         bringMainWindowToFront()
     }
 
+    // MARK: - Go menu
+
+    /// The previous day, or the previous week in the week overview.
+    @objc func goPrevious() {
+        if store.mainViewMode == .week { store.moveWeek(-1) } else { store.moveDay(-1) }
+        bringMainWindowToFront()
+    }
+
+    /// The next day, or the next week in the week overview.
+    @objc func goNext() {
+        if store.mainViewMode == .week { store.moveWeek(1) } else { store.moveDay(1) }
+        bringMainWindowToFront()
+    }
+
+    @objc func goToday() {
+        store.selectToday()
+        bringMainWindowToFront()
+    }
+
+    @objc func goDayView() {
+        store.mainViewMode = .day
+        bringMainWindowToFront()
+    }
+
+    @objc func goWeekView() {
+        store.mainViewMode = .week
+        bringMainWindowToFront()
+    }
+
     // MARK: - Day-closing prompts (morning & end of day)
 
     func startPromptTimer() {
@@ -543,6 +610,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     /// `now` is injectable for tests.
     func checkPeriodicPrompts(now: Date = Date()) {
+        // Once a minute: the menu bar time follows the date roll-over.
+        refreshStatusItem()
         guard let store = store else { return }
         let today = SchichtaCore.day(from: now)
         let time = AppTime.calendar.dateComponents([.hour, .minute], from: now)

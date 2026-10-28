@@ -87,6 +87,10 @@ class SchichtaStore: ObservableObject {
     @Setting("Schichta.ShowInDock") var showInDock: Bool = true {
         didSet { appDelegate()?.applyDockVisibility() }
     }
+    /// Shows today's logged time next to the menu bar icon.
+    @Setting("Schichta.ShowTodayInMenuBar") var showTodayInMenuBar: Bool = true {
+        didSet { appDelegate()?.refreshStatusItem() }
+    }
     /// ⌥⌘K opens the check-in from any app.
     @Setting("Schichta.GlobalHotKeyEnabled") var globalHotKeyEnabled: Bool = true {
         didSet { appDelegate()?.updateGlobalHotKey() }
@@ -146,6 +150,9 @@ class SchichtaStore: ObservableObject {
     @Published var storeProblem: String? = nil
     /// True when an unreadable data file could not be moved aside, so saving would overwrite it.
     private(set) var savingBlocked = false
+
+    /// The delayed write scheduled by `saveSoon`, if any.
+    private var pendingSave: Task<Void, Never>? = nil
 
     let storeURL: URL
     /// Read and written by `@Setting`.
@@ -253,10 +260,32 @@ class SchichtaStore: ObservableObject {
         }
     }
 
+    /// Saves after `delay` of quiet, for changes that arrive in bursts (typing in the notes field):
+    /// each call restarts the timer, so the keystrokes coalesce into one write instead of one per key.
+    /// A synchronous `save()` supersedes the pending write, and quitting flushes it (`flushPendingSave`).
+    func saveSoon(after delay: Duration = .milliseconds(800)) {
+        pendingSave?.cancel()
+        pendingSave = Task {
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled else { return }
+            pendingSave = nil
+            save()
+        }
+    }
+
+    /// Writes a change that `saveSoon` is still waiting on, right now. No-op when nothing is pending.
+    func flushPendingSave() {
+        guard pendingSave != nil else { return }
+        save() // also cancels the pending task
+    }
+
     func save() {
+        pendingSave?.cancel()
+        pendingSave = nil
         guard !savingBlocked else { return }
         do {
             try DatabaseFile(url: storeURL).save(database)
+            appDelegate()?.refreshStatusItem()
         } catch {
             NSLog("Could not save the Schichta database: %@", error.localizedDescription)
             showToast(t("store.savingFailed", "\(error.localizedDescription)"))

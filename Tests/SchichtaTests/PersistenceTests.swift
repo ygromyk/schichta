@@ -31,6 +31,26 @@ struct PersistenceTests {
         }
     }
 
+    @Test func notesTypedLastAreWrittenByFlush() throws {
+        try withDataFolder { _, open in
+            let store = open()
+            store.updateJournalNotes("x")
+            store.flushPendingSave()
+            #expect(open().database.journal[store.selectedDay]?.notes == "x")
+        }
+    }
+
+    @Test func aSyncSaveCarriesPendingNotes() throws {
+        try withDataFolder { _, open in
+            let store = open()
+            store.updateJournalNotes("x")
+            store.addEntry(ticket: "PROJ-1", description: "Work", minutes: 30, estimated: false)
+            let reloaded = open()
+            #expect(reloaded.database.journal[store.selectedDay]?.notes == "x")
+            #expect(reloaded.database.entries.count == 1)
+        }
+    }
+
     @Test func missingFileStartsEmptyAndCreatesIt() throws {
         try withDataFolder { file, open in
             let store = open()

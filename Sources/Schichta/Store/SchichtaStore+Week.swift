@@ -136,11 +136,17 @@ extension SchichtaStore {
             logged[entry.date, default: 0] += entry.minutes
         }
         var balance = overtimeOpeningMinutes
-        var day = start
+        // Walk Date values: parsing and formatting a day string per step was the cost on every render.
+        let time = AppTime.state
+        guard var date = time.day.date(from: start), let end = time.day.date(from: today) else { return balance }
         var guardDays = 0
-        while day <= today && guardDays < 3660 { // ten years at most
-            balance += logged[day, default: 0] - (isWorkingDay(day) ? dailyTargetMinutes : 0)
-            day = SchichtaCore.addDays(1, to: day)
+        while date <= end && guardDays < 3660 { // ten years at most
+            let day = time.day.string(from: date)
+            let weekday = time.calendar.component(.weekday, from: date)
+            let working = workingDays.contains(weekday) && absence(on: day) == nil
+            balance += logged[day, default: 0] - (working ? dailyTargetMinutes : 0)
+            guard let next = time.calendar.date(byAdding: .day, value: 1, to: date) else { break }
+            date = next
             guardDays += 1
         }
         return balance

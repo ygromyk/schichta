@@ -92,6 +92,11 @@ enum SchichtaCore {
         return formatTime(minutes)
     }
 
+    /// "h:mm" without a leading zero on the hour ("0:30", "3:45"), compact for the menu bar.
+    static func formatShortTime(_ minutes: Int) -> String {
+        String(format: "%d:%02d", minutes / 60, minutes % 60)
+    }
+
     static func formatTime(_ minutes: Int) -> String {
         let h = minutes / 60
         let m = minutes % 60

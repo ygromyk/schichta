@@ -130,6 +130,7 @@
 /* Store/SchichtaStore+Entries.swift */
 "entries.errorDailyTotalCannotExceed" = "Fehler: Tagessumme darf 24 Stunden nicht überschreiten.";
 "entries.entryAdded" = "Eintrag hinzugefügt.";
+"entries.entriesCopiedFrom" = "%1$@ Einträge von %2$@ übernommen (als Schätzung).";
 "entries.entryUpdated" = "Eintrag aktualisiert.";
 "entries.entryDeleted" = "Eintrag gelöscht.";
 "entries.estimateConfirmed" = "Schätzung bestätigt.";
@@ -268,6 +269,8 @@
 "main.entries" = "%1$@ Einträge";
 "main.noEntriesForThisDay" = "Noch keine Einträge für diesen Tag.";
 "main.addAnActivityAboveOr" = "Erfasse eine Tätigkeit oben oder nutze die automatische Auswertung.";
+"main.copyEntriesFrom" = "Einträge vom %1$@ übernehmen";
+"main.copyEntriesFromHelp" = "Kopiert die Einträge des letzten Tages mit Einträgen als Schätzungen auf diesen Tag.";
 "main.noTicket" = "Ohne Ticket";
 "main.noDescription" = "Ohne Beschreibung";
 "main.estimated" = "Geschätzt";
@@ -416,6 +419,7 @@
 "settings.definesWhetherCheckInsCreate" = "Legt fest, ob ein Check-in sofort eine buchungswirksame Tätigkeit erzeugt oder nur die Tagesnotiz ergänzt.";
 "settings.openTheCheckInFrom" = "Check-in überall mit %1$@ öffnen";
 "settings.showInDockOffMenu" = "Im Dock anzeigen (aus: nur Statusleiste)";
+"settings.showTodayInMenuBar" = "Heutige Zeit in der Menüleiste anzeigen";
 "settings.startAtLogin" = "Beim Anmelden starten";
 "settings.loginItemNotChanged" = "Anmeldeobjekt nicht geändert: %1$@";
 "settings.pleaseAllowItInSystem" = "Bitte in Systemeinstellungen › Allgemein › Anmeldeobjekte erlauben.";
@@ -531,6 +535,12 @@
 "app.menu.testMorningPrompt" = "Morgen-Prompt (Vortag) testen";
 "app.menu.testEndOfDayPrompt" = "Feierabend-Prompt testen";
 "app.menu.quit" = "Schichta beenden";
+"app.menu.go" = "Gehe zu";
+"app.menu.previous" = "Zurück";
+"app.menu.next" = "Weiter";
+"app.menu.today" = "Heute";
+"app.menu.dayView" = "Tagesansicht";
+"app.menu.weekView" = "Wochenübersicht";
 "app.menu.edit" = "Bearbeiten";
 "app.menu.undo" = "Rückgängig";
 "app.menu.cut" = "Ausschneiden";

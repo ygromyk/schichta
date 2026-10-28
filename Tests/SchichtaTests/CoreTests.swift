@@ -25,6 +25,11 @@ struct CoreTests {
         #expect(SchichtaCore.snapDuration(minutes, step: step) == expected)
     }
 
+    @Test("The menu bar time has no leading zero on the hour", arguments: [(0, "0:00"), (30, "0:30"), (225, "3:45"), (720, "12:00")])
+    func formatsShortTime(minutes: Int, expected: String) {
+        #expect(SchichtaCore.formatShortTime(minutes) == expected)
+    }
+
     @Test func labelsDurations() {
         #expect(SchichtaCore.durationLabel(15) == "15m")
         #expect(SchichtaCore.durationLabel(60) == "1h")

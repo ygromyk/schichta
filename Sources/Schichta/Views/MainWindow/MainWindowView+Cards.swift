@@ -249,6 +249,17 @@ extension MainWindowView {
                         Text(store.t("main.addAnActivityAboveOr"))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
+                        if let source = store.lastDayWithEntries(before: store.selectedDay) {
+                            Button {
+                                store.copyEntries(from: source)
+                            } label: {
+                                Label(store.t("main.copyEntriesFrom", "\(SchichtaCore.formatGermanDate(source))"), systemImage: "doc.on.doc")
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .padding(.top, 4)
+                            .help(store.t("main.copyEntriesFromHelp"))
+                        }
                     }
                     .frame(maxWidth: .infinity)
                     .padding(24)

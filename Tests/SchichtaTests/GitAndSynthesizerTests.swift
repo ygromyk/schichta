@@ -57,6 +57,20 @@ struct GitActivityTests {
         #expect(data[0].error?.en == "Directory not found: /nonexistent/example-app")
         #expect(data[1].title == "example-api")
     }
+
+    @Test func resultsKeepTheConfiguredOrder() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("schichta-tests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let repos = [
+            TrackedRepo(path: "/nonexistent/first", projectName: "", defaultTicket: "", enabled: true),
+            TrackedRepo(path: "/nonexistent/disabled", projectName: "", defaultTicket: "", enabled: false),
+            TrackedRepo(path: dir.path, projectName: "", defaultTicket: "", enabled: true),
+            TrackedRepo(path: "/nonexistent/third", projectName: "", defaultTicket: "", enabled: true),
+        ]
+        let result = try Activity.readRepos("2026-10-12", repos: repos, authorFilter: "Max Mustermann")
+        #expect(result.repositories.map(\.path) == repos.filter(\.enabled).map(\.path))
+    }
 }
 
 @Suite("Automatic proposals")

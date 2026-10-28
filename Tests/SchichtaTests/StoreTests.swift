@@ -178,4 +178,66 @@ struct StoreTests {
             #expect(store.proposals.map(\.minutes) == [0, 45], "time open stays open")
         }
     }
+
+    @Test func todayMinutesSumsOnlyThatDay() {
+        withTestStore { store in
+            store.database = Database(version: 1, entries: [
+                Entry(id: "a", date: "2026-10-27", ticket: "PROJ-1", description: "A", minutes: 90, estimated: false),
+                Entry(id: "b", date: "2026-10-27", ticket: "PROJ-2", description: "B", minutes: 45, estimated: true),
+                Entry(id: "c", date: "2026-10-26", ticket: "PROJ-3", description: "C", minutes: 60, estimated: false),
+            ], journal: [:])
+            #expect(store.todayMinutes(today: "2026-10-27") == 135)
+            #expect(store.todayMinutes(today: "2026-10-28") == 0)
+        }
+    }
+
+    @Test func findsTheLastDayWithEntries() {
+        withTestStore { store in
+            #expect(store.lastDayWithEntries(before: "2026-10-27") == nil)
+            store.database = Database(version: 1, entries: [
+                Entry(id: "a", date: "2026-10-20", ticket: "", description: "A", minutes: 30, estimated: false),
+                Entry(id: "b", date: "2026-10-23", ticket: "", description: "B", minutes: 30, estimated: false),
+                Entry(id: "c", date: "2026-10-27", ticket: "", description: "C", minutes: 30, estimated: false),
+            ], journal: [:])
+            #expect(store.lastDayWithEntries(before: "2026-10-27") == "2026-10-23", "strictly before the given day")
+            #expect(store.lastDayWithEntries(before: "2026-10-28") == "2026-10-27")
+            #expect(store.lastDayWithEntries(before: "2026-10-20") == nil)
+        }
+    }
+
+    @Test func copiesEntriesAsEstimates() {
+        withTestStore { store in
+            let originals = [
+                Entry(id: "a", date: "2026-10-23", ticket: "PROJ-1", description: "Review", minutes: 90, estimated: false, project: "Alpha"),
+                Entry(id: "b", date: "2026-10-23", ticket: "", description: "Meeting", minutes: 30, estimated: false),
+            ]
+            store.database = Database(version: 1, entries: originals, journal: [:])
+            store.selectDay("2026-10-26")
+            store.copyEntries(from: "2026-10-23")
+
+            let copies = store.entriesForSelectedDay()
+            #expect(copies.count == 2)
+            #expect(copies.map(\.ticket) == ["PROJ-1", ""])
+            #expect(copies.map(\.description) == ["Review", "Meeting"])
+            #expect(copies.map(\.minutes) == [90, 30])
+            #expect(copies.map(\.project) == ["Alpha", ""])
+            #expect(copies.allSatisfy { $0.estimated })
+            #expect(Set(copies.map(\.id)).isDisjoint(with: ["a", "b"]), "copies get new ids")
+            #expect(store.database.entries.filter { $0.date == "2026-10-23" } == originals, "the originals stay unchanged")
+        }
+    }
+
+    @Test func copyingIsRefusedBeyondTwentyFourHours() {
+        withTestStore { store in
+            store.database = Database(version: 1, entries: [
+                Entry(id: "a", date: "2026-10-23", ticket: "", description: "Long", minutes: 600, estimated: false),
+                Entry(id: "b", date: "2026-10-26", ticket: "", description: "Existing", minutes: 900, estimated: false),
+            ], journal: [:])
+            store.selectDay("2026-10-26")
+            store.copyEntries(from: "2026-10-23")
+
+            #expect(store.entriesForSelectedDay().map(\.id) == ["b"], "nothing is copied")
+            #expect(store.toastMessage == store.t("entries.errorDailyTotalCannotExceed"))
+        }
+    }
 }

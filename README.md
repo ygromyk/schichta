@@ -116,6 +116,7 @@ hook. AI and booking requests are shown to you in full before anything is sent. 
 ### Fits your Mac
 
 - **Start at login** and an optional menu-bar-only mode without Dock icon, switchable in Settings.
+- **Today in the menu bar.** The menu bar icon can show today's logged time, switchable in Settings.
 - **Booking targets.** Connect Clockify or any HTTP time-tracking API through a JSON file,
   with no code changes.
 - **Your time zone.** Days start and end in the system time zone, or in one you pick in Settings.
@@ -139,6 +140,9 @@ hook. AI and booking requests are shown to you in full before anything is sent. 
 | `⌥⌘K` | Open the check-in from any app (no Accessibility permission needed) |
 | `⌘K` | Open the check-in while Schichta is active |
 | `⌘0` | Show the main window |
+| `⌥⌘←` / `⌥⌘→` | Previous / next day (week in the week overview) |
+| `⌥⌘T` | Go to today |
+| `⌥⌘1` / `⌥⌘2` | Day view / week overview |
 | `⌘,` | Settings |
 | `⌘Return` | Save the entry in the day view |
 | `Return` | Save the check-in answer |
