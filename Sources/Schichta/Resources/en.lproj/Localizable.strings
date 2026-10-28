@@ -372,6 +372,10 @@
 "main.byTicket" = "By ticket";
 "main.weekSummaryCopied" = "Week summary copied.";
 "main.copyWeek" = "Copy week";
+"main.copyTicket" = "Copy ticket";
+"main.copyDescription" = "Copy description";
+"main.copyDuration" = "Copy duration";
+"main.copiedValue" = "Copied: %1$@";
 "main.1DayIsNotBooked" = "1 day is not booked yet:";
 "main.daysAreNotBookedYet" = "%1$@ days are not booked yet:";
 "main.weekTotal" = "Week total";

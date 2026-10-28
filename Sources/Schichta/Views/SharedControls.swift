@@ -21,6 +21,29 @@ struct StepButton: View {
     }
 }
 
+/// Small clipboard icon that copies one value of an entry row (ticket, description, duration).
+/// Hidden entirely when there is nothing to copy, so empty fields do not get a dead button.
+struct CopyButton: View {
+    let text: String
+    let help: String
+    @ObservedObject var store: SchichtaStore
+
+    var body: some View {
+        if !text.isEmpty {
+            Button {
+                store.copyToPasteboard(text)
+                store.showToast(store.t("main.copiedValue", text))
+            } label: {
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help(help)
+        }
+    }
+}
+
 extension View {
     /// Frame of the four tiles in the metrics bar.
     func tileStyle() -> some View {

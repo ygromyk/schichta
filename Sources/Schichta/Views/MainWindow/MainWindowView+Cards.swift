@@ -286,6 +286,7 @@ extension MainWindowView {
                                     .background(SchichtaTheme.forestGreen)
                                     .cornerRadius(4)
                             }
+                            CopyButton(text: entry.ticket, help: store.t("main.copyTicket"), store: store)
 
                             // Project label and description: the label only when the description still keeps
                             // 110 pt, so a narrow window neither breaks words nor pushes the buttons off the row.
@@ -312,6 +313,7 @@ extension MainWindowView {
                                 description
                             }
                             .help(proj)
+                            CopyButton(text: entry.description, help: store.t("main.copyDescription"), store: store)
 
                             // Estimated Tag / Confirm Button
                             if entry.estimated {
@@ -353,6 +355,8 @@ extension MainWindowView {
                             .font(.system(size: 11))
                             .fixedSize()
                             .help(store.t("main.addMinutes", "\(2 * store.timeStepMinutes)"))
+
+                            CopyButton(text: SchichtaCore.formatTime(entry.minutes), help: store.t("main.copyDuration"), store: store)
 
                             // Edit & Delete
                             Button(action: { startEditing(entry) }) {
