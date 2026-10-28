@@ -45,7 +45,7 @@ extension MainWindowView {
 
     var entryFormCard: some View {
         sectionCard(
-            title: editingEntryId != nil ? store.t("Eintrag bearbeiten", "Edit activity") : store.t("Tätigkeit erfassen", "Add activity"),
+            title: editingEntryId != nil ? store.t("main.editActivity") : store.t("main.addActivity"),
             icon: "plus.circle.fill"
         ) {
             VStack(alignment: .leading, spacing: 10) {
@@ -53,7 +53,7 @@ extension MainWindowView {
                 HStack(alignment: .center, spacing: 12) {
                     // Ticket Input
                     HStack(spacing: 4) {
-                        TextField(store.t("Ticket optional (z. B. PROJ-2800)", "Ticket optional (e.g. PROJ-2800)"), text: $formTicket)
+                        TextField(store.t("main.ticketOptionalExampleProj2800"), text: $formTicket)
                             .textFieldStyle(.roundedBorder)
 
                         if !formTicket.isEmpty {
@@ -67,16 +67,16 @@ extension MainWindowView {
 
                     // Duration stepper & quick buttons
                     HStack(spacing: 5) {
-                        Text(store.t("Dauer:", "Duration:"))
+                        Text(store.t("main.duration"))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(.secondary)
                             .fixedSize()
 
-                        StepButton(increase: false, size: 15, help: store.t("−\(store.timeStepMinutes) Minuten", "−\(store.timeStepMinutes) minutes")) { addStepsToDuration(-1) }
+                        StepButton(increase: false, size: 15, help: store.t("main.minutes", "\(store.timeStepMinutes)")) { addStepsToDuration(-1) }
 
                         DurationInput(text: $formDuration, step: store.timeStepMinutes)
 
-                        StepButton(increase: true, size: 15, help: store.t("+\(store.timeStepMinutes) Minuten", "+\(store.timeStepMinutes) minutes")) { addStepsToDuration(1) }
+                        StepButton(increase: true, size: 15, help: store.t("main.minutes2", "\(store.timeStepMinutes)")) { addStepsToDuration(1) }
 
                         HStack(spacing: 3) {
                             ForEach(store.durationPresets, id: \.self) { minutes in
@@ -94,7 +94,7 @@ extension MainWindowView {
                 let recents = store.recentTickets()
                 if !recents.isEmpty {
                     HStack(spacing: 5) {
-                        Text(store.t("Zuletzt:", "Recent:"))
+                        Text(store.t("main.recent"))
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -116,19 +116,19 @@ extension MainWindowView {
                 }
 
                 // Row 2: description field
-                TextField(store.t("Woran hast du gearbeitet? (z. B. Abstimmung Architektur)", "What did you work on? (e.g. Architecture sync)"), text: $formDescription)
+                TextField(store.t("main.whatDidYouWorkOn"), text: $formDescription)
                     .textFieldStyle(.roundedBorder)
 
                 // Row 3: footer with checkbox + save button
                 HStack {
-                    Toggle(store.t("Zeit ist geschätzt (vor Buchung prüfen)", "Time is estimated (verify before booking)"), isOn: $formEstimated)
+                    Toggle(store.t("main.timeIsEstimatedVerifyBefore"), isOn: $formEstimated)
                         .toggleStyle(.checkbox)
                         .font(.system(size: 12))
 
                     Spacer()
 
                     if editingEntryId != nil {
-                        Button(store.t("Abbrechen", "Cancel")) {
+                        Button(store.t("main.cancel")) {
                             resetForm()
                         }
                         .buttonStyle(.plain)
@@ -136,7 +136,7 @@ extension MainWindowView {
                         .padding(.trailing, 4)
                     }
 
-                    Button(editingEntryId != nil ? store.t("Änderungen speichern", "Save changes") : store.t("Eintrag speichern", "Save entry")) {
+                    Button(editingEntryId != nil ? store.t("main.saveChanges") : store.t("main.saveEntry")) {
                         saveForm()
                     }
                     .buttonStyle(.borderedProminent)
@@ -154,10 +154,10 @@ extension MainWindowView {
     var aiSummaryBox: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Label(store.t("KI-Zusammenfassung", "AI summary"), systemImage: "wand.and.stars")
+                Label(store.t("main.aiSummary"), systemImage: "wand.and.stars")
                     .font(.system(size: 11.5, weight: .semibold))
                 Spacer()
-                Button(store.t("In Tagesnotizen übernehmen", "Add to daily notes")) {
+                Button(store.t("main.addToDailyNotes")) {
                     let current = store.journalForSelectedDay().notes
                     let addition = "KI-Zusammenfassung: " + store.aiSummaryText
                     notesText = current.isEmpty ? addition : current + "\n\n" + addition
@@ -188,11 +188,11 @@ extension MainWindowView {
 
     var proposalsCard: some View {
         sectionCard(
-            title: store.t("Automatisch erkannte Tätigkeiten (\(store.proposals.count))", "Automatically recognized activities (\(store.proposals.count))"),
+            title: store.t("main.automaticallyRecognizedActivities", "\(store.proposals.count)"),
             icon: "sparkles",
             trailing: {
                 if !store.proposals.isEmpty {
-                    Button(store.t("Alle mit Zeit übernehmen", "Accept all with duration")) {
+                    Button(store.t("main.acceptAllWithDuration")) {
                         store.acceptAllProposals()
                     }
                     .buttonStyle(.borderedProminent)
@@ -206,7 +206,7 @@ extension MainWindowView {
                     HStack(spacing: 8) {
                         ProgressView()
                             .controlSize(.small)
-                        Text(store.t("Git-Commits, Reflogs und Notizen werden analysiert...", "Analyzing Git commits, reflogs and notes..."))
+                        Text(store.t("main.analyzingGitCommitsReflogsAnd"))
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
@@ -230,10 +230,10 @@ extension MainWindowView {
         let entries = store.entriesForSelectedDay()
 
         return sectionCard(
-            title: store.t("Deine Einträge am \(SchichtaCore.formatGermanDate(store.selectedDay))", "Your entries on \(SchichtaCore.formatGermanDate(store.selectedDay))"),
+            title: store.t("main.yourEntriesOn", "\(SchichtaCore.formatGermanDate(store.selectedDay))"),
             icon: "checklist",
             trailing: {
-                Text(entries.count == 1 ? store.t("1 Eintrag", "1 entry") : store.t("\(entries.count) Einträge", "\(entries.count) entries"))
+                Text(entries.count == 1 ? store.t("main.1Entry") : store.t("main.entries", "\(entries.count)"))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
@@ -244,9 +244,9 @@ extension MainWindowView {
                         Image(systemName: "plus.circle")
                             .font(.system(size: 28))
                             .foregroundColor(.secondary)
-                        Text(store.t("Noch keine Einträge für diesen Tag.", "No entries for this day yet."))
+                        Text(store.t("main.noEntriesForThisDay"))
                             .font(.system(size: 13, weight: .medium))
-                        Text(store.t("Erfasse eine Tätigkeit oben oder nutze die automatische Auswertung.", "Add an activity above or use automatic analysis."))
+                        Text(store.t("main.addAnActivityAboveOr"))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
@@ -257,7 +257,7 @@ extension MainWindowView {
                         HStack(alignment: .center, spacing: 10) {
                             // Ticket Badge
                             if entry.ticket.isEmpty {
-                                Text(store.t("Ohne Ticket", "No ticket"))
+                                Text(store.t("main.noTicket"))
                                     .font(.system(size: 10, weight: .semibold))
                                     .foregroundColor(.secondary)
                                     .fixedSize()
@@ -279,7 +279,7 @@ extension MainWindowView {
                             // Project label and description: the label only when the description still keeps
                             // 110 pt, so a narrow window neither breaks words nor pushes the buttons off the row.
                             let proj = !entry.project.isEmpty ? entry.project : SchichtaCore.resolveProjectName(for: entry, repos: store.trackedRepos)
-                            let description = Text(entry.description.isEmpty ? store.t("Ohne Beschreibung", "No description") : entry.description)
+                            let description = Text(entry.description.isEmpty ? store.t("main.noDescription") : entry.description)
                                 .font(.system(size: 13))
                                 .foregroundColor(entry.description.isEmpty ? .secondary : .primary)
                                 .lineLimit(2)
@@ -306,7 +306,7 @@ extension MainWindowView {
                             if entry.estimated {
                                 Button(action: { store.confirmEstimate(id: entry.id) }) {
                                     HStack(spacing: 3) {
-                                        Text(store.t("Geschätzt", "Estimated"))
+                                        Text(store.t("main.estimated"))
                                             .fixedSize() // never break the word in a narrow window
                                         Image(systemName: "checkmark")
                                     }
@@ -318,11 +318,11 @@ extension MainWindowView {
                                     .cornerRadius(4)
                                 }
                                 .buttonStyle(.plain)
-                                .help(store.t("Klicken um Schätzung als bestätigt zu markieren", "Click to confirm estimate"))
+                                .help(store.t("main.clickToConfirmEstimate"))
                             }
 
                             // One step less
-                            StepButton(increase: false, size: 15, help: store.t("−\(store.timeStepMinutes) Minuten", "−\(store.timeStepMinutes) minutes")) {
+                            StepButton(increase: false, size: 15, help: store.t("main.minutes", "\(store.timeStepMinutes)")) {
                                 store.adjustEntryMinutes(id: entry.id, steps: -1)
                             }
 
@@ -330,7 +330,7 @@ extension MainWindowView {
                             InlineDurationField(entry: entry, store: store)
 
                             // One step more
-                            StepButton(increase: true, size: 15, help: store.t("+\(store.timeStepMinutes) Minuten", "+\(store.timeStepMinutes) minutes")) {
+                            StepButton(increase: true, size: 15, help: store.t("main.minutes2", "\(store.timeStepMinutes)")) {
                                 store.adjustEntryMinutes(id: entry.id, steps: 1)
                             }
 
@@ -341,7 +341,7 @@ extension MainWindowView {
                             .buttonStyle(.borderless)
                             .font(.system(size: 11))
                             .fixedSize()
-                            .help(store.t("+\(2 * store.timeStepMinutes) Minuten hinzufügen", "Add \(2 * store.timeStepMinutes) minutes"))
+                            .help(store.t("main.addMinutes", "\(2 * store.timeStepMinutes)"))
 
                             // Edit & Delete
                             Button(action: { startEditing(entry) }) {
@@ -349,7 +349,7 @@ extension MainWindowView {
                                     .foregroundColor(.secondary)
                             }
                             .buttonStyle(.plain)
-                            .help(store.t("Bearbeiten", "Edit"))
+                            .help(store.t("main.edit"))
 
                             Button(action: {
                                 entryToDelete = entry
@@ -359,7 +359,7 @@ extension MainWindowView {
                                     .foregroundColor(.red.opacity(0.75))
                             }
                             .buttonStyle(.plain)
-                            .help(store.t("Löschen", "Delete"))
+                            .help(store.t("main.delete"))
                         }
                         .padding(.vertical, 6)
                         .padding(.horizontal, 10)
@@ -374,7 +374,7 @@ extension MainWindowView {
 
     var notesCard: some View {
         sectionCard(
-            title: store.t("Tagesnotizen", "Daily Notes"),
+            title: store.t("main.dailyNotes"),
             icon: "note.text",
             trailing: {
                 Button(action: {
@@ -382,7 +382,7 @@ extension MainWindowView {
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.triangle.branch")
-                        Text(store.t("Git-Aktivitäten in den Einstellungen prüfen…", "Inspect Git activities in Settings…"))
+                        Text(store.t("main.inspectGitActivitiesInSettings"))
                     }
                     .font(.system(size: 11))
                 }
@@ -391,7 +391,7 @@ extension MainWindowView {
             }
         ) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(store.t("Freie Tagesnotizen & 30m Check-in Protokoll:", "Free daily notes & 30m check-in log:"))
+                Text(store.t("main.freeDailyNotes30mCheck"))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
 

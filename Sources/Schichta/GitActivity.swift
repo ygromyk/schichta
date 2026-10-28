@@ -7,7 +7,7 @@ enum Activity {
     static func bounds(_ day: String, in time: AppTime.State = AppTime.state) throws -> (String, String) {
         guard day.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil,
               let start = time.day.date(from: day), time.day.string(from: start) == day else {
-            throw SchichtaError("Ungültiges Datum", en: "Invalid date")
+            throw SchichtaError("git.invalidDate")
         }
         let end = time.calendar.date(byAdding: .day, value: 1, to: start)!.addingTimeInterval(-1)
         return (time.isoSeconds.string(from: start), time.isoSeconds.string(from: end))
@@ -21,56 +21,72 @@ enum Activity {
 
     static func git(_ repo: URL, _ arguments: [String]) -> GitOutput {
         guard let output = try? Shell.run("/usr/bin/git", ["-C", repo.path] + arguments, timeout: 15) else {
-            return GitOutput(error: LocalizedText("Git konnte nicht gestartet werden.", "Git could not be started."))
+            return GitOutput(error: LocalizedText(key: "git.gitCouldNotBeStarted"))
         }
         guard output.status == 0 else {
-            return GitOutput(error: LocalizedText("Git-Abfrage fehlgeschlagen oder Zeitlimit überschritten.", "Git query failed or timed out."))
+            return GitOutput(error: LocalizedText(key: "git.gitQueryFailedOrTimed"))
         }
         let text = output.text
         return GitOutput(text: String(text.prefix(100000)), truncated: text.count > 100000)
     }
 
+    /// Reads every enabled repository in parallel (each one's git commands still run in sequence);
+    /// the results keep the configured repository order.
     static func readRepos(_ day: String, repos: [TrackedRepo], authorFilter: String?) throws -> GitActivityResult {
         let (start, end) = try bounds(day)
         let author = (authorFilter ?? gitUserName()).trimmingCharacters(in: .whitespacesAndNewlines)
         let authorArg = author.isEmpty ? "--all" : "--author=\(author)"
         let isToday = (day == SchichtaCore.day())
 
-        var repoResults: [RepoActivity] = []
-
-        for repo in repos {
-            guard repo.enabled else { continue }
-            let repoURL = URL(fileURLWithPath: repo.path)
-            var activity = RepoActivity(repo: repo)
-
-            guard FileManager.default.fileExists(atPath: repoURL.path) else {
-                activity.error = LocalizedText("Verzeichnis nicht gefunden: \(repo.path)", "Directory not found: \(repo.path)")
-                repoResults.append(activity)
-                continue
-            }
-
-            let isInsideGit = git(repoURL, ["rev-parse", "--is-inside-work-tree"])
-            if isInsideGit.text.trimmingCharacters(in: .whitespacesAndNewlines) != "true" {
-                activity.error = LocalizedText("Kein Git-Repository unter: \(repo.path)", "Not a Git repository: \(repo.path)")
-                repoResults.append(activity)
-                continue
-            }
-
-            // 1. Own commits
-            activity.commits = git(repoURL, ["log", "--all", "--since-as-filter=\(start)", "--until=\(end)", authorArg, "-n", "150", "--format=%h | Autorzeit: %aI | Commitzeit: %cI | %s"])
-            // 2. Changed files / diff stats
-            activity.changedFiles = git(repoURL, ["log", "--all", "--since-as-filter=\(start)", "--until=\(end)", authorArg, "--shortstat", "--oneline", "-n", "30"])
-            // 3. Local branch/HEAD activity
-            activity.headActivity = git(repoURL, ["reflog", "show", "HEAD", "--since=\(start)", "--until=\(end)", "-n", "200", "--date=iso-strict", "--format=%gD | %gs"])
-            // 4. Uncommitted working-tree changes (today only)
-            if isToday {
-                activity.workingTree = git(repoURL, ["status", "--short"])
-            }
-
-            repoResults.append(activity)
+        let enabled = repos.filter(\.enabled)
+        let results = ResultSlots(count: enabled.count)
+        DispatchQueue.concurrentPerform(iterations: enabled.count) { index in
+            results.set(read(enabled[index], start: start, end: end, authorArg: authorArg, isToday: isToday), at: index)
         }
 
-        return GitActivityResult(date: day, timezone: AppTime.timeZone.identifier, repositories: repoResults)
+        return GitActivityResult(date: day, timezone: AppTime.timeZone.identifier, repositories: results.values)
+    }
+
+    /// Collects results written from concurrent iterations, each into its own slot.
+    private final class ResultSlots: @unchecked Sendable {
+        private let lock = NSLock()
+        private var slots: [RepoActivity?]
+
+        init(count: Int) { slots = Array(repeating: nil, count: count) }
+
+        func set(_ value: RepoActivity, at index: Int) {
+            lock.withLock { slots[index] = value }
+        }
+
+        var values: [RepoActivity] { lock.withLock { slots.compactMap { $0 } } }
+    }
+
+    private static func read(_ repo: TrackedRepo, start: String, end: String, authorArg: String, isToday: Bool) -> RepoActivity {
+        let repoURL = URL(fileURLWithPath: repo.path)
+        var activity = RepoActivity(repo: repo)
+
+        guard FileManager.default.fileExists(atPath: repoURL.path) else {
+            activity.error = LocalizedText(key: "git.directoryNotFound", "\(repo.path)")
+            return activity
+        }
+
+        let isInsideGit = git(repoURL, ["rev-parse", "--is-inside-work-tree"])
+        if isInsideGit.text.trimmingCharacters(in: .whitespacesAndNewlines) != "true" {
+            activity.error = LocalizedText(key: "git.notAGitRepository", "\(repo.path)")
+            return activity
+        }
+
+        // 1. Own commits
+        activity.commits = git(repoURL, ["log", "--all", "--since-as-filter=\(start)", "--until=\(end)", authorArg, "-n", "150", "--format=%h | Autorzeit: %aI | Commitzeit: %cI | %s"])
+        // 2. Changed files / diff stats
+        activity.changedFiles = git(repoURL, ["log", "--all", "--since-as-filter=\(start)", "--until=\(end)", authorArg, "--shortstat", "--oneline", "-n", "30"])
+        // 3. Local branch/HEAD activity
+        activity.headActivity = git(repoURL, ["reflog", "show", "HEAD", "--since=\(start)", "--until=\(end)", "-n", "200", "--date=iso-strict", "--format=%gD | %gs"])
+        // 4. Uncommitted working-tree changes (today only)
+        if isToday {
+            activity.workingTree = git(repoURL, ["status", "--short"])
+        }
+        return activity
     }
 
     static func formatLogText(_ result: GitActivityResult) -> String {

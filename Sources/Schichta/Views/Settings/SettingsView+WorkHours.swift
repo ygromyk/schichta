@@ -6,24 +6,24 @@ extension SettingsView {
 
     var workHoursAndPromptsTab: some View {
         VStack(alignment: .leading, spacing: 16) {
-            GroupBox(label: Label(store.t("Reguläre Arbeitstage", "Regular Working Days"), systemImage: "calendar")) {
+            GroupBox(label: Label(store.t("settings.regularWorkingDays"), systemImage: "calendar")) {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(store.t("Wähle deine regulären Arbeitstage. An freien Tagen ruhen automatische Prompts.", "Select your regular working days. Automatic prompts are paused on non-working days."))
+                    Text(store.t("settings.selectYourRegularWorkingDays"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
 
                     HStack(spacing: 8) {
-                        let days: [(Int, String, String)] = [
-                            (2, "Mo", "Mon"),
-                            (3, "Di", "Tue"),
-                            (4, "Mi", "Wed"),
-                            (5, "Do", "Thu"),
-                            (6, "Fr", "Fri"),
-                            (7, "Sa", "Sat"),
-                            (1, "So", "Sun")
+                        let days: [(Int, String)] = [
+                            (2, "settings.weekday.mon"),
+                            (3, "settings.weekday.tue"),
+                            (4, "settings.weekday.wed"),
+                            (5, "settings.weekday.thu"),
+                            (6, "settings.weekday.fri"),
+                            (7, "settings.weekday.sat"),
+                            (1, "settings.weekday.sun")
                         ]
-                        ForEach(days, id: \.0) { dayId, deLabel, enLabel in
-                            let label = store.t(deLabel, enLabel)
+                        ForEach(days, id: \.0) { dayId, labelKey in
+                            let label = store.t(labelKey)
                             let isSelected = store.workingDays.contains(dayId)
                             Button(action: {
                                 if isSelected {
@@ -46,7 +46,7 @@ extension SettingsView {
                                     )
                             }
                             .buttonStyle(.plain)
-                            .help(store.t("\(label) als Arbeitstag umschalten", "Toggle \(label) as working day"))
+                            .help(store.t("settings.toggleAsWorkingDay", "\(label)"))
                         }
                     }
                 }
@@ -54,14 +54,14 @@ extension SettingsView {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            GroupBox(label: Label(store.t("Tagessoll & Arbeitszeitfenster", "Daily Target & Work Hours"), systemImage: "hourglass")) {
+            GroupBox(label: Label(store.t("settings.dailyTargetWorkHours"), systemImage: "hourglass")) {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text(store.t("Tägliche Soll-Arbeitszeit:", "Daily target work time:"))
+                        Text(store.t("settings.dailyTargetWorkTime"))
                             .font(.system(size: 12, weight: .medium))
                         Spacer()
 
-                        StepButton(increase: false, size: 16, help: store.t("−30 Minuten", "−30 minutes")) {
+                        StepButton(increase: false, size: 16, help: store.t("settings.30Minutes")) {
                             store.dailyTargetMinutes = max(60, store.dailyTargetMinutes - 30)
                         }
 
@@ -69,7 +69,7 @@ extension SettingsView {
                             .font(.system(size: 14, weight: .bold, design: .monospaced))
                             .frame(width: 75, alignment: .center)
 
-                        StepButton(increase: true, size: 16, help: store.t("+30 Minuten", "+30 minutes")) {
+                        StepButton(increase: true, size: 16, help: store.t("settings.30Minutes2")) {
                             store.dailyTargetMinutes = min(840, store.dailyTargetMinutes + 30)
                         }
 
@@ -91,7 +91,7 @@ extension SettingsView {
                     Divider()
 
                     HStack {
-                        Text(store.t("Zeitraster:", "Time step:"))
+                        Text(store.t("settings.timeStep"))
                             .font(.system(size: 12, weight: .medium))
                         Spacer()
                         Picker("", selection: $store.timeStepMinutes) {
@@ -101,13 +101,12 @@ extension SettingsView {
                         }
                         .frame(width: 85)
                     }
-                    .help(store.t("Alle Dauern werden auf dieses Raster gerundet; auch die ±-Knöpfe springen um diesen Wert. Bestehende Einträge bleiben, bis du sie änderst.",
-                                  "All durations are rounded to this step, and the ± buttons move by it. Existing entries stay as they are until you change them."))
+                    .help(store.t("settings.allDurationsAreRoundedTo"))
 
                     Divider()
 
                     HStack {
-                        Text(store.t("Arbeitszeit-Fenster:", "Work hours window:"))
+                        Text(store.t("settings.workHoursWindow"))
                             .font(.system(size: 12, weight: .medium))
                         Spacer()
                         HStack(spacing: 6) {
@@ -127,7 +126,7 @@ extension SettingsView {
                             }
                             .frame(width: 80)
 
-                            Text(store.t("bis", "to"))
+                            Text(store.t("settings.to"))
                                 .foregroundColor(.secondary)
 
                             Picker("", selection: Binding(
@@ -148,7 +147,7 @@ extension SettingsView {
                         }
                     }
 
-                    Toggle(store.t("Automatische Prompts nur an Arbeitstagen & innerhalb der Arbeitszeit", "Automatic prompts only on work days & during work hours"), isOn: $store.onlyPromptDuringWorkHours)
+                    Toggle(store.t("settings.automaticPromptsOnlyOnWork"), isOn: $store.onlyPromptDuringWorkHours)
                         .font(.system(size: 12))
 
                     Divider()
@@ -158,10 +157,10 @@ extension SettingsView {
                 .padding(10)
             }
 
-            GroupBox(label: Label(store.t("Check-in-Assistent & Prompts", "Check-in Assistant & Prompts"), systemImage: "bell.badge")) {
+            GroupBox(label: Label(store.t("settings.checkInAssistantPrompts"), systemImage: "bell.badge")) {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Toggle(store.t("Regelmäßiger Check-in-Timer aktiv", "Regular check-in timer active"), isOn: $store.timerEnabled)
+                        Toggle(store.t("settings.regularCheckInTimerActive"), isOn: $store.timerEnabled)
                             .font(.system(size: 12, weight: .medium))
                         Spacer()
                         HStack(spacing: 4) {
@@ -188,14 +187,14 @@ extension SettingsView {
 
                     Divider()
 
-                    Toggle(store.t("Morgen-Prompt: An ungebuchten Vortag erinnern", "Morning prompt: Remind if previous work day is unbooked"), isOn: $store.morningPromptEnabled)
+                    Toggle(store.t("settings.morningPromptRemindIfPrevious"), isOn: $store.morningPromptEnabled)
                         .font(.system(size: 12))
 
-                    Toggle(store.t("Feierabend-Prompt: Zum Arbeitsende an Tagesabschluss erinnern", "End-of-day prompt: Remind to close day at end of work hours"), isOn: $store.endOfDayPromptEnabled)
+                    Toggle(store.t("settings.endOfDayPromptRemind"), isOn: $store.endOfDayPromptEnabled)
                         .font(.system(size: 12))
 
                     HStack {
-                        Toggle(store.t("Mittags-Prompt: Vor der Pause nach dem Vormittag fragen", "Lunch prompt: Ask about the morning before the break"), isOn: $store.lunchPromptEnabled)
+                        Toggle(store.t("settings.lunchPromptAskAboutThe"), isOn: $store.lunchPromptEnabled)
                             .font(.system(size: 12))
                         Spacer()
                         Picker("", selection: Binding(
@@ -217,29 +216,29 @@ extension SettingsView {
                     }
 
                     HStack {
-                        Toggle(store.t("Abwesenheit erkennen: nach Rückkehr fragen, was die Lücke war", "Detect time away: ask what the gap was when you're back"), isOn: $store.awayDetectionEnabled)
+                        Toggle(store.t("settings.detectTimeAwayAskWhat"), isOn: $store.awayDetectionEnabled)
                             .font(.system(size: 12))
                         Spacer()
                         Picker("", selection: $store.awayMinimumMinutes) {
                             ForEach([5, 10, 15, 20, 30], id: \.self) { mins in
-                                Text(store.t("ab \(mins) min", "≥ \(mins) min")).tag(mins)
+                                Text(store.t("settings.min", "\(mins)")).tag(mins)
                             }
                         }
                         .frame(width: 115)
                         .disabled(!store.awayDetectionEnabled)
                     }
-                    Text(store.t("Leerlauf, Ruhezustand und Bildschirmsperre zählen als weg. Während du weg bist, gibt es keine Check-ins; ein unbeantworteter Check-in meldet sich nach 3 Minuten per Mitteilung.", "Idle time, sleep and the lock screen count as away. No check-ins while you're away; an unanswered check-in sends a notification after 3 minutes."))
+                    Text(store.t("settings.idleTimeSleepAndThe"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
 
                     Divider()
 
-                    Toggle(store.t("Kurzen Sound bei Check-in & Prompts abspielen", "Play short sound on check-in & prompts"), isOn: $store.checkInSoundEnabled)
+                    Toggle(store.t("settings.playShortSoundOnCheck"), isOn: $store.checkInSoundEnabled)
                         .font(.system(size: 12))
 
                     if store.checkInSoundEnabled {
                         HStack(spacing: 8) {
-                            Text(store.t("Ton:", "Sound:"))
+                            Text(store.t("settings.sound"))
                                 .font(.system(size: 12, weight: .medium))
 
                             Picker("", selection: $store.checkInSoundName) {
@@ -254,12 +253,12 @@ extension SettingsView {
                             }) {
                                 HStack(spacing: 4) {
                                     Text("🔊")
-                                    Text(store.t("Vorschau", "Preview"))
+                                    Text(store.t("settings.preview"))
                                 }
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.small)
-                            .help(store.t("Klangprobe abspielen", "Play sound preview"))
+                            .help(store.t("settings.playSoundPreview"))
                         }
                         .padding(.leading, 18)
                     }
@@ -279,10 +278,10 @@ struct OvertimeAccountSettings: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(store.t("Überstundenkonto ab:", "Overtime account from:"))
+                Text(store.t("settings.overtimeAccountFrom"))
                     .font(.system(size: 12, weight: .medium))
                 Spacer()
-                Toggle(store.t("Festes Startdatum", "Fixed start date"), isOn: Binding(
+                Toggle(store.t("settings.fixedStartDate"), isOn: Binding(
                     get: { !store.overtimeStartDate.isEmpty },
                     set: { store.overtimeStartDate = $0 ? store.overtimeStart() : "" }
                 ))
@@ -295,13 +294,13 @@ struct OvertimeAccountSettings: View {
                     .labelsHidden()
                     .frame(width: 120)
                 } else {
-                    Text(store.t("erster Eintrag (\(SchichtaCore.formatGermanDate(store.overtimeStart())))", "first entry (\(SchichtaCore.formatGermanDate(store.overtimeStart())))"))
+                    Text(store.t("settings.firstEntry", "\(SchichtaCore.formatGermanDate(store.overtimeStart()))"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
             }
             HStack {
-                Text(store.t("Startsaldo:", "Opening balance:"))
+                Text(store.t("settings.openingBalance"))
                     .font(.system(size: 12, weight: .medium))
                 Spacer()
                 TextField("+0:00", text: $openingText)
@@ -310,19 +309,18 @@ struct OvertimeAccountSettings: View {
                     .multilineTextAlignment(.trailing)
                     .frame(width: 90)
                     .onSubmit(applyOpening)
-                    .help(store.t("z. B. +12:30 oder -4:00, mit Enter übernehmen", "e.g. +12:30 or -4:00, Enter to apply"))
-                Text(store.t("Konto heute: \(SchichtaCore.formatSignedTime(store.overtimeBalance()))", "Account today: \(SchichtaCore.formatSignedTime(store.overtimeBalance()))"))
+                    .help(store.t("settings.example1230Or4"))
+                Text(store.t("settings.accountToday", "\(SchichtaCore.formatSignedTime(store.overtimeBalance()))"))
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
                     .foregroundColor(.secondary)
                     .frame(width: 170, alignment: .trailing)
             }
             if openingInvalid {
-                Text(store.t("Bitte als +12:30, -4:00 oder 1,5 eingeben.", "Please enter as +12:30, -4:00 or 1.5."))
+                Text(store.t("settings.pleaseEnterAs1230"))
                     .font(.system(size: 11))
                     .foregroundColor(.orange)
             }
-            Text(store.t("Saldo = Startsaldo + Erfasst − Soll für jeden Tag seit dem Startdatum. Urlaub, Krank und Feiertage haben kein Soll.",
-                         "Balance = opening balance + logged − target for every day since the start date. Vacation, sick and holidays have no target."))
+            Text(store.t("settings.balanceOpeningBalanceLoggedTarget"))
                 .font(.system(size: 11))
                 .foregroundColor(.secondary)
         }

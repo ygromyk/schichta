@@ -77,9 +77,9 @@ enum Absence: String, Codable, CaseIterable {
 
     func title(for language: AppLanguage) -> String {
         switch self {
-        case .vacation: return LocalizedText("Urlaub", "Vacation").in(language)
-        case .sick: return LocalizedText("Krank", "Sick").in(language)
-        case .holiday: return LocalizedText("Feiertag", "Holiday").in(language)
+        case .vacation: return LocalizedText(key: "model.vacation").in(language)
+        case .sick: return LocalizedText(key: "model.sick").in(language)
+        case .holiday: return LocalizedText(key: "model.holiday").in(language)
         }
     }
 
@@ -181,11 +181,9 @@ enum CheckInMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 
     func title(for lang: AppLanguage) -> String {
-        switch (self, lang) {
-        case (.both, .de): return "Als Eintrag + Notiz"
-        case (.both, .en): return "As entry + note"
-        case (.noteOnly, .de): return "Nur als Notiz"
-        case (.noteOnly, .en): return "Note only"
+        switch self {
+        case .both: return L10n.string("model.asEntryAndNote", language: lang)
+        case .noteOnly: return L10n.string("model.noteOnly", language: lang)
         }
     }
 }

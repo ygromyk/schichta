@@ -14,9 +14,9 @@ extension MainWindowView {
         return ScrollView { VStack(alignment: .leading, spacing: 14) {
             // Header
             VStack(alignment: .leading, spacing: 2) {
-                Text(store.t("Tagesabschluss", "Day-End Summary"))
+                Text(store.t("main.dayEndSummary"))
                     .font(.system(size: 16, weight: .bold))
-                Text(store.t("Buchungsentwurf für \(store.gitAuthorFilter)", "Booking draft for \(store.gitAuthorFilter)"))
+                Text(store.t("main.bookingDraftFor", "\(store.gitAuthorFilter)"))
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
             }
@@ -26,7 +26,7 @@ extension MainWindowView {
                 HStack(spacing: 8) {
                     Image(systemName: "info.circle")
                         .foregroundColor(.secondary)
-                    Text(store.t("Noch keine Einträge. Erfasse deine Tätigkeiten für den Tag.", "No entries yet. Log your activities for the day."))
+                    Text(store.t("main.noEntriesYetLogYour"))
                         .font(.system(size: 11.5))
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -38,7 +38,7 @@ extension MainWindowView {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(.orange)
-                    Text(store.t("\(estimatesCount) geschätzte Zeit(en) vor der Buchung prüfen.", "Verify \(estimatesCount) estimated duration(s) before booking."))
+                    Text(store.t("main.verifyEstimatedDurationSBefore", "\(estimatesCount)"))
                         .font(.system(size: 11.5, weight: .medium))
                         .foregroundColor(.orange)
                 }
@@ -50,7 +50,7 @@ extension MainWindowView {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.seal.fill")
                         .foregroundColor(SchichtaTheme.forestGreen)
-                    Text(store.t("Zeiten geprüft. Bereit für die Übertragung.", "Durations verified. Ready to transfer."))
+                    Text(store.t("main.durationsVerifiedReadyToTransfer"))
                         .font(.system(size: 11.5, weight: .medium))
                         .foregroundColor(SchichtaTheme.forestGreen)
                 }
@@ -63,7 +63,7 @@ extension MainWindowView {
             // Monospace Report Preview
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text(store.t("Entwurf:", "Draft:"))
+                    Text(store.t("main.draft"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
                     Spacer()
@@ -73,7 +73,7 @@ extension MainWindowView {
                 }
 
                 ScrollView {
-                    Text(entries.isEmpty ? store.t("Dein Tagesentwurf erscheint hier, sobald du eine Tätigkeit speicherst.", "Your daily draft will appear here as soon as you save an activity.") : reportText)
+                    Text(entries.isEmpty ? store.t("main.yourDailyDraftWillAppear") : reportText)
                         .font(.system(size: 11.5, design: .monospaced))
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -90,7 +90,7 @@ extension MainWindowView {
                 Button(action: { store.copyBCSReport() }) {
                     HStack(spacing: 6) {
                         Image(systemName: "doc.on.doc")
-                        Text(store.t("Tagesentwurf kopieren", "Copy daily draft"))
+                        Text(store.t("main.copyDailyDraft"))
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -100,7 +100,7 @@ extension MainWindowView {
                 Button(action: { showTargetsSheet = true }) {
                     HStack(spacing: 6) {
                         Image(systemName: "paperplane")
-                        Text(store.t("Buchen in …", "Book to …"))
+                        Text(store.t("main.bookTo"))
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -113,7 +113,7 @@ extension MainWindowView {
                     Button(action: { store.copyBCSReportAndMarkBooked() }) {
                         HStack(spacing: 6) {
                             Image(systemName: "checkmark.seal")
-                            Text(store.t("Kopieren & als gebucht markieren", "Copy & mark as booked"))
+                            Text(store.t("main.copyMarkAsBooked"))
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -125,7 +125,7 @@ extension MainWindowView {
                 Button(action: { store.saveBCSReportToFile(window: NSApp.keyWindow) }) {
                     HStack(spacing: 6) {
                         Image(systemName: "square.and.arrow.down")
-                        Text(store.t("Als TXT speichern …", "Save as TXT …"))
+                        Text(store.t("main.saveAsTxt"))
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -139,10 +139,10 @@ extension MainWindowView {
 
             // Info Hint
             VStack(alignment: .leading, spacing: 4) {
-                Text(store.t("Hinweis:", "Note:"))
+                Text(store.t("main.note"))
                     .font(.system(size: 10.5, weight: .semibold))
                     .foregroundColor(.secondary)
-                Text(store.t("Kopiere den Entwurf und trage ihn in deinem Buchungssystem ein – oder nutze „Buchen in …“.", "Copy the draft and enter it in your booking system – or use “Book to …”."))
+                Text(store.t("main.copyTheDraftAndEnter"))
                     .font(.system(size: 10.5))
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -164,15 +164,15 @@ extension MainWindowView {
                         .foregroundColor(SchichtaTheme.forestGreen)
                         .font(.system(size: 16))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(store.t("Tag ist gebucht & abgeschlossen", "Day is booked & completed"))
+                        Text(store.t("main.dayIsBookedCompleted"))
                             .font(.system(size: 11.5, weight: .bold))
                             .foregroundColor(SchichtaTheme.forestGreen)
-                        Text(store.t("Im Buchungssystem eingetragen", "Recorded in booking system"))
+                        Text(store.t("main.recordedInBookingSystem"))
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                     }
                     Spacer()
-                    Button(store.t("Wieder öffnen", "Reopen")) {
+                    Button(store.t("main.reopen")) {
                         store.toggleDayBooked()
                     }
                     .buttonStyle(.plain)
@@ -190,18 +190,18 @@ extension MainWindowView {
                         .foregroundColor(.orange)
                         .font(.system(size: 16))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(store.t("Tag noch nicht gebucht", "Day not yet booked"))
+                        Text(store.t("main.dayNotYetBooked"))
                             .font(.system(size: 11.5, weight: .semibold))
                             .lineLimit(1)
                             .fixedSize()
-                        Text(store.t("Noch nicht abgeschlossen", "Not completed yet"))
+                        Text(store.t("main.notCompletedYet"))
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                             .lineLimit(1)
                     }
                     .layoutPriority(1)
                     Spacer(minLength: 4)
-                    Button(store.t("Als gebucht markieren", "Mark as booked")) {
+                    Button(store.t("main.markAsBooked")) {
                         store.toggleDayBooked()
                     }
                     .buttonStyle(.borderedProminent)

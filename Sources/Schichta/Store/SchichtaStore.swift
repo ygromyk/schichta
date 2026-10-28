@@ -151,8 +151,9 @@ class SchichtaStore: ObservableObject {
     /// Read and written by `@Setting`.
     let defaults: UserDefaults
 
-    func t(_ de: String, _ en: String) -> String {
-        appLanguage == .de ? de : en
+    /// The text for `key` in the store's language; `args` fill its `%1$@`, `%2$@`, …
+    func t(_ key: String, _ args: String...) -> String {
+        L10n.string(key, args, language: appLanguage)
     }
 
     /// An error's message in the store's language (Schichta errors carry both).
@@ -185,9 +186,9 @@ class SchichtaStore: ObservableObject {
         save()
         let date = SchichtaCore.formatGermanDate(day)
         if let absence {
-            showToast(t("\(date): \(absence.title(for: .de))", "\(date): \(absence.title(for: .en))"))
+            showToast("\(date): \(absence.title(for: appLanguage))")
         } else {
-            showToast(t("\(date) ist wieder ein Arbeitstag.", "\(date) is a working day again."))
+            showToast(t("store.isAWorkingDayAgain", "\(date)"))
         }
     }
 
@@ -244,14 +245,10 @@ class SchichtaStore: ObservableObject {
             NSLog("Could not read the Schichta database: %@", error.localizedDescription)
             let reason = describe(error)
             if let movedTo {
-                storeProblem = t(
-                    "Die Datendatei konnte nicht gelesen werden (\(reason)). Sie wurde unverändert nach \(movedTo.lastPathComponent) verschoben; Schichta startet mit leeren Daten. Ältere Stände liegen im Ordner Backups.",
-                    "The data file could not be read (\(reason)). It was moved unchanged to \(movedTo.lastPathComponent); Schichta starts with empty data. Older copies are in the Backups folder.")
+                storeProblem = t("store.theDataFileCouldNot", "\(reason)", "\(movedTo.lastPathComponent)")
             } else {
                 savingBlocked = true
-                storeProblem = t(
-                    "Die Datendatei konnte nicht gelesen werden (\(reason)). Um sie nicht zu überschreiben, speichert Schichta bis zum Neustart nichts.",
-                    "The data file could not be read (\(reason)). To avoid overwriting it, Schichta saves nothing until restarted.")
+                storeProblem = t("store.theDataFileCouldNot2", "\(reason)")
             }
         }
     }
@@ -262,7 +259,7 @@ class SchichtaStore: ObservableObject {
             try DatabaseFile(url: storeURL).save(database)
         } catch {
             NSLog("Could not save the Schichta database: %@", error.localizedDescription)
-            showToast(t("Speichern fehlgeschlagen: \(error.localizedDescription)", "Saving failed: \(error.localizedDescription)"))
+            showToast(t("store.savingFailed", "\(error.localizedDescription)"))
         }
     }
 

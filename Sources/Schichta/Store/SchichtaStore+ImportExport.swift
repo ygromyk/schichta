@@ -24,14 +24,14 @@ extension SchichtaStore {
 
     func copyBCSReport() {
         copyToPasteboard(SchichtaCore.bcsReport(day: selectedDay, entries: entriesForSelectedDay()))
-        showToast(t("Tagesentwurf in Zwischenablage kopiert.", "Daily draft copied to clipboard."))
+        showToast(t("importExport.dailyDraftCopiedToClipboard"))
     }
 
     func copyBCSReportAndMarkBooked(day: String? = nil) {
         let targetDay = day ?? selectedDay
         copyToPasteboard(SchichtaCore.bcsReport(day: targetDay, entries: database.entries.filter { $0.date == targetDay }))
         markDayBooked(targetDay, booked: true)
-        showToast(t("Tagesentwurf kopiert & Tag als gebucht markiert ✓", "Daily draft copied & day marked as booked ✓"))
+        showToast(t("importExport.dailyDraftCopiedDayMarked"))
     }
 
     func saveBCSReportToFile(window: NSWindow?) {
@@ -42,8 +42,8 @@ extension SchichtaStore {
         panel.allowedContentTypes = [.plainText]
         present(panel, window: window, onURL: { url in
             try Data(rep.utf8).write(to: url, options: .atomic)
-            self.showToast(self.t("Tagesentwurf gespeichert.", "Daily draft saved."))
-        }, failure: { self.t("Fehler beim Speichern: \($0.localizedDescription)", "Error saving: \($0.localizedDescription)") })
+            self.showToast(self.t("importExport.dailyDraftSaved"))
+        }, failure: { self.t("importExport.errorSaving", "\($0.localizedDescription)") })
     }
 
     func exportBackup(window: NSWindow?) {
@@ -55,8 +55,8 @@ extension SchichtaStore {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             try encoder.encode(self.database).write(to: url, options: .atomic)
-            self.showToast(self.t("Sicherung erfolgreich exportiert.", "Backup successfully exported."))
-        }, failure: { self.t("Export fehlgeschlagen: \($0.localizedDescription)", "Export failed: \($0.localizedDescription)") })
+            self.showToast(self.t("importExport.backupSuccessfullyExported"))
+        }, failure: { self.t("importExport.exportFailed", "\($0.localizedDescription)") })
     }
 
     func importBackup(window: NSWindow?) {
@@ -67,13 +67,13 @@ extension SchichtaStore {
         present(panel, window: window, onURL: { url in
             let data = try Data(contentsOf: url)
             guard data.count <= 10_000_000 else {
-                self.showToast(self.t("Datei ist zu groß (maximal 10 MB).", "File is too large (maximum 10 MB)."))
+                self.showToast(self.t("importExport.fileIsTooLargeMaximum"))
                 return
             }
             let validated = try SchichtaCore.validate(database: JSONDecoder().decode(Database.self, from: data))
             self.database = validated
             self.save()
-            self.showToast(self.t("\(validated.entries.count) Einträge importiert.", "\(validated.entries.count) entries imported."))
-        }, failure: { self.t("Import fehlgeschlagen: \($0.localizedDescription)", "Import failed: \($0.localizedDescription)") })
+            self.showToast(self.t("importExport.entriesImported", "\(validated.entries.count)"))
+        }, failure: { self.t("importExport.importFailed", "\($0.localizedDescription)") })
     }
 }

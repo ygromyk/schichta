@@ -19,7 +19,7 @@ extension MainWindowView {
                     Image(systemName: "clock.fill")
                         .foregroundColor(SchichtaTheme.forestGreen)
                         .font(.system(size: 11))
-                    Text(store.t("Erfasste Zeit", "Logged time"))
+                    Text(store.t("main.loggedTime"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
                     Spacer()
@@ -31,7 +31,7 @@ extension MainWindowView {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text(totalMinutes >= target ? store.t("\(SchichtaCore.formatTime(target)) h voll", "\(SchichtaCore.formatTime(target)) h reached") : store.t("von \(SchichtaCore.formatTime(target)) h", "of \(SchichtaCore.formatTime(target)) h"))
+                    Text(totalMinutes >= target ? store.t("main.hReached", "\(SchichtaCore.formatTime(target))") : store.t("main.ofH", "\(SchichtaCore.formatTime(target))"))
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                 }
@@ -47,14 +47,14 @@ extension MainWindowView {
                     Image(systemName: "list.bullet.clipboard.fill")
                         .foregroundColor(.blue)
                         .font(.system(size: 11))
-                    Text(store.t("Tätigkeiten", "Activities"))
+                    Text(store.t("main.activities"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
                     Spacer()
                 }
                 Text("\(entries.count)")
                     .font(.system(size: 20, weight: .bold))
-                Text(entries.count == 1 ? store.t("1 Eintrag heute", "1 entry today") : store.t("\(entries.count) Einträge heute", "\(entries.count) entries today"))
+                Text(entries.count == 1 ? store.t("main.1EntryToday") : store.t("main.entriesToday", "\(entries.count)"))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
@@ -85,48 +85,48 @@ extension MainWindowView {
                             .foregroundColor(SchichtaTheme.forestGreen)
                             .font(.system(size: 11))
                     }
-                    Text(store.t("Prüfstatus", "Review status"))
+                    Text(store.t("main.reviewStatus"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
                     Spacer()
                 }
 
                 if totalMinutes == 0 {
-                    Text(store.t("Keine Einträge", "No entries"))
+                    Text(store.t("main.noEntries"))
                         .font(.system(size: 14, weight: .semibold))
-                    Text(store.t("Beginne mit der 1. Tätigkeit", "Start with your 1st entry"))
+                    Text(store.t("main.startWithYour1stEntry"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 } else if totalMinutes > 1440 {
-                    Text(store.t("Über 24 Stunden!", "Over 24 hours!"))
+                    Text(store.t("main.over24Hours"))
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.red)
-                    Text(store.t("Bitte Zeiten korrigieren", "Please correct durations"))
+                    Text(store.t("main.pleaseCorrectDurations"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 } else if store.journalForSelectedDay().booked {
-                    Text(store.t("Gebucht", "Booked"))
+                    Text(store.t("main.booked"))
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(SchichtaTheme.forestGreen)
-                    Text(store.t("Tag ist abgeschlossen", "Day is completed"))
+                    Text(store.t("main.dayIsCompleted"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 } else if estimatesCount > 0 || openTicketsCount > 0 {
-                    Text(estimatesCount == 1 ? store.t("1 Schätzung", "1 estimate") : store.t("\(estimatesCount) Schätzungen", "\(estimatesCount) estimates"))
+                    Text(estimatesCount == 1 ? store.t("main.1Estimate") : store.t("main.estimates", "\(estimatesCount)"))
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.orange)
-                    Text(openTicketsCount > 0 ? (openTicketsCount == 1 ? store.t("1 ohne Ticket", "1 without ticket") : store.t("\(openTicketsCount) ohne Ticket", "\(openTicketsCount) without ticket")) : store.t("Vor Buchung prüfen", "Verify before booking"))
+                    Text(openTicketsCount > 0 ? (openTicketsCount == 1 ? store.t("main.1WithoutTicket") : store.t("main.withoutTicket", "\(openTicketsCount)")) : store.t("main.verifyBeforeBooking"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 } else {
-                    Text(store.t("Bereit zur Buchung", "Ready to book"))
+                    Text(store.t("main.readyToBook"))
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(SchichtaTheme.forestGreen)
-                    Text(store.t("Alle Angaben geprüft", "All details verified"))
+                    Text(store.t("main.allDetailsVerified"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
@@ -141,7 +141,7 @@ extension MainWindowView {
                     Image(systemName: "bell.badge.fill")
                         .foregroundColor(.purple)
                         .font(.system(size: 11))
-                    Text(store.t("Check-in-Assistent", "Check-in Assistant"))
+                    Text(store.t("main.checkInAssistant"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
                     Spacer()
@@ -158,19 +158,19 @@ extension MainWindowView {
                 HStack(alignment: .center, spacing: 4) {
                     let assistantStatusText: String = {
                         if !store.timerEnabled {
-                            return store.t("Pausiert", "Paused")
+                            return store.t("main.paused")
                         }
                         let today = SchichtaCore.day()
                         if let absence = store.absence(on: today) {
                             return absence.title(for: store.appLanguage)
                         }
                         if !store.isWorkingDay(today) {
-                            return store.t("Wochenende", "Weekend")
+                            return store.t("main.weekend")
                         }
                         if !store.isCurrentlyWithinWorkingHours() {
-                            return store.t("Ruht", "Resting")
+                            return store.t("main.resting")
                         }
-                        return store.t("Aktiv", "Active")
+                        return store.t("main.active")
                     }()
 
                     Text(assistantStatusText)
@@ -179,21 +179,21 @@ extension MainWindowView {
 
                     Spacer()
 
-                    StepButton(increase: false, size: 13, help: store.t("Intervall um 5/15 Min. verringern", "Decrease interval by 5/15 min")) {
+                    StepButton(increase: false, size: 13, help: store.t("main.decreaseIntervalBy515")) {
                         store.reminderIntervalMinutes = max(5, store.reminderIntervalMinutes <= 15 ? store.reminderIntervalMinutes - 5 : store.reminderIntervalMinutes - 15)
                     }
 
                     Text("\(store.reminderIntervalMinutes) Min.")
                         .font(.system(size: 13, weight: .bold, design: .monospaced))
 
-                    StepButton(increase: true, size: 13, help: store.t("Intervall um 15 Min. erhöhen", "Increase interval by 15 min")) {
+                    StepButton(increase: true, size: 13, help: store.t("main.increaseIntervalBy15Min")) {
                         store.reminderIntervalMinutes = min(240, store.reminderIntervalMinutes + 15)
                     }
                 }
 
                 // Row 3: subtext
                 HStack {
-                    Text(store.t("Feierabend: \(store.endOfDayPromptTimeString) Uhr", "End of day: \(store.endOfDayPromptTimeString)"))
+                    Text(store.t("main.endOfDay", "\(store.endOfDayPromptTimeString)"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
@@ -203,12 +203,12 @@ extension MainWindowView {
                     Button(action: {
                         store.openSettings(tab: .workHours)
                     }) {
-                        Text(store.t("Ändern…", "Change…"))
+                        Text(store.t("main.change"))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(SchichtaTheme.forestGreen)
                     }
                     .buttonStyle(.plain)
-                    .help(store.t("Arbeitszeit & Feierabend in den Einstellungen anpassen", "Adjust work hours & end of day in settings"))
+                    .help(store.t("main.adjustWorkHoursEndOf"))
                 }
             }
             .tileStyle()

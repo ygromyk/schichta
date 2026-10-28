@@ -10,7 +10,7 @@ extension SchichtaStore {
         if let data = try? payload.json(),
            let jsonStr = String(data: data, encoding: .utf8) {
             copyToPasteboard(jsonStr)
-            showToast(t("Beispiel-JSON in Zwischenablage kopiert.", "Sample JSON copied to clipboard."))
+            showToast(t("git.sampleJsonCopiedToClipboard"))
         }
     }
 
@@ -41,9 +41,9 @@ extension SchichtaStore {
             self.isInspectingGit = false
             switch outcome {
             case .success:
-                self.showToast(self.t("Git-Aktivitäten für \(SchichtaCore.formatGermanDate(day)) geprüft.", "Git activities inspected for \(SchichtaCore.formatGermanDate(day))."))
+                self.showToast(self.t("git.gitActivitiesInspectedFor", "\(SchichtaCore.formatGermanDate(day))"))
             case .failure(let error):
-                self.showToast(self.t("Fehler bei Git-Prüfung: \(self.describe(error))", "Git inspection error: \(self.describe(error))"))
+                self.showToast(self.t("git.gitInspectionError", "\(self.describe(error))"))
             }
         }
     }
@@ -61,7 +61,7 @@ extension SchichtaStore {
             jsonData = try payload.json()
             try jsonData.write(to: exportURL, options: .atomic)
         } catch {
-            let errStr = t("Fehler beim Erzeugen des JSON: \(error.localizedDescription)", "Error creating JSON: \(error.localizedDescription)")
+            let errStr = t("git.errorCreatingJson", "\(error.localizedDescription)")
             self.lastHookResult = errStr
             self.showToast(errStr)
             completion?(false, errStr)
@@ -69,14 +69,14 @@ extension SchichtaStore {
         }
 
         if shellCmd.isEmpty && webhookURLStr.isEmpty {
-            let msg = t("JSON exportiert nach: \(exportURL.lastPathComponent)", "JSON exported to: \(exportURL.lastPathComponent)")
+            let msg = t("git.jsonExportedTo", "\(exportURL.lastPathComponent)")
             self.lastHookResult = msg
             self.showToast(msg)
             completion?(true, msg)
             return
         }
 
-        showToast(t("Führe externen Hook aus...", "Running external hook..."))
+        showToast(t("git.runningExternalHook"))
         let language = appLanguage
 
         Task {
@@ -101,14 +101,14 @@ extension SchichtaStore {
 
             let summary = results.joined(separator: " · ")
             lastHookResult = summary
-            showToast(allSuccess ? t("Hook erfolgreich: \(summary)", "Hook success: \(summary)") : t("Hook-Meldung: \(summary)", "Hook message: \(summary)"))
+            showToast(allSuccess ? t("git.hookSuccess", "\(summary)") : t("git.hookMessage", "\(summary)"))
             completion?(allSuccess, summary)
         }
     }
 
     nonisolated private static func runShellHook(_ command: String, day: String, entries: [Entry], jsonData: Data, exportURL: URL,
                                                  language: AppLanguage) -> (ok: Bool, message: String) {
-        func say(_ de: String, _ en: String) -> String { LocalizedText(de, en).in(language) }
+        func say(_ key: String, _ args: String...) -> String { L10n.string(key, args, language: language) }
         var env = ProcessInfo.processInfo.environment
         env["SCHICHTA_DATE"] = day
         let totalMins = entries.reduce(0) { $0 + $1.minutes }
@@ -124,18 +124,18 @@ extension SchichtaStore {
             let output = run.text.trimmingCharacters(in: .whitespacesAndNewlines)
             if run.status == 0 {
                 let snippet = output.isEmpty ? "OK" : String(output.prefix(2000))
-                return (true, say("Shell-Hook (Exit 0): \(snippet)", "Shell hook (exit 0): \(snippet)"))
+                return (true, say("git.shellHookOk", snippet))
             }
-            return (false, say("Shell-Hook Fehler (Exit \(run.status)): \(output)", "Shell hook error (exit \(run.status)): \(output)"))
+            return (false, say("git.shellHookError", "\(run.status)", output))
         } catch {
-            return (false, say("Shell-Hook Startfehler: \(error.localizedDescription)", "Shell hook failed to start: \(error.localizedDescription)"))
+            return (false, say("git.shellHookFailedToStart", error.localizedDescription))
         }
     }
 
     nonisolated private static func postWebhook(_ urlString: String, jsonData: Data, language: AppLanguage) async -> (ok: Bool, message: String) {
-        func say(_ de: String, _ en: String) -> String { LocalizedText(de, en).in(language) }
+        func say(_ key: String, _ args: String...) -> String { L10n.string(key, args, language: language) }
         guard let url = URL(string: urlString) else {
-            return (false, say("Webhook-URL ungültig: \(urlString)", "Invalid webhook URL: \(urlString)"))
+            return (false, say("git.invalidWebhookUrl", urlString))
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -151,7 +151,7 @@ extension SchichtaStore {
             }
             return (false, "Webhook HTTP \(status): \(String(decoding: data, as: UTF8.self).prefix(150))")
         } catch {
-            return (false, say("Webhook Fehler: \(error.localizedDescription)", "Webhook error: \(error.localizedDescription)"))
+            return (false, say("git.webhookError", error.localizedDescription))
         }
     }
 }

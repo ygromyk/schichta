@@ -100,10 +100,8 @@ extension SchichtaStore {
     /// Plain-text week summary for pasting into a booking tool or mail.
     func weekReport(_ week: WeekSummary) -> String {
         var lines = [
-            t("KW \(week.weekNumber): \(SchichtaCore.formatGermanDate(week.start)) – \(SchichtaCore.formatGermanDate(week.end))",
-              "Week \(week.weekNumber): \(SchichtaCore.formatGermanDate(week.start)) – \(SchichtaCore.formatGermanDate(week.end))"),
-            t("Gesamt: \(SchichtaCore.formatTime(week.total)) von \(SchichtaCore.formatTime(week.target))",
-              "Total: \(SchichtaCore.formatTime(week.total)) of \(SchichtaCore.formatTime(week.target))"),
+            t("week.week", "\(week.weekNumber)", "\(SchichtaCore.formatGermanDate(week.start))", "\(SchichtaCore.formatGermanDate(week.end))"),
+            t("week.totalOf", "\(SchichtaCore.formatTime(week.total))", "\(SchichtaCore.formatTime(week.target))"),
             "",
         ]
         for d in week.days where d.minutes > 0 {
@@ -112,9 +110,9 @@ extension SchichtaStore {
         }
         if !week.ticketTotals.isEmpty {
             lines.append("")
-            lines.append(t("Nach Ticket:", "By ticket:"))
+            lines.append(t("week.byTicket"))
             for total in week.ticketTotals {
-                let ticket = total.ticket.isEmpty ? t("Ohne Ticket", "No ticket") : total.ticket
+                let ticket = total.ticket.isEmpty ? t("week.noTicket") : total.ticket
                 let project = total.project.isEmpty ? "" : " (\(total.project))"
                 lines.append("\(ticket)\(project): \(SchichtaCore.formatTime(total.minutes))")
             }

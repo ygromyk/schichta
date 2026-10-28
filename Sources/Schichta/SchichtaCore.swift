@@ -6,7 +6,7 @@ enum SchichtaCore {
     static func parseMinutes(_ input: String) throws -> Int {
         let s = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !s.isEmpty else {
-            throw SchichtaError("Dauer darf nicht leer sein.", en: "Duration must not be empty.")
+            throw SchichtaError("core.durationMustNotBeEmpty")
         }
 
         var total: Int? = nil
@@ -43,11 +43,11 @@ enum SchichtaCore {
         }
 
         guard let minutes = total else {
-            throw SchichtaError("Dauer als 1:30, 1,5 oder 30m eingeben.", en: "Enter the duration as 1:30, 1.5 or 30m.")
+            throw SchichtaError("core.enterTheDurationAs1")
         }
 
         guard minutes >= 1 && minutes <= 1440 else {
-            throw SchichtaError("Dauer muss zwischen einer Minute und 24 Stunden liegen.", en: "Duration must be between one minute and 24 hours.")
+            throw SchichtaError("core.durationMustBeBetweenOne")
         }
 
         return minutes
@@ -222,7 +222,7 @@ enum SchichtaCore {
     static func appendCheckIn(existingNotes: String, timeStr: String, text: String, ticket: String = "", minutes: Int = 30) throws -> String {
         let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else {
-            throw SchichtaError("Bitte eine Tätigkeit oder Notiz eingeben.", en: "Please enter an activity or note.")
+            throw SchichtaError("core.pleaseEnterAnActivityOr")
         }
         let cleanTicket = ticket.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         let prefix = cleanTicket.isEmpty ? "" : "[\(cleanTicket)] "
@@ -233,44 +233,42 @@ enum SchichtaCore {
 
     static func validate(database: Database) throws -> Database {
         guard database.version <= 1 else {
-            throw SchichtaError(
-                "Die Daten stammen von einer neueren Schichta-Version (Format \(database.version)). Bitte Schichta aktualisieren.",
-                en: "The data comes from a newer Schichta version (format \(database.version)). Please update Schichta.")
+            throw SchichtaError("core.theDataComesFromA", "\(database.version)")
         }
         guard database.version == 1 else {
-            throw SchichtaError("Keine gültige Schichta-Sicherung.", en: "Not a valid Schichta backup.")
+            throw SchichtaError("core.notAValidSchichtaBackup")
         }
         guard database.entries.count <= 50000 else {
-            throw SchichtaError("Zu viele Einträge in der Sicherung.", en: "Too many entries in the backup.")
+            throw SchichtaError("core.tooManyEntriesInThe")
         }
 
         var ids = Set<String>()
         for e in database.entries {
             guard !ids.contains(e.id) else {
-                throw SchichtaError("Doppelte Eintrags-ID in der Sicherung.", en: "Duplicate entry ID in the backup.")
+                throw SchichtaError("core.duplicateEntryIdInThe")
             }
             ids.insert(e.id)
             guard isValidDate(e.date) else {
-                throw SchichtaError("Ungültiges Eintragsdatum: \(e.date)", en: "Invalid entry date: \(e.date)")
+                throw SchichtaError("core.invalidEntryDate", "\(e.date)")
             }
             guard e.minutes >= 1 && e.minutes <= 1440 else {
-                throw SchichtaError("Dauer außerhalb des gültigen Bereichs (1-1440 Min).", en: "Duration out of range (1–1440 min).")
+                throw SchichtaError("core.durationOutOfRange1")
             }
             guard e.ticket.count <= 100 else {
-                throw SchichtaError("Ticketname zu lang.", en: "Ticket name too long.")
+                throw SchichtaError("core.ticketNameTooLong")
             }
             let desc = e.description.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !desc.isEmpty && desc.count <= 4000 else {
-                throw SchichtaError("Ungültige Tätigkeitsbeschreibung.", en: "Invalid activity description.")
+                throw SchichtaError("core.invalidActivityDescription")
             }
         }
 
         for (day, item) in database.journal {
             guard isValidDate(day) else {
-                throw SchichtaError("Ungültiges Notizdatum: \(day)", en: "Invalid note date: \(day)")
+                throw SchichtaError("core.invalidNoteDate", "\(day)")
             }
             guard item.notes.count <= 200000 && item.logs.count <= 200000 && item.answer.count <= 200000 else {
-                throw SchichtaError("Notizinhalt zu lang.", en: "Note content too long.")
+                throw SchichtaError("core.noteContentTooLong")
             }
         }
 

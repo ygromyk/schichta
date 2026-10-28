@@ -6,10 +6,10 @@ extension SettingsView {
 
     var generalTab: some View {
         VStack(alignment: .leading, spacing: 16) {
-            GroupBox(label: Label(store.t("Sprache / Language", "Language"), systemImage: "globe")) {
+            GroupBox(label: Label(store.t("settings.language"), systemImage: "globe")) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
-                        Text(store.t("App-Sprache:", "App Language:"))
+                        Text(store.t("settings.appLanguage"))
                             .font(.system(size: 13, weight: .medium))
                         Spacer()
                         Picker("", selection: $store.appLanguage) {
@@ -20,21 +20,21 @@ extension SettingsView {
                         .pickerStyle(.segmented)
                         .frame(width: 200)
                     }
-                    Text(store.t("Schaltet die gesamte Oberfläche, Menüs, Prompts und Datumsformate live um.", "Switches the entire UI, menus, prompts, and date formats live."))
+                    Text(store.t("settings.switchesTheEntireUiMenus"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
                 .padding(10)
             }
 
-            GroupBox(label: Label(store.t("Zeitzone", "Time Zone"), systemImage: "globe.europe.africa")) {
+            GroupBox(label: Label(store.t("settings.timeZone"), systemImage: "globe.europe.africa")) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
-                        Text(store.t("Tage und Uhrzeiten in:", "Days and times in:"))
+                        Text(store.t("settings.daysAndTimesIn"))
                             .font(.system(size: 13, weight: .medium))
                         Spacer()
                         Picker("", selection: $store.timeZoneIdentifier) {
-                            Text(store.t("System (\(TimeZone.current.identifier))", "System (\(TimeZone.current.identifier))")).tag("")
+                            Text(store.t("settings.system", "\(TimeZone.current.identifier)")).tag("")
                             Divider()
                             ForEach(TimeZone.knownTimeZoneIdentifiers.sorted(), id: \.self) { id in
                                 Text(id).tag(id)
@@ -42,17 +42,17 @@ extension SettingsView {
                         }
                         .frame(width: 260)
                     }
-                    Text(store.t("Bestimmt, wann ein Tag beginnt und endet (Git-Abfragen, Check-ins, Erinnerungen) und in welcher Zeit Uhrzeiten angezeigt werden.", "Decides when a day starts and ends (Git queries, check-ins, reminders) and in which zone times are shown."))
+                    Text(store.t("settings.decidesWhenADayStarts"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
                 .padding(10)
             }
 
-            GroupBox(label: Label(store.t("Check-in Verhalten", "Check-in Behavior"), systemImage: "clock")) {
+            GroupBox(label: Label(store.t("settings.checkInBehavior"), systemImage: "clock")) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
-                        Text(store.t("Standard-Modus:", "Default mode:"))
+                        Text(store.t("settings.defaultMode"))
                             .font(.system(size: 13, weight: .medium))
                         Spacer()
                         Picker("", selection: $store.defaultCheckInMode) {
@@ -63,32 +63,32 @@ extension SettingsView {
                         .pickerStyle(.segmented)
                         .frame(width: 260)
                     }
-                    Text(store.t("Legt fest, ob ein Check-in sofort eine buchungswirksame Tätigkeit erzeugt oder nur die Tagesnotiz ergänzt.", "Defines whether check-ins create a billable activity immediately or only append to the day note."))
+                    Text(store.t("settings.definesWhetherCheckInsCreate"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
 
                     Divider()
 
-                    Toggle(store.t("Check-in überall mit \(GlobalHotKey.displayName) öffnen", "Open the check-in from any app with \(GlobalHotKey.displayName)"), isOn: $store.globalHotKeyEnabled)
+                    Toggle(store.t("settings.openTheCheckInFrom", "\(GlobalHotKey.displayName)"), isOn: $store.globalHotKeyEnabled)
                         .font(.system(size: 12))
 
-                    Toggle(store.t("Im Dock anzeigen (aus: nur Statusleiste)", "Show in Dock (off: menu bar only)"), isOn: $store.showInDock)
+                    Toggle(store.t("settings.showInDockOffMenu"), isOn: $store.showInDock)
                         .font(.system(size: 12))
 
-                    Toggle(store.t("Beim Anmelden starten", "Start at login"), isOn: Binding(
+                    Toggle(store.t("settings.startAtLogin"), isOn: Binding(
                         get: { LoginItem.isEnabled },
                         set: { enabled in
                             do {
                                 try LoginItem.setEnabled(enabled)
                             } catch {
-                                store.showToast(store.t("Anmeldeobjekt nicht geändert: \(error.localizedDescription)", "Login item not changed: \(error.localizedDescription)"))
+                                store.showToast(store.t("settings.loginItemNotChanged", "\(error.localizedDescription)"))
                             }
                             store.objectWillChange.send()
                         }
                     ))
                     .font(.system(size: 12))
                     if LoginItem.status == .requiresApproval {
-                        Text(store.t("Bitte in Systemeinstellungen › Allgemein › Anmeldeobjekte erlauben.", "Please allow it in System Settings › General › Login Items."))
+                        Text(store.t("settings.pleaseAllowItInSystem"))
                             .font(.system(size: 11))
                             .foregroundColor(.orange)
                     }
@@ -96,23 +96,23 @@ extension SettingsView {
                 .padding(10)
             }
 
-            GroupBox(label: Label(store.t("Benutzer & Berichte", "User & Reports"), systemImage: "person.crop.circle")) {
+            GroupBox(label: Label(store.t("settings.userReports"), systemImage: "person.crop.circle")) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(store.t("Name für Entwurf & Git-Autor:", "Name for draft & Git author:"))
+                    Text(store.t("settings.nameForDraftGitAuthor"))
                         .font(.system(size: 12, weight: .medium))
                     TextField("Max Mustermann", text: $store.gitAuthorFilter)
                         .textFieldStyle(.roundedBorder)
-                    Text(store.t("Wird als Filter für 'git log --author' und in der Kopfzeile des Tagesentwurfs verwendet.", "Used as filter for 'git log --author' and in the header of the daily draft."))
+                    Text(store.t("settings.usedAsFilterForGit"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
                 .padding(10)
             }
 
-            GroupBox(label: Label(store.t("Daten & Sicherung", "Data & Backup"), systemImage: "internaldrive")) {
+            GroupBox(label: Label(store.t("settings.dataBackup"), systemImage: "internaldrive")) {
                 VStack(alignment: .leading, spacing: 10) {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(store.t("Datenbank-Speicherort:", "Database location:"))
+                        Text(store.t("settings.databaseLocation"))
                             .font(.system(size: 12, weight: .medium))
                         Text(store.storeURL.path)
                             .font(.system(size: 11, design: .monospaced))
@@ -121,17 +121,17 @@ extension SettingsView {
                     }
 
                     HStack(spacing: 10) {
-                        Button(store.t("Im Finder anzeigen", "Show in Finder")) {
+                        Button(store.t("settings.showInFinder")) {
                             NSWorkspace.shared.activateFileViewerSelecting([store.storeURL])
                         }
 
                         Spacer()
 
-                        Button(store.t("Sicherung exportieren…", "Export backup…")) {
+                        Button(store.t("settings.exportBackup")) {
                             store.exportBackup(window: nil)
                         }
 
-                        Button(store.t("Sicherung importieren…", "Import backup…")) {
+                        Button(store.t("settings.importBackup")) {
                             store.importBackup(window: nil)
                         }
                     }

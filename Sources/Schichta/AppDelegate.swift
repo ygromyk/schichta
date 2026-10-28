@@ -24,6 +24,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     /// An unanswered check-in panel gets a notification after this long.
     static let escalationDelay: Duration = .seconds(3 * 60)
     static let checkInCategory = "schichta.checkin"
+    static let dayPromptCategory = "schichta.dayprompt"
+    /// "Ask later" on a morning or end-of-day notification asks again after this long.
+    static let dayPromptSnoozeDelay: Duration = .seconds(60 * 60)
 
     static func activeScreen() -> NSScreen {
         let mouseLoc = NSEvent.mouseLocation
@@ -96,7 +99,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     nonisolated static func checkInWindowString(for date: Date = Date(), intervalMinutes: Int = 30, language: AppLanguage = .de) -> String {
         let start = date.addingTimeInterval(-Double(intervalMinutes * 60))
-        let suffix = language == .de ? "\(intervalMinutes) Min. Check-in" : "\(intervalMinutes) min check-in"
+        let suffix = L10n.string("app.minuteCheckIn", ["\(intervalMinutes)"], language: language)
         return "\(AppTime.clock.string(from: start)) – \(AppTime.clock.string(from: date)) · \(suffix)"
     }
 
@@ -154,7 +157,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         store?.settingsSelectedTab = tab
         let targetScreen = AppDelegate.activeScreen()
         if let win = settingsWindow {
-            win.title = (store?.appLanguage ?? .de) == .de ? "Einstellungen" : "Settings"
+            win.title = t("app.settingsTitle")
             if !win.isVisible || win.screen != targetScreen {
                 AppDelegate.centerWindow(win, on: targetScreen)
             }
@@ -171,7 +174,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             defer: false
         )
         win.minSize = NSSize(width: 720, height: 620)
-        win.title = (store.appLanguage) == .de ? "Einstellungen" : "Settings"
+        win.title = t("app.settingsTitle")
         win.contentView = NSHostingView(rootView: settingsView)
         win.isReleasedWhenClosed = false
         AppDelegate.centerWindow(win, on: targetScreen)
@@ -184,48 +187,41 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         setupMainMenu()
         registerNotificationCategories()
         if let win = settingsWindow {
-            win.title = (store?.appLanguage ?? .de) == .de ? "Einstellungen" : "Settings"
+            win.title = t("app.settingsTitle")
         }
     }
 
     private func setupMainMenu() {
-        let isDe = (store?.appLanguage ?? .de) == .de
         let menu = NSMenu()
         let appItem = NSMenuItem(); menu.addItem(appItem)
         let appMenu = NSMenu(); appItem.submenu = appMenu
 
-        appMenu.addItem(withTitle: isDe ? "Über Schichta" : "About Schichta", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: t("app.menu.about"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         appMenu.addItem(NSMenuItem.separator())
-        appMenu.addItem(withTitle: isDe ? "Einstellungen…" : "Settings…", action: #selector(openSettingsWindow), keyEquivalent: ",")
+        appMenu.addItem(withTitle: t("app.menu.settings"), action: #selector(openSettingsWindow), keyEquivalent: ",")
         appMenu.addItem(NSMenuItem.separator())
-        appMenu.addItem(withTitle: isDe ? "Check-in öffnen" : "Open Check-in", action: #selector(openCheckInFromMenu), keyEquivalent: "k")
-        appMenu.addItem(withTitle: isDe ? "Hauptfenster anzeigen" : "Show Main Window", action: #selector(showMainWindow(_:)), keyEquivalent: "0")
+        appMenu.addItem(withTitle: t("app.menu.openCheckIn"), action: #selector(openCheckInFromMenu), keyEquivalent: "k")
+        appMenu.addItem(withTitle: t("app.menu.showMainWindow"), action: #selector(showMainWindow(_:)), keyEquivalent: "0")
         #if DEBUG
         // Development only: release builds (swift build -c release) leave these out.
         appMenu.addItem(NSMenuItem.separator())
-        appMenu.addItem(withTitle: isDe ? "Morgen-Prompt (Vortag) testen" : "Test Morning Prompt (Prev Day)", action: #selector(testMorningPromptFromMenu), keyEquivalent: "")
-        appMenu.addItem(withTitle: isDe ? "Feierabend-Prompt testen" : "Test End-of-Day Prompt", action: #selector(testEndOfDayPromptFromMenu), keyEquivalent: "")
+        appMenu.addItem(withTitle: t("app.menu.testMorningPrompt"), action: #selector(testMorningPromptFromMenu), keyEquivalent: "")
+        appMenu.addItem(withTitle: t("app.menu.testEndOfDayPrompt"), action: #selector(testEndOfDayPromptFromMenu), keyEquivalent: "")
         #endif
         appMenu.addItem(NSMenuItem.separator())
-        appMenu.addItem(withTitle: isDe ? "Schichta beenden" : "Quit Schichta", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: t("app.menu.quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 
         let editItem = NSMenuItem(); menu.addItem(editItem)
-        let editMenu = NSMenu(title: isDe ? "Bearbeiten" : "Edit"); editItem.submenu = editMenu
-        let editActions: [(String, String, String)] = isDe ? [
-            ("Rückgängig", "undo:", "z"),
-            ("Ausschneiden", "cut:", "x"),
-            ("Kopieren", "copy:", "c"),
-            ("Einfügen", "paste:", "v"),
-            ("Alles auswählen", "selectAll:", "a")
-        ] : [
-            ("Undo", "undo:", "z"),
-            ("Cut", "cut:", "x"),
-            ("Copy", "copy:", "c"),
-            ("Paste", "paste:", "v"),
-            ("Select All", "selectAll:", "a")
+        let editMenu = NSMenu(title: t("app.menu.edit")); editItem.submenu = editMenu
+        let editActions: [(String, String, String)] = [
+            ("app.menu.undo", "undo:", "z"),
+            ("app.menu.cut", "cut:", "x"),
+            ("app.menu.copy", "copy:", "c"),
+            ("app.menu.paste", "paste:", "v"),
+            ("app.menu.selectAll", "selectAll:", "a")
         ]
-        for (title, selector, key) in editActions {
-            editMenu.addItem(withTitle: title, action: Selector(selector), keyEquivalent: key)
+        for (titleKey, selector, key) in editActions {
+            editMenu.addItem(withTitle: t(titleKey), action: Selector(selector), keyEquivalent: key)
         }
         NSApp.mainMenu = menu
     }
@@ -241,8 +237,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     func updateStatusItem(isDue: Bool) {
         guard let button = statusItem?.button else { return }
-        let isDe = (store?.appLanguage ?? .de) == .de
-        let label = isDue ? (isDe ? "Schichta – Check-in fällig" : "Schichta – check-in due") : "Schichta"
+        let label = isDue ? t("app.checkInDue") : "Schichta"
         let image = AppIconGenerator.statusBarIcon(due: isDue)
         image.accessibilityDescription = label
         button.image = image
@@ -362,6 +357,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         escalationTask = nil
     }
 
+    /// The text for `key` in the app's language (German until the store is loaded).
+    private func t(_ key: String, _ args: String...) -> String {
+        L10n.string(key, args, language: store?.appLanguage ?? .de)
+    }
+
     /// Notifications only in the bundled app; a bare binary or the test run has no notification center.
     private var notificationsAvailable: Bool {
         Bundle.main.bundleURL.pathExtension == "app"
@@ -378,27 +378,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     /// Check-in notifications can be answered in place: a reply field, "same as before" and "later".
+    /// Morning and end-of-day notifications can be put off with "ask later".
     func registerNotificationCategories() {
         guard notificationsAvailable else { return }
-        let isDe = (store?.appLanguage ?? .de) == .de
         let reply = UNTextInputNotificationAction(
             identifier: "reply",
-            title: isDe ? "Antworten…" : "Reply…",
+            title: t("notification.reply"),
             options: [],
-            textInputButtonTitle: isDe ? "Speichern" : "Save",
-            textInputPlaceholder: isDe ? "Woran arbeitest du? (Ticket optional)" : "What are you working on? (ticket optional)")
-        let same = UNNotificationAction(identifier: "same", title: isDe ? "Wie zuvor" : "Same as before", options: [])
-        let later = UNNotificationAction(identifier: "later", title: isDe ? "Später" : "Later", options: [])
+            textInputButtonTitle: t("notification.save"),
+            textInputPlaceholder: t("notification.replyPlaceholder"))
+        let same = UNNotificationAction(identifier: "same", title: t("notification.sameAsBefore"), options: [])
+        let later = UNNotificationAction(identifier: "later", title: t("notification.later"), options: [])
+        let askLater = UNNotificationAction(identifier: "askLater", title: t("notification.askLater"), options: [])
         UNUserNotificationCenter.current().setNotificationCategories([
             UNNotificationCategory(identifier: AppDelegate.checkInCategory, actions: [reply, same, later], intentIdentifiers: [], options: []),
+            UNNotificationCategory(identifier: AppDelegate.dayPromptCategory, actions: [askLater], intentIdentifiers: [], options: []),
         ])
     }
 
     /// An `id` prefixed "morning-prompt"/"endofday-prompt" opens the main window on click, anything else the check-in.
-    private func postNotification(id: String, category: String? = nil, de: (title: String, body: String), en: (title: String, body: String)) {
+    private func postNotification(id: String, category: String? = nil, title: String, body: String) {
         guard notificationsAvailable else { return }
-        let text = (store?.appLanguage ?? .de) == .de ? de : en
-        let content = makeNotificationContent(title: text.title, body: text.body)
+        let content = makeNotificationContent(title: title, body: body)
         if let category { content.categoryIdentifier = category }
         let request = UNNotificationRequest(identifier: id, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
@@ -407,14 +408,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     func sendCheckInNotification() {
         if case .beforeLunch = store.checkInRequest.reason {
             postNotification(id: UUID().uuidString, category: AppDelegate.checkInCategory,
-                             de: ("Schichta · Mittagspause?", "Was hast du heute Vormittag gemacht? Kurz antworten, bevor du gehst."),
-                             en: ("Schichta · Off to lunch?", "What did you do this morning? Answer quickly before you go."))
+                             title: t("notification.lunch.title"), body: t("notification.lunch.body"))
             return
         }
         let minutes = store.reminderIntervalMinutes
         postNotification(id: UUID().uuidString, category: AppDelegate.checkInCategory,
-                         de: ("Schichta · \(minutes) Minuten", "Was machst du gerade? Hier antworten oder in der Statusleiste festhalten."),
-                         en: ("Schichta · \(minutes) minutes", "What are you working on? Reply here or log it in the status bar."))
+                         title: t("notification.checkIn.title", "\(minutes)"), body: t("notification.checkIn.body"))
     }
 
     // UNUserNotificationCenterDelegate
@@ -449,6 +448,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             }
         case "later":
             snoozeCheckIn()
+        case "askLater":
+            snoozeDayPrompt(id: id)
         default:
             if id.starts(with: "morning-prompt") || id.starts(with: "endofday-prompt") {
                 bringMainWindowToFront()
@@ -473,6 +474,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         closeCheckInPanel()
         if store.timerEnabled {
             startCheckInTimer()
+        }
+    }
+
+    /// Asks again after `dayPromptSnoozeDelay`, unless the day has been booked by then.
+    func snoozeDayPrompt(id: String) {
+        Task { [weak self] in
+            try? await Task.sleep(for: AppDelegate.dayPromptSnoozeDelay)
+            guard let self, let store = self.store else { return }
+            let morning = "morning-prompt-", endOfDay = "endofday-prompt-"
+            if id.hasPrefix(morning) {
+                let day = String(id.dropFirst(morning.count))
+                guard store.database.journal[day]?.booked != true else { return }
+                self.triggerMorningPrompt(unbookedDay: day)
+            } else if id.hasPrefix(endOfDay) {
+                let day = String(id.dropFirst(endOfDay.count))
+                guard store.database.journal[day]?.booked != true else { return }
+                self.triggerEndOfDayPrompt(day: day)
+            }
         }
     }
 
@@ -664,16 +683,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     func sendMorningPromptNotification(for unbookedDay: String) {
         let dateStr = SchichtaCore.formatFullDate(unbookedDay, language: store?.appLanguage ?? .de)
-        postNotification(id: "morning-prompt-\(unbookedDay)",
-                         de: ("Schichta · Vortag noch offen", "Deine Buchungen vom \(dateStr) sind noch nicht abgeschlossen."),
-                         en: ("Schichta · Previous day still unbooked", "Your bookings from \(dateStr) have not been finalized yet."))
+        postNotification(id: "morning-prompt-\(unbookedDay)", category: AppDelegate.dayPromptCategory,
+                         title: t("notification.morning.title"), body: t("notification.morning.body", dateStr))
     }
 
     func sendEndOfDayPromptNotification(for day: String) {
         let dateStr = SchichtaCore.formatFullDate(day, language: store?.appLanguage ?? .de)
-        postNotification(id: "endofday-prompt-\(day)",
-                         de: ("Schichta · Feierabend-Abschluss", "Zeit, deine heutigen Buchungen für \(dateStr) abzuschließen!"),
-                         en: ("Schichta · End of day sign-off", "Time to finalize today's bookings for \(dateStr)!"))
+        postNotification(id: "endofday-prompt-\(day)", category: AppDelegate.dayPromptCategory,
+                         title: t("notification.endOfDay.title"), body: t("notification.endOfDay.body", dateStr))
     }
 
     @objc func testMorningPromptFromMenu() {

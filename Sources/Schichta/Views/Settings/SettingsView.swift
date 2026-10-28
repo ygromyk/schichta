@@ -14,10 +14,10 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             // macOS Style Tab Picker
             Picker("", selection: $store.settingsSelectedTab) {
-                Label(store.t("Allgemein", "General"), systemImage: "gearshape").tag(SettingsTab.general)
-                Label(store.t("Arbeitszeit & Prompts", "Work Hours & Prompts"), systemImage: "clock.badge.checkmark").tag(SettingsTab.workHours)
-                Label(store.t("Git-Repos & Prüfung", "Git Repos & Inspector"), systemImage: "arrow.triangle.branch").tag(SettingsTab.gitRepos)
-                Label(store.t("Integrationen & Hooks", "Integrations & Hooks"), systemImage: "network").tag(SettingsTab.integrations)
+                Label(store.t("settings.general"), systemImage: "gearshape").tag(SettingsTab.general)
+                Label(store.t("settings.workHoursPrompts"), systemImage: "clock.badge.checkmark").tag(SettingsTab.workHours)
+                Label(store.t("settings.gitReposInspector"), systemImage: "arrow.triangle.branch").tag(SettingsTab.gitRepos)
+                Label(store.t("settings.integrationsHooks"), systemImage: "network").tag(SettingsTab.integrations)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 20)
@@ -63,7 +63,7 @@ struct SettingsView: View {
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
-        panel.prompt = store.t("Durchsuchen", "Scan")
+        panel.prompt = store.t("settings.scan")
         startInProjectsRoot(panel)
         if panel.runModal() == .OK, let url = panel.url {
             store.gitProjectsRoot = url.path

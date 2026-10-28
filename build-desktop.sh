@@ -28,10 +28,14 @@ if [ "${UNIVERSAL:-}" = "1" ]; then
         BINARIES+=("$("${BUILD[@]}" --show-bin-path)/Schichta")
     done
     lipo -create "${BINARIES[@]}" -output "$APP/Contents/MacOS/Schichta"
+    BIN_PATH="$("${BUILD[@]}" --show-bin-path)"
 else
     swift build -c release
-    cp "$(swift build -c release --show-bin-path)/Schichta" "$APP/Contents/MacOS/Schichta"
+    BIN_PATH="$(swift build -c release --show-bin-path)"
+    cp "$BIN_PATH/Schichta" "$APP/Contents/MacOS/Schichta"
 fi
+# Texts (de.lproj / en.lproj) live in SwiftPM's resource bundle; L10n looks for it in Contents/Resources.
+cp -R "$BIN_PATH/Schichta_Schichta.bundle" "$APP/Contents/Resources/"
 
 echo "Creating app icon (AppIcon.icns)..."
 ICONSET="$(mktemp -d)/Schichta.iconset"

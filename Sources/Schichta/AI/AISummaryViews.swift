@@ -34,7 +34,7 @@ final class AISummaryModel: ObservableObject {
     func send(store: SchichtaStore, onDone: @escaping () -> Void) {
         let command = store.aiCommand.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !command.isEmpty else {
-            phase = .failed(store.t("Kein KI-Befehl eingerichtet (Einstellungen › Integrationen).", "No AI command set up (Settings › Integrations)."))
+            phase = .failed(store.t("ai.noAiCommandSetUp"))
             return
         }
         phase = .running
@@ -64,19 +64,18 @@ struct AISummarySheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label(store.t("KI-Zusammenfassung für \(SchichtaCore.formatGermanDate(store.selectedDay))", "AI summary for \(SchichtaCore.formatGermanDate(store.selectedDay))"), systemImage: "wand.and.stars")
+                Label(store.t("ai.aiSummaryFor", "\(SchichtaCore.formatGermanDate(store.selectedDay))"), systemImage: "wand.and.stars")
                     .font(.system(size: 14, weight: .semibold))
                 Spacer()
             }
-            Text(store.t("Genau dieser Text wird per stdin an den eingestellten Befehl geschickt. Offensichtliche Geheimnisse sind bereits entfernt.",
-                         "Exactly this text is sent via stdin to the configured command. Obvious secrets are already removed."))
+            Text(store.t("ai.exactlyThisTextIsSent"))
                 .font(.system(size: 11))
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 6) {
                 Image(systemName: "terminal")
-                Text(store.aiCommand.isEmpty ? store.t("Kein Befehl eingerichtet", "No command set up") : store.aiCommand)
+                Text(store.aiCommand.isEmpty ? store.t("ai.noCommandSetUp") : store.aiCommand)
                     .font(.system(size: 10.5, design: .monospaced))
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -86,7 +85,7 @@ struct AISummarySheet: View {
             Group {
                 switch model.phase {
                 case .preparing:
-                    ProgressView(store.t("Git und Chats werden gelesen…", "Reading Git and chats…"))
+                    ProgressView(store.t("ai.readingGitAndChats"))
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 default:
                     ScrollView {
@@ -112,20 +111,20 @@ struct AISummarySheet: View {
             }
 
             HStack {
-                Text(store.t("\(model.sessionCount) Chat-Sitzung(en) · \(model.prompt.count) Zeichen", "\(model.sessionCount) chat session(s) · \(model.prompt.count) characters"))
+                Text(store.t("ai.chatSessionSCharacters", "\(model.sessionCount)", "\(model.prompt.count)"))
                     .font(.system(size: 10.5))
                     .foregroundColor(.secondary)
                 Spacer()
                 if model.phase == .running {
                     ProgressView().controlSize(.small)
                 }
-                Button(store.t("Einstellungen…", "Settings…")) {
+                Button(store.t("ai.settings")) {
                     isPresented = false
                     appDelegate()?.showSettings(tab: .integrations)
                 }
-                Button(store.t("Abbrechen", "Cancel")) { isPresented = false }
+                Button(store.t("ai.cancel")) { isPresented = false }
                     .keyboardShortcut(.cancelAction)
-                Button(store.t("Senden", "Send")) {
+                Button(store.t("ai.send")) {
                     model.send(store: store) { isPresented = false }
                 }
                 .prominentWhenEnabled(model.phase == .ready || {
@@ -151,14 +150,13 @@ struct AISettingsSection: View {
     }
 
     var body: some View {
-        GroupBox(label: Label(store.t("KI-Zusammenfassung", "AI Summary"), systemImage: "wand.and.stars")) {
+        GroupBox(label: Label(store.t("ai.aiSummary"), systemImage: "wand.and.stars")) {
             VStack(alignment: .leading, spacing: 10) {
-                Text(store.t("Befehl, der den Tagesauftrag auf stdin bekommt und JSON ausgibt. Die App ruft keine KI-API direkt auf; Chats werden nur aus getrackten Repositories gelesen. Vor dem Senden siehst du immer den vollständigen Text.",
-                             "Command that receives the day request on stdin and prints JSON. The app never calls an AI API directly; chats are only read from tracked repositories. You always see the full text before sending."))
+                Text(store.t("ai.commandThatReceivesTheDay"))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                TextField(store.t("z. B. claude -p …", "e.g. claude -p …"), text: $store.aiCommand)
+                TextField(store.t("ai.exampleClaudeP"), text: $store.aiCommand)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(size: 11, design: .monospaced))
                     .onChange(of: store.aiCommand) {
@@ -166,24 +164,24 @@ struct AISettingsSection: View {
                         if tools.first(where: { $0.id == store.aiToolId })?.command != store.aiCommand { store.aiToolId = "" }
                     }
                 HStack(spacing: 8) {
-                    Picker(store.t("Werkzeug:", "Tool:"), selection: Binding(
+                    Picker(store.t("ai.tool"), selection: Binding(
                         get: { tools.contains(where: { $0.id == store.aiToolId }) ? store.aiToolId : "" },
                         set: { id in
                             store.aiToolId = id
                             if let tool = tools.first(where: { $0.id == id }) { store.aiCommand = tool.command }
                         }
                     )) {
-                        Text(store.t("Eigener Befehl", "Custom command")).tag("")
+                        Text(store.t("ai.customCommand")).tag("")
                         ForEach(tools) { tool in
-                            Text(tool.name + (tool.isBuiltIn ? "" : store.t(" (eigene Datei)", " (custom file)"))
-                                 + (tool.installed ? "" : store.t(" – nicht gefunden", " – not found")))
+                            Text(tool.name + (tool.isBuiltIn ? "" : store.t("ai.customFile"))
+                                 + (tool.installed ? "" : store.t("ai.notFound")))
                                 .tag(tool.id)
                         }
                     }
                     .frame(maxWidth: 360)
                     Spacer()
-                    Button(store.t("Ordner für eigene Tools", "Custom tools folder")) { NSWorkspace.shared.open(AITools.folder) }
-                    Button(store.t("Neu laden", "Reload")) { reload() }
+                    Button(store.t("ai.customToolsFolder")) { NSWorkspace.shared.open(AITools.folder) }
+                    Button(store.t("ai.reload")) { reload() }
                 }
                 ForEach(toolErrors, id: \.self) { error in
                     Label(error, systemImage: "exclamationmark.triangle")

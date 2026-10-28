@@ -7,14 +7,14 @@ extension SettingsView {
     var integrationsAndHooksTab: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Section 1: overview & documentation
-            GroupBox(label: Label(store.t("Externe Integrationen & Webhooks", "External Integrations & Webhooks"), systemImage: "network")) {
+            GroupBox(label: Label(store.t("settings.externalIntegrationsWebhooks"), systemImage: "network")) {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(store.t("Integriere Schichta nahtlos mit deinen externen Tools (z. B. lokales Shell- oder Python-Skript, n8n, Zapier, Webhook oder eigener Adapter). Jedem Eintrag wird automatisch der zugehörige Projektname des Repos zugeordnet.", "Seamlessly integrate Schichta with external tools (e.g. local shell or Python scripts, n8n, Zapier, webhook, or your own adapter). Each entry is automatically mapped to its repository project name."))
+                    Text(store.t("settings.seamlesslyIntegrateSchichtaWithExternal"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(store.t("Umgebungsvariablen für Shell-Hooks:", "Environment variables for Shell hooks:"))
+                        Text(store.t("settings.environmentVariablesForShellHooks"))
                             .font(.system(size: 10.5, weight: .bold))
                             .foregroundColor(.secondary)
 
@@ -31,7 +31,7 @@ extension SettingsView {
                         Button(action: { store.copySampleHookPayload() }) {
                             HStack(spacing: 5) {
                                 Image(systemName: "doc.on.doc")
-                                Text(store.t("Beispiel-JSON kopieren", "Copy sample JSON"))
+                                Text(store.t("settings.copySampleJson"))
                             }
                         }
                         .controlSize(.small)
@@ -47,15 +47,15 @@ extension SettingsView {
             AISettingsSection(store: store)
 
             // Section 2: configuration
-            GroupBox(label: Label(store.t("Hook-Konfiguration", "Hook Configuration"), systemImage: "wrench.and.screwdriver")) {
+            GroupBox(label: Label(store.t("settings.hookConfiguration"), systemImage: "wrench.and.screwdriver")) {
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(store.t("Lokaler Shell-Befehl / CLI-Skript:", "Local Shell Command / CLI script:"))
+                        Text(store.t("settings.localShellCommandCliScript"))
                             .font(.system(size: 11.5, weight: .medium))
                         TextField("/usr/local/bin/book-time oder python3 ~/scripts/book_time.py", text: $store.hookShellCommand)
                             .textFieldStyle(.roundedBorder)
                             .font(.system(size: 11.5, design: .monospaced))
-                        Text(store.t("Wird via '/bin/zsh -c' ausgeführt. Erhält das JSON über stdin und gesetzte Umgebungsvariablen.", "Executed via '/bin/zsh -c'. Receives JSON payload via stdin and environment variables."))
+                        Text(store.t("settings.executedViaBinZshC"))
                             .font(.system(size: 10.5))
                             .foregroundColor(.secondary)
                     }
@@ -63,32 +63,32 @@ extension SettingsView {
                     Divider()
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(store.t("HTTP POST Webhook URL:", "HTTP POST Webhook URL:"))
+                        Text(store.t("settings.httpPostWebhookUrl"))
                             .font(.system(size: 11.5, weight: .medium))
                         TextField("http://127.0.0.1:8765/webhook", text: $store.hookWebhookURL)
                             .textFieldStyle(.roundedBorder)
                             .font(.system(size: 11.5, design: .monospaced))
-                        Text(store.t("Sendet einen HTTP POST Request mit Content-Type: application/json an diesen Endpunkt.", "Sends an HTTP POST request with Content-Type: application/json to this endpoint."))
+                        Text(store.t("settings.sendsAnHttpPostRequest"))
                             .font(.system(size: 10.5))
                             .foregroundColor(.secondary)
                     }
 
                     Divider()
 
-                    Toggle(store.t("Hook automatisch ausführen, wenn ein Tag als gebucht abgeschlossen wird", "Run hook automatically when a day is marked as booked"), isOn: $store.hookAutoTriggerOnBook)
+                    Toggle(store.t("settings.runHookAutomaticallyWhenA"), isOn: $store.hookAutoTriggerOnBook)
                         .font(.system(size: 11.5))
                 }
                 .padding(10)
             }
 
             // Section 3: test hook & status
-            GroupBox(label: Label(store.t("Hook testen & Live-Status", "Test Hook & Live Status"), systemImage: "bolt.fill")) {
+            GroupBox(label: Label(store.t("settings.testHookLiveStatus"), systemImage: "bolt.fill")) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         Button(action: { store.runExternalHook(for: store.selectedDay) }) {
                             HStack(spacing: 5) {
                                 Image(systemName: "bolt.fill")
-                                Text(store.t("Hook jetzt mit Tag \(SchichtaCore.formatGermanDate(store.selectedDay)) testen", "Test hook now with day \(SchichtaCore.formatGermanDate(store.selectedDay))"))
+                                Text(store.t("settings.testHookNowWithDay", "\(SchichtaCore.formatGermanDate(store.selectedDay))"))
                             }
                         }
                         .buttonStyle(.borderedProminent)
@@ -100,7 +100,7 @@ extension SettingsView {
 
                     if !store.lastHookResult.isEmpty {
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(store.t("Letzte Hook-Ausgabe:", "Last hook output:"))
+                            Text(store.t("settings.lastHookOutput"))
                                 .font(.system(size: 10.5, weight: .medium))
                                 .foregroundColor(.secondary)
 

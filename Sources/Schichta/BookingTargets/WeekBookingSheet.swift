@@ -41,7 +41,7 @@ final class WeekBookingModel: ObservableObject {
             let signature = BookingTargetsModel.signature(entries)
             if day.estimatedCount > 0 {
                 return DayPlan(day: day.day, minutes: day.minutes, signature: signature, requests: [],
-                               skipReason: store.t("\(day.estimatedCount) Schätzung(en) erst bestätigen", "confirm \(day.estimatedCount) estimate(s) first"))
+                               skipReason: store.t("booking.confirmEstimateSFirst", "\(day.estimatedCount)"))
             }
             do {
                 let requests = try TargetRenderer.prepare(
@@ -63,7 +63,7 @@ final class WeekBookingModel: ObservableObject {
                 let day = plans[index].day
                 let current = BookingTargetsModel.signature(store.database.entries.filter { $0.date == day })
                 guard current == plans[index].signature else {
-                    plans[index].result = store.t("Einträge geändert – Vorschau neu erzeugen", "Entries changed – preview again")
+                    plans[index].result = store.t("booking.entriesChangedPreviewAgain")
                     continue
                 }
                 let results = await sender.send(plans[index].requests)
@@ -89,17 +89,16 @@ struct WeekBookingSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 12) {
-                Text(store.t("Woche buchen · KW \(week.weekNumber)", "Book week · W\(week.weekNumber)"))
+                Text(store.t("booking.bookWeekW", "\(week.weekNumber)"))
                     .font(.system(size: 15, weight: .bold))
 
                 if model.targets.isEmpty {
-                    Text(store.t("Noch kein Buchungsziel eingerichtet. Lege eine Target-Datei an (Hauptfenster › Buchen in …).",
-                                 "No booking target set up yet. Add a target file (main window › Book in …)."))
+                    Text(store.t("booking.noBookingTargetSetUp"))
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                 } else {
                     HStack {
-                        Text(store.t("Ziel:", "Target:"))
+                        Text(store.t("booking.target"))
                             .font(.system(size: 12, weight: .medium))
                         Picker("", selection: $model.targetId) {
                             ForEach(model.targets) { loaded in
@@ -113,7 +112,7 @@ struct WeekBookingSheet: View {
                     }
 
                     if model.plans.isEmpty {
-                        Text(store.t("Keine offenen Tage mit Einträgen in dieser Woche.", "No open days with entries this week."))
+                        Text(store.t("booking.noOpenDaysWithEntries"))
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
@@ -134,9 +133,9 @@ struct WeekBookingSheet: View {
             HStack {
                 if model.isSending { ProgressView().controlSize(.small) }
                 Spacer()
-                Button(store.t("Schließen", "Close")) { isPresented = false }
+                Button(store.t("booking.close")) { isPresented = false }
                     .keyboardShortcut(.cancelAction)
-                Button(store.t("\(model.readyPlans.count) Tag(e) senden …", "Send \(model.readyPlans.count) day(s) …")) { confirmSend = true }
+                Button(store.t("booking.sendDayS", "\(model.readyPlans.count)")) { confirmSend = true }
                     .buttonStyle(.borderedProminent)
                     .tint(SchichtaTheme.forestGreen)
                     .disabled(model.readyPlans.isEmpty || model.isSending)
@@ -149,13 +148,12 @@ struct WeekBookingSheet: View {
             model.prepare(store: store, week: week)
         }
         .onChange(of: model.targetId) { model.prepare(store: store, week: week) }
-        .alert(store.t("Jetzt senden?", "Send now?"), isPresented: $confirmSend) {
-            Button(store.t("Abbrechen", "Cancel"), role: .cancel) {}
-            Button(store.t("Senden", "Send")) { model.send(store: store) }
+        .alert(store.t("booking.sendNow"), isPresented: $confirmSend) {
+            Button(store.t("booking.cancel"), role: .cancel) {}
+            Button(store.t("booking.send")) { model.send(store: store) }
         } message: {
             let requests = model.readyPlans.reduce(0) { $0 + $1.requests.count }
-            Text(store.t("\(requests) Anfrage(n) für \(model.readyPlans.count) Tag(e) werden genau wie in der Vorschau gesendet. Erfolgreiche Tage werden als gebucht markiert.",
-                         "\(requests) request(s) for \(model.readyPlans.count) day(s) will be sent exactly as previewed. Successful days are marked as booked."))
+            Text(store.t("booking.requestSForDayS", "\(requests)", "\(model.readyPlans.count)"))
         }
     }
 
@@ -170,14 +168,14 @@ struct WeekBookingSheet: View {
                     .font(.system(size: 12, design: .monospaced))
                     .foregroundColor(.secondary)
                 Spacer()
-                Text(plan.sent ? store.t("Gebucht ✓", "Booked ✓")
-                     : plan.skipReason ?? store.t("\(plan.requests.count) Anfrage(n) bereit", "\(plan.requests.count) request(s) ready"))
+                Text(plan.sent ? store.t("booking.booked")
+                     : plan.skipReason ?? store.t("booking.requestSReady", "\(plan.requests.count)"))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(plan.skipReason == nil ? .secondary : .orange)
                     .lineLimit(1)
             }
             if plan.skipReason == nil && !plan.requests.isEmpty {
-                DisclosureGroup(store.t("Vorschau", "Preview")) {
+                DisclosureGroup(store.t("booking.preview")) {
                     Text(plan.requests.map(\.previewText).joined(separator: "\n\n———\n\n"))
                         .font(.system(size: 10.5, design: .monospaced))
                         .textSelection(.enabled)

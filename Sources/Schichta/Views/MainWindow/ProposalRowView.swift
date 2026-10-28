@@ -12,8 +12,8 @@ struct ProposalRowView: View {
 
     @State private var timeStr: String = ""
 
-    private func t(_ de: String, _ en: String) -> String {
-        language == .de ? de : en
+    private func t(_ key: String, _ args: String...) -> String {
+        L10n.string(key, args, language: language)
     }
 
     var body: some View {
@@ -40,7 +40,7 @@ struct ProposalRowView: View {
 
                 Spacer()
 
-                Button(t("＋ Übernehmen", "＋ Accept")) {
+                Button(t("proposal.accept")) {
                     if let mins = try? SchichtaCore.parseMinutes(timeStr) {
                         proposal.minutes = mins
                     }
@@ -52,11 +52,11 @@ struct ProposalRowView: View {
             }
 
             HStack(spacing: 6) {
-                TextField(t("Ticket", "Ticket"), text: $proposal.ticket)
+                TextField(t("proposal.ticket"), text: $proposal.ticket)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 130)
 
-                StepButton(increase: false, size: 15, help: t("−\(step) Minuten", "−\(step) minutes")) {
+                StepButton(increase: false, size: 15, help: t("proposal.minutes", "\(step)")) {
                     let cur = (try? SchichtaCore.parseMinutes(timeStr)) ?? proposal.minutes
                     let next = SchichtaCore.snapDuration(cur - step, step: step)
                     timeStr = SchichtaCore.formatTime(next)
@@ -65,14 +65,14 @@ struct ProposalRowView: View {
 
                 DurationInput(text: $timeStr, step: step)
 
-                StepButton(increase: true, size: 15, help: t("+\(step) Minuten", "+\(step) minutes")) {
+                StepButton(increase: true, size: 15, help: t("proposal.minutes2", "\(step)")) {
                     let cur = (try? SchichtaCore.parseMinutes(timeStr)) ?? proposal.minutes
                     let next = SchichtaCore.snapDuration(cur + step, step: step)
                     timeStr = SchichtaCore.formatTime(next)
                     proposal.minutes = next
                 }
 
-                TextField(t("Tätigkeit", "Activity"), text: $proposal.description)
+                TextField(t("proposal.activity"), text: $proposal.description)
                     .textFieldStyle(.roundedBorder)
             }
         }

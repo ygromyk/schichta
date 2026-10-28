@@ -1,0 +1,554 @@
+/* AI/AISummary.swift */
+"ai.theAnswerContainsNoValid" = "The answer contains no valid JSON object.";
+"ai.aiCommandFailedExit" = "AI command failed (exit %1$@): %2$@";
+"ai.source" = "AI%1$@";
+"ai.sourceTimeOpen" = "AI · time open%1$@";
+
+/* AI/AISummaryViews.swift */
+"ai.noAiCommandSetUp" = "No AI command set up (Settings › Integrations).";
+"ai.aiSummaryFor" = "AI summary for %1$@";
+"ai.exactlyThisTextIsSent" = "Exactly this text is sent via stdin to the configured command. Obvious secrets are already removed.";
+"ai.noCommandSetUp" = "No command set up";
+"ai.readingGitAndChats" = "Reading Git and chats…";
+"ai.chatSessionSCharacters" = "%1$@ chat session(s) · %2$@ characters";
+"ai.settings" = "Settings…";
+"ai.cancel" = "Cancel";
+"ai.send" = "Send";
+"ai.aiSummary" = "AI Summary";
+"ai.commandThatReceivesTheDay" = "Command that receives the day request on stdin and prints JSON. The app never calls an AI API directly; chats are only read from tracked repositories. You always see the full text before sending.";
+"ai.exampleClaudeP" = "e.g. claude -p …";
+"ai.tool" = "Tool:";
+"ai.customCommand" = "Custom command";
+"ai.customFile" = " (custom file)";
+"ai.notFound" = " – not found";
+"ai.customToolsFolder" = "Custom tools folder";
+"ai.reload" = "Reload";
+
+/* AppIconGenerator.swift */
+"misc.couldNotCreatePngFor" = "Could not create PNG for %1$@";
+
+/* AutoSynthesizer.swift */
+"synth.fromDailyNotes" = "From daily notes";
+"synth.fromCheckIns" = "From check-ins";
+"synth.localChangesFilesInProgress" = "%1$@: Local changes (%2$@ files in progress)";
+"synth.gitLocalChanges" = "Git · %1$@ (local changes)";
+
+/* BookingTargets/BookingTarget.swift */
+"booking.theFileMustBeA" = "The file must be a JSON object.";
+"booking.urlIsMissing" = "\"url\" is missing.";
+"booking.methodMustBePostPut" = "\"method\" must be POST, PUT or PATCH.";
+"booking.modeMustBePerEntryOr" = "\"mode\" must be perEntry or perDay.";
+"booking.secretsDontBelongInThe" = "Secrets don't belong in the file. Put only a name under \"secret\" and store the value in the Keychain from Schichta.";
+"booking.authBasicNeedsUsername" = "auth.basic needs \"username\".";
+"booking.authHeaderNeedsHeader" = "auth.header needs \"header\".";
+"booking.authNeedsATypeNone" = "\"auth\" needs a type (none, bearer, basic, header) and a \"secret\" name.";
+"booking.invalidWorkStartTime" = "Invalid work start time.";
+"booking.secretIsMissingFromThe" = "Secret “%1$@” is missing from the Keychain.";
+"booking.invalidUrl" = "Invalid URL: %1$@";
+"booking.onlyHttpsIsAllowedHttp" = "Only https is allowed (http only for localhost): %1$@";
+"booking.bodyMustBeAJson" = "\"body\" must be a JSON object or a list.";
+"booking.noMappingInMapFor" = "No mapping in \"map\" for “%1$@” ({{%2$@}}).";
+"booking.unknownPlaceholder" = "Unknown placeholder {{%1$@}}.";
+"booking.isAListObjectAnd" = "{{%1$@}} is a list/object and cannot be inserted into text.";
+"booking.noEntriesFor" = "No entries for %1$@.";
+
+/* BookingTargets/BookingTargetsView.swift */
+"booking.bookingTargetsTargetFiles" = "Booking Targets (target files)";
+"booking.eachJsonFileInThe" = "Each .json file in the folder describes a target: URL, authentication (value in Keychain) and the JSON body built from placeholders like {{entry.ticket}}. Sending requires a reviewed preview.";
+"booking.openFolder" = "Open folder";
+"booking.reload" = "Reload";
+"booking.noTargetsYetCopyClockify" = "No targets yet. Copy clockify.example.json in the folder to e.g. clockify.json and adjust URL & fields.";
+"booking.sendNow" = "Send now?";
+"booking.cancel" = "Cancel";
+"booking.send" = "Send";
+"booking.requestSWillBeSent" = "%1$@ request(s) will be sent exactly as previewed.";
+"booking.perDay" = "per day";
+"booking.perEntry" = "per entry";
+"booking.inKeychain" = "„%1$@“ in Keychain";
+"booking.missing" = "„%1$@“ missing";
+"booking.newValue" = "New value";
+"booking.enterValue" = "Enter value";
+"booking.save" = "Save";
+"booking.previewFor" = "Preview for %1$@";
+"booking.send2" = "Send …";
+"booking.dayOrEntriesChangedRegenerate" = "Day or entries changed – regenerate the preview.";
+
+/* BookingTargets/WeekBookingSheet.swift */
+"booking.confirmEstimateSFirst" = "confirm %1$@ estimate(s) first";
+"booking.entriesChangedPreviewAgain" = "Entries changed – preview again";
+"booking.bookWeekW" = "Book week · W%1$@";
+"booking.noBookingTargetSetUp" = "No booking target set up yet. Add a target file (main window › Book in …).";
+"booking.target" = "Target:";
+"booking.noOpenDaysWithEntries" = "No open days with entries this week.";
+"booking.close" = "Close";
+"booking.sendDayS" = "Send %1$@ day(s) …";
+"booking.requestSForDayS" = "%1$@ request(s) for %2$@ day(s) will be sent exactly as previewed. Successful days are marked as booked.";
+"booking.booked" = "Booked ✓";
+"booking.requestSReady" = "%1$@ request(s) ready";
+"booking.preview" = "Preview";
+
+/* GitActivity.swift */
+"git.invalidDate" = "Invalid date";
+"git.gitCouldNotBeStarted" = "Git could not be started.";
+"git.gitQueryFailedOrTimed" = "Git query failed or timed out.";
+"git.directoryNotFound" = "Directory not found: %1$@";
+"git.notAGitRepository" = "Not a Git repository: %1$@";
+
+/* Models.swift */
+"model.vacation" = "Vacation";
+"model.sick" = "Sick";
+"model.holiday" = "Holiday";
+"model.asEntryAndNote" = "As entry + note";
+"model.noteOnly" = "Note only";
+
+/* SchichtaCore.swift */
+"core.durationMustNotBeEmpty" = "Duration must not be empty.";
+"core.enterTheDurationAs1" = "Enter the duration as 1:30, 1.5 or 30m.";
+"core.durationMustBeBetweenOne" = "Duration must be between one minute and 24 hours.";
+"core.pleaseEnterAnActivityOr" = "Please enter an activity or note.";
+"core.theDataComesFromA" = "The data comes from a newer Schichta version (format %1$@). Please update Schichta.";
+"core.notAValidSchichtaBackup" = "Not a valid Schichta backup.";
+"core.tooManyEntriesInThe" = "Too many entries in the backup.";
+"core.duplicateEntryIdInThe" = "Duplicate entry ID in the backup.";
+"core.invalidEntryDate" = "Invalid entry date: %1$@";
+"core.durationOutOfRange1" = "Duration out of range (1–1440 min).";
+"core.ticketNameTooLong" = "Ticket name too long.";
+"core.invalidActivityDescription" = "Invalid activity description.";
+"core.invalidNoteDate" = "Invalid note date: %1$@";
+"core.noteContentTooLong" = "Note content too long.";
+
+/* Store/SchichtaStore+Booking.swift */
+"booking.dayMarkedAsBooked" = "Day %1$@ marked as booked ✓";
+"booking.dayMarkedAsOpen" = "Day %1$@ marked as open.";
+"booking.endOfDayPromptTriggered" = "End-of-day prompt triggered.";
+"booking.morningPromptForTriggered" = "Morning prompt for %1$@ triggered.";
+
+/* Store/SchichtaStore+CheckIn.swift */
+"checkIn.break" = "Break";
+"checkIn.breakNoted" = "Break noted (%1$@).";
+
+/* Store/SchichtaStore+Entries.swift */
+"entries.errorDailyTotalCannotExceed" = "Error: Daily total cannot exceed 24 hours.";
+"entries.entryAdded" = "Entry added.";
+"entries.entryUpdated" = "Entry updated.";
+"entries.entryDeleted" = "Entry deleted.";
+"entries.estimateConfirmed" = "Estimate confirmed.";
+"entries.durationAdjustedMin" = "Duration adjusted (%1$@ min): %2$@";
+"entries.durationChanged" = "Duration changed: %1$@";
+"entries.mEntryNoteRecorded" = "%1$@m entry & note recorded.";
+"entries.checkInSavedAsNote" = "Check-in saved as note.";
+"entries.activitiesAutomaticallyRecognized" = "%1$@ activities automatically recognized.";
+"entries.gitAnalysisError" = "Git analysis error: %1$@";
+"entries.aiProposalsPleaseReview" = "%1$@ AI proposals – please review.";
+"entries.pleaseEnterADurationFirst" = "Please enter a duration first.";
+"entries.allProposalsAccepted" = "All proposals accepted.";
+
+/* Store/SchichtaStore+Export.swift */
+"export.yes" = "yes";
+"export.no" = "no";
+"export.monthExported" = "Month exported: %1$@";
+"export.exportFailed" = "Export failed: %1$@";
+"export.column.date" = "Date";
+"export.column.weekday" = "Weekday";
+"export.column.ticket" = "Ticket";
+"export.column.project" = "Project";
+"export.column.description" = "Description";
+"export.column.minutes" = "Minutes";
+"export.column.hours" = "Hours";
+"export.column.estimated" = "Estimated";
+"export.column.booked" = "Booked";
+"export.column.absence" = "Absence";
+
+/* Store/SchichtaStore+GitAndHooks.swift */
+"git.sampleJsonCopiedToClipboard" = "Sample JSON copied to clipboard.";
+"git.gitActivitiesInspectedFor" = "Git activities inspected for %1$@.";
+"git.gitInspectionError" = "Git inspection error: %1$@";
+"git.errorCreatingJson" = "Error creating JSON: %1$@";
+"git.jsonExportedTo" = "JSON exported to: %1$@";
+"git.runningExternalHook" = "Running external hook...";
+"git.hookSuccess" = "Hook success: %1$@";
+"git.hookMessage" = "Hook message: %1$@";
+"git.shellHookOk" = "Shell hook (exit 0): %1$@";
+"git.shellHookError" = "Shell hook error (exit %1$@): %2$@";
+"git.shellHookFailedToStart" = "Shell hook failed to start: %1$@";
+"git.invalidWebhookUrl" = "Invalid webhook URL: %1$@";
+"git.webhookError" = "Webhook error: %1$@";
+
+/* Store/SchichtaStore+ImportExport.swift */
+"importExport.dailyDraftCopiedToClipboard" = "Daily draft copied to clipboard.";
+"importExport.dailyDraftCopiedDayMarked" = "Daily draft copied & day marked as booked ✓";
+"importExport.dailyDraftSaved" = "Daily draft saved.";
+"importExport.errorSaving" = "Error saving: %1$@";
+"importExport.backupSuccessfullyExported" = "Backup successfully exported.";
+"importExport.exportFailed" = "Export failed: %1$@";
+"importExport.fileIsTooLargeMaximum" = "File is too large (maximum 10 MB).";
+"importExport.entriesImported" = "%1$@ entries imported.";
+"importExport.importFailed" = "Import failed: %1$@";
+
+/* Store/SchichtaStore+Repos.swift */
+"repos.couldNotReadDirectory" = "Could not read directory: %1$@";
+"repos.newGitRepositorySAdded" = "%1$@ new Git repository(s) added.";
+"repos.noNewRepositoriesFoundIn" = "No new repositories found in %1$@.";
+
+/* Store/SchichtaStore+Week.swift */
+"week.week" = "Week %1$@: %2$@ – %3$@";
+"week.totalOf" = "Total: %1$@ of %2$@";
+"week.byTicket" = "By ticket:";
+"week.noTicket" = "No ticket";
+
+/* Store/SchichtaStore.swift */
+"store.isAWorkingDayAgain" = "%1$@ is a working day again.";
+"store.theDataFileCouldNot" = "The data file could not be read (%1$@). It was moved unchanged to %2$@; Schichta starts with empty data. Older copies are in the Backups folder.";
+"store.theDataFileCouldNot2" = "The data file could not be read (%1$@). To avoid overwriting it, Schichta saves nothing until restarted.";
+"store.savingFailed" = "Saving failed: %1$@";
+
+/* Views/CheckInPanel.swift */
+"checkIn.enableOrPauseMinuteInterval" = "Enable or pause %1$@-minute interval prompt";
+"checkIn.closeEsc" = "Close (Esc)";
+"checkIn.breakDontLog" = "Break – don't log";
+"checkIn.sameAsBefore" = "Same as before:";
+"checkIn.logTheLastCheckIn" = "Log the last check-in again with the duration below";
+"checkIn.ticketOptionalExampleProj2800" = "Ticket optional (e.g. PROJ-2800)";
+"checkIn.duration" = "Duration:";
+"checkIn.minutes" = "−%1$@ minutes";
+"checkIn.minutes2" = "+%1$@ minutes";
+"checkIn.saved" = "✓ Saved";
+"checkIn.save" = "Save ↵";
+"checkIn.mainWindow" = "Main window";
+"checkIn.laterM" = "Later (+%1$@m)";
+"checkIn.settings" = "Settings… (⌘,)";
+"checkIn.quit" = "Quit";
+"checkIn.whatAreYouWorkingOn" = "What are you working on?";
+"checkIn.offToLunch" = "Off to lunch? 🍽";
+"checkIn.welcomeBack" = "Welcome back";
+"checkIn.whatDidYouDoThis" = "What did you do this morning?";
+"checkIn.awayWhatWasThat" = "Away %1$@ (%2$@). What was that?";
+"checkIn.shortNoteWhatAreYou" = "Short note: What are you working on?";
+"checkIn.exampleReviewProj2800Daily" = "e.g. review PROJ-2800, daily, login bugfix";
+"checkIn.exampleTeamMeetingCustomerCall" = "e.g. team meeting, customer call";
+
+/* Views/MainWindow/MainWindowView+Banners.swift */
+"main.showDataFolderInFinder" = "Show data folder in Finder";
+"main.closeBanner" = "Close banner";
+"main.undo" = "Undo";
+"main.goodMorningThePreviousWork" = "Good morning! The previous work day (%1$@) is not booked yet.";
+"main.yourBookingsFromHaveNot" = "Your bookings from %1$@ have not been transferred yet.";
+"main.switchToPreviousDayReview" = "Switch to previous day & review";
+"main.copyDraftMarkAsBooked" = "Copy draft & mark as booked ✓";
+"main.ignoreAlreadyBooked" = "Ignore / Already booked";
+"main.dayCompletionWouldYouLike" = "Day completion: Would you like to close today's bookings (%1$@) now?";
+"main.analyzeActivitiesForAndBook" = "Analyze activities for %1$@ and book them.";
+"main.automaticallyAnalyzeDay" = "Automatically analyze day";
+"main.copyDraftCompleteDay" = "Copy draft & complete day ✓";
+"main.remindMeLater" = "Remind me later";
+"main.markedAs.vacation" = "%1$@ is marked as vacation: no target, no reminders.";
+"main.markedAs.sick" = "%1$@ is marked as sick: no target, no reminders.";
+"main.markedAs.holiday" = "%1$@ is marked as holiday: no target, no reminders.";
+
+/* Views/MainWindow/MainWindowView+Cards.swift */
+"main.editActivity" = "Edit activity";
+"main.addActivity" = "Add activity";
+"main.ticketOptionalExampleProj2800" = "Ticket optional (e.g. PROJ-2800)";
+"main.duration" = "Duration:";
+"main.minutes" = "−%1$@ minutes";
+"main.minutes2" = "+%1$@ minutes";
+"main.recent" = "Recent:";
+"main.whatDidYouWorkOn" = "What did you work on? (e.g. Architecture sync)";
+"main.timeIsEstimatedVerifyBefore" = "Time is estimated (verify before booking)";
+"main.cancel" = "Cancel";
+"main.saveChanges" = "Save changes";
+"main.saveEntry" = "Save entry";
+"main.aiSummary" = "AI summary";
+"main.addToDailyNotes" = "Add to daily notes";
+"main.automaticallyRecognizedActivities" = "Automatically recognized activities (%1$@)";
+"main.acceptAllWithDuration" = "Accept all with duration";
+"main.analyzingGitCommitsReflogsAnd" = "Analyzing Git commits, reflogs and notes...";
+"main.yourEntriesOn" = "Your entries on %1$@";
+"main.1Entry" = "1 entry";
+"main.entries" = "%1$@ entries";
+"main.noEntriesForThisDay" = "No entries for this day yet.";
+"main.addAnActivityAboveOr" = "Add an activity above or use automatic analysis.";
+"main.noTicket" = "No ticket";
+"main.noDescription" = "No description";
+"main.estimated" = "Estimated";
+"main.clickToConfirmEstimate" = "Click to confirm estimate";
+"main.addMinutes" = "Add %1$@ minutes";
+"main.edit" = "Edit";
+"main.delete" = "Delete";
+"main.dailyNotes" = "Daily Notes";
+"main.inspectGitActivitiesInSettings" = "Inspect Git activities in Settings…";
+"main.freeDailyNotes30mCheck" = "Free daily notes & 30m check-in log:";
+
+/* Views/MainWindow/MainWindowView+Header.swift */
+"main.today" = "Today";
+"main.done" = "Done";
+"main.day" = "Day";
+"main.week" = "Week";
+"main.dayViewOrWeekOverview" = "Day view or week overview";
+"main.previousWeek" = "Previous week";
+"main.previousDay" = "Previous day";
+"main.selectDateInCalendar" = "Select date in calendar";
+"main.nextWeek" = "Next week";
+"main.nextDay" = "Next day";
+"main.jumpToToday" = "Jump to today";
+"main.w" = "W%1$@ · %2$@–%3$@";
+"main.ai" = "AI";
+"main.summarizeTheDayFromNotes" = "Summarize the day from notes, Git and Claude/Codex chats via AI";
+"main.analyzeDay" = "Analyze day";
+"main.automaticallyAnalyzeLocalGitCommits" = "Automatically analyze local Git commits, reflogs and notes";
+"main.settings" = "Settings… (⌘,)";
+"main.openCheckInK" = "Open check-in (⌘K)";
+"main.markAs" = "Mark %1$@ as";
+"main.testMorningPromptPreviousDay" = "Test morning prompt (previous day)";
+"main.testEndOfDayPrompt" = "Test end-of-day prompt";
+"main.exportMonthAsCsv" = "Export month as CSV…";
+"main.exportBackup" = "Export backup...";
+"main.importBackup" = "Import backup...";
+"main.moreActions" = "More actions";
+
+/* Views/MainWindow/MainWindowView+Inspector.swift */
+"main.dayEndSummary" = "Day-End Summary";
+"main.bookingDraftFor" = "Booking draft for %1$@";
+"main.noEntriesYetLogYour" = "No entries yet. Log your activities for the day.";
+"main.verifyEstimatedDurationSBefore" = "Verify %1$@ estimated duration(s) before booking.";
+"main.durationsVerifiedReadyToTransfer" = "Durations verified. Ready to transfer.";
+"main.draft" = "Draft:";
+"main.yourDailyDraftWillAppear" = "Your daily draft will appear here as soon as you save an activity.";
+"main.copyDailyDraft" = "Copy daily draft";
+"main.bookTo" = "Book to …";
+"main.copyMarkAsBooked" = "Copy & mark as booked";
+"main.saveAsTxt" = "Save as TXT …";
+"main.note" = "Note:";
+"main.copyTheDraftAndEnter" = "Copy the draft and enter it in your booking system – or use “Book to …”.";
+"main.dayIsBookedCompleted" = "Day is booked & completed";
+"main.recordedInBookingSystem" = "Recorded in booking system";
+"main.reopen" = "Reopen";
+"main.dayNotYetBooked" = "Day not yet booked";
+"main.notCompletedYet" = "Not completed yet";
+"main.markAsBooked" = "Mark as booked";
+
+/* Views/MainWindow/MainWindowView+Metrics.swift */
+"main.loggedTime" = "Logged time";
+"main.hReached" = "%1$@ h reached";
+"main.ofH" = "of %1$@ h";
+"main.activities" = "Activities";
+"main.1EntryToday" = "1 entry today";
+"main.entriesToday" = "%1$@ entries today";
+"main.reviewStatus" = "Review status";
+"main.noEntries" = "No entries";
+"main.startWithYour1stEntry" = "Start with your 1st entry";
+"main.over24Hours" = "Over 24 hours!";
+"main.pleaseCorrectDurations" = "Please correct durations";
+"main.booked" = "Booked";
+"main.dayIsCompleted" = "Day is completed";
+"main.1Estimate" = "1 estimate";
+"main.estimates" = "%1$@ estimates";
+"main.1WithoutTicket" = "1 without ticket";
+"main.withoutTicket" = "%1$@ without ticket";
+"main.verifyBeforeBooking" = "Verify before booking";
+"main.readyToBook" = "Ready to book";
+"main.allDetailsVerified" = "All details verified";
+"main.checkInAssistant" = "Check-in Assistant";
+"main.paused" = "Paused";
+"main.weekend" = "Weekend";
+"main.resting" = "Resting";
+"main.active" = "Active";
+"main.decreaseIntervalBy515" = "Decrease interval by 5/15 min";
+"main.increaseIntervalBy15Min" = "Increase interval by 15 min";
+"main.endOfDay" = "End of day: %1$@";
+"main.change" = "Change…";
+"main.adjustWorkHoursEndOf" = "Adjust work hours & end of day in settings";
+
+/* Views/MainWindow/MainWindowView+Week.swift */
+"main.days" = "Days";
+"main.bookWeek" = "Book week…";
+"main.sendAllOpenDaysOf" = "Send all open days of this week to a booking target";
+"main.monthAsCsv" = "Month as CSV…";
+"main.exportAllEntriesOfThe" = "Export all entries of the month as a spreadsheet";
+"main.clickOpensTheDayRight" = "Click opens the day · right-click: vacation, sick or holiday";
+"main.byTicket" = "By ticket";
+"main.weekSummaryCopied" = "Week summary copied.";
+"main.copyWeek" = "Copy week";
+"main.1DayIsNotBooked" = "1 day is not booked yet:";
+"main.daysAreNotBookedYet" = "%1$@ days are not booked yet:";
+"main.weekTotal" = "Week total";
+"main.weekBalance" = "Week balance";
+"main.accountSince" = "Account: %1$@ since %2$@";
+"main.overtimeAccountLoggedMinusTarget" = "Overtime account: logged minus target for every day since the start date, plus the opening balance (Settings › Work Hours).";
+"main.bookedDays" = "Booked days";
+"main.workingDaysThisWeek" = "Working days this week";
+"main.estimates2" = "Estimates";
+"main.allConfirmed" = "All confirmed";
+"main.reviewBeforeBooking" = "Review before booking";
+"main.estimated2" = "%1$@ estimated";
+"main.normalWorkingDay" = "Normal working day";
+"main.booked2" = "Booked ✓";
+"main.open" = "Open";
+"main.off" = "Off";
+"main.noEntriesThisWeekYet" = "No entries this week yet.";
+"main.openDay" = "Open %1$@";
+
+/* Views/MainWindow/MainWindowView.swift */
+"main.shellHookAdapter" = "Shell hook / adapter";
+"main.runFor" = "Run for %1$@";
+"main.noHookSetUpOpen" = "No hook set up – open settings…";
+"main.deleteEntry" = "Delete entry?";
+"main.doYouReallyWantTo" = "Do you really want to delete „%1$@“?";
+"main.invalidDurationPleaseEnterAs" = "Invalid duration. Please enter as 0:30, 1.5 or 30m.";
+
+/* Views/MainWindow/ProposalRowView.swift */
+"proposal.accept" = "＋ Accept";
+"proposal.ticket" = "Ticket";
+"proposal.minutes" = "−%1$@ minutes";
+"proposal.minutes2" = "+%1$@ minutes";
+"proposal.activity" = "Activity";
+
+/* Views/Settings/SettingsView+General.swift */
+"settings.language" = "Language";
+"settings.appLanguage" = "App Language:";
+"settings.switchesTheEntireUiMenus" = "Switches the entire UI, menus, prompts, and date formats live.";
+"settings.timeZone" = "Time Zone";
+"settings.daysAndTimesIn" = "Days and times in:";
+"settings.system" = "System (%1$@)";
+"settings.decidesWhenADayStarts" = "Decides when a day starts and ends (Git queries, check-ins, reminders) and in which zone times are shown.";
+"settings.checkInBehavior" = "Check-in Behavior";
+"settings.defaultMode" = "Default mode:";
+"settings.definesWhetherCheckInsCreate" = "Defines whether check-ins create a billable activity immediately or only append to the day note.";
+"settings.openTheCheckInFrom" = "Open the check-in from any app with %1$@";
+"settings.showInDockOffMenu" = "Show in Dock (off: menu bar only)";
+"settings.startAtLogin" = "Start at login";
+"settings.loginItemNotChanged" = "Login item not changed: %1$@";
+"settings.pleaseAllowItInSystem" = "Please allow it in System Settings › General › Login Items.";
+"settings.userReports" = "User & Reports";
+"settings.nameForDraftGitAuthor" = "Name for draft & Git author:";
+"settings.usedAsFilterForGit" = "Used as filter for 'git log --author' and in the header of the daily draft.";
+"settings.dataBackup" = "Data & Backup";
+"settings.databaseLocation" = "Database location:";
+"settings.showInFinder" = "Show in Finder";
+"settings.exportBackup" = "Export backup…";
+"settings.importBackup" = "Import backup…";
+
+/* Views/Settings/SettingsView+GitRepos.swift */
+"settings.trackedGitRepositories" = "Tracked Git Repositories";
+"settings.addAnyLocalGitDirectories" = "Add any local Git directories here. For each repo you can specify the project name (for draft & hooks) and an optional default ticket.";
+"settings.addGitDirectory" = "Add Git directory…";
+"settings.findGitFoldersInA" = "Find Git folders in a folder…";
+"settings.noRepositoriesTrackedYetClick" = "No repositories tracked yet. Click 'Add Git directory…'.";
+"settings.enableDisableRepositoryForGit" = "Enable/disable repository for Git scanning";
+"settings.validGitRepoGitPresent" = "Valid Git repo (.git present)";
+"settings.noGitFolderFound" = "No .git folder found";
+"settings.removeRepository" = "Remove repository";
+"settings.projectNameForReportsHooks" = "Project name for reports & hooks:";
+"settings.exampleExampleApp" = "e.g. Example App";
+"settings.defaultTicketOptional" = "Default ticket (optional):";
+"settings.exampleProj2800" = "e.g. PROJ-2800";
+"settings.localGitInspectionFor" = "Local Git inspection for %1$@";
+"settings.inspectsAllActiveRepositoriesFor" = "Inspects all active repositories for the selected day: own commits, file diffs, branch/HEAD reflogs, and uncommitted working tree files.";
+"settings.inspectLocalDayActivityNow" = "Inspect local day activity now";
+"settings.applyAsProposals" = "Apply as proposals";
+"settings.readingLocalGitActivityFrom" = "Reading local Git activity from repositories...";
+"settings.recognizedActivityByRepository" = "Recognized activity by repository:";
+"settings.commits" = "%1$@ commits";
+"settings.headLogs" = "%1$@ HEAD logs";
+"settings.uncommitted" = "%1$@ uncommitted";
+"settings.detailedGitLog" = "Detailed Git log:";
+"settings.diffFound" = "Diff found";
+"settings.noDiff" = "No diff";
+
+/* Views/Settings/SettingsView+Integrations.swift */
+"settings.externalIntegrationsWebhooks" = "External Integrations & Webhooks";
+"settings.seamlesslyIntegrateSchichtaWithExternal" = "Seamlessly integrate Schichta with external tools (e.g. local shell or Python scripts, n8n, Zapier, webhook, or your own adapter). Each entry is automatically mapped to its repository project name.";
+"settings.environmentVariablesForShellHooks" = "Environment variables for Shell hooks:";
+"settings.copySampleJson" = "Copy sample JSON";
+"settings.hookConfiguration" = "Hook Configuration";
+"settings.localShellCommandCliScript" = "Local Shell Command / CLI script:";
+"settings.executedViaBinZshC" = "Executed via '/bin/zsh -c'. Receives JSON payload via stdin and environment variables.";
+"settings.httpPostWebhookUrl" = "HTTP POST Webhook URL:";
+"settings.sendsAnHttpPostRequest" = "Sends an HTTP POST request with Content-Type: application/json to this endpoint.";
+"settings.runHookAutomaticallyWhenA" = "Run hook automatically when a day is marked as booked";
+"settings.testHookLiveStatus" = "Test Hook & Live Status";
+"settings.testHookNowWithDay" = "Test hook now with day %1$@";
+"settings.lastHookOutput" = "Last hook output:";
+
+/* Views/Settings/SettingsView+WorkHours.swift */
+"settings.regularWorkingDays" = "Regular Working Days";
+"settings.selectYourRegularWorkingDays" = "Select your regular working days. Automatic prompts are paused on non-working days.";
+"settings.toggleAsWorkingDay" = "Toggle %1$@ as working day";
+"settings.dailyTargetWorkHours" = "Daily Target & Work Hours";
+"settings.dailyTargetWorkTime" = "Daily target work time:";
+"settings.30Minutes" = "−30 minutes";
+"settings.30Minutes2" = "+30 minutes";
+"settings.timeStep" = "Time step:";
+"settings.allDurationsAreRoundedTo" = "All durations are rounded to this step, and the ± buttons move by it. Existing entries stay as they are until you change them.";
+"settings.workHoursWindow" = "Work hours window:";
+"settings.to" = "to";
+"settings.automaticPromptsOnlyOnWork" = "Automatic prompts only on work days & during work hours";
+"settings.checkInAssistantPrompts" = "Check-in Assistant & Prompts";
+"settings.regularCheckInTimerActive" = "Regular check-in timer active";
+"settings.morningPromptRemindIfPrevious" = "Morning prompt: Remind if previous work day is unbooked";
+"settings.endOfDayPromptRemind" = "End-of-day prompt: Remind to close day at end of work hours";
+"settings.lunchPromptAskAboutThe" = "Lunch prompt: Ask about the morning before the break";
+"settings.detectTimeAwayAskWhat" = "Detect time away: ask what the gap was when you're back";
+"settings.min" = "≥ %1$@ min";
+"settings.idleTimeSleepAndThe" = "Idle time, sleep and the lock screen count as away. No check-ins while you're away; an unanswered check-in sends a notification after 3 minutes.";
+"settings.playShortSoundOnCheck" = "Play short sound on check-in & prompts";
+"settings.sound" = "Sound:";
+"settings.preview" = "Preview";
+"settings.playSoundPreview" = "Play sound preview";
+"settings.overtimeAccountFrom" = "Overtime account from:";
+"settings.fixedStartDate" = "Fixed start date";
+"settings.firstEntry" = "first entry (%1$@)";
+"settings.openingBalance" = "Opening balance:";
+"settings.example1230Or4" = "e.g. +12:30 or -4:00, Enter to apply";
+"settings.accountToday" = "Account today: %1$@";
+"settings.pleaseEnterAs1230" = "Please enter as +12:30, -4:00 or 1.5.";
+"settings.balanceOpeningBalanceLoggedTarget" = "Balance = opening balance + logged − target for every day since the start date. Vacation, sick and holidays have no target.";
+"settings.weekday.mon" = "Mon";
+"settings.weekday.tue" = "Tue";
+"settings.weekday.wed" = "Wed";
+"settings.weekday.thu" = "Thu";
+"settings.weekday.fri" = "Fri";
+"settings.weekday.sat" = "Sat";
+"settings.weekday.sun" = "Sun";
+
+/* Views/Settings/SettingsView.swift */
+"settings.general" = "General";
+"settings.workHoursPrompts" = "Work Hours & Prompts";
+"settings.gitReposInspector" = "Git Repos & Inspector";
+"settings.integrationsHooks" = "Integrations & Hooks";
+"settings.scan" = "Scan";
+
+/* Views/SharedControls.swift */
+"controls.typeTheDurationTabMoves" = "Type the duration, Tab moves to minutes, ↑/↓ change the value; Enter confirms";
+
+/* AppDelegate.swift */
+"app.minuteCheckIn" = "%1$@ min check-in";
+"app.settingsTitle" = "Settings";
+"app.menu.about" = "About Schichta";
+"app.menu.settings" = "Settings…";
+"app.menu.openCheckIn" = "Open Check-in";
+"app.menu.showMainWindow" = "Show Main Window";
+"app.menu.testMorningPrompt" = "Test Morning Prompt (Prev Day)";
+"app.menu.testEndOfDayPrompt" = "Test End-of-Day Prompt";
+"app.menu.quit" = "Quit Schichta";
+"app.menu.edit" = "Edit";
+"app.menu.undo" = "Undo";
+"app.menu.cut" = "Cut";
+"app.menu.copy" = "Copy";
+"app.menu.paste" = "Paste";
+"app.menu.selectAll" = "Select All";
+"app.checkInDue" = "Schichta – check-in due";
+"notification.reply" = "Reply…";
+"notification.save" = "Save";
+"notification.replyPlaceholder" = "What are you working on? (ticket optional)";
+"notification.sameAsBefore" = "Same as before";
+"notification.later" = "Later";
+"notification.askLater" = "Ask later";
+"notification.lunch.title" = "Schichta · Off to lunch?";
+"notification.lunch.body" = "What did you do this morning? Answer quickly before you go.";
+"notification.checkIn.title" = "Schichta · %1$@ minutes";
+"notification.checkIn.body" = "What are you working on? Reply here or log it in the status bar.";
+"notification.morning.title" = "Schichta · Previous day still unbooked";
+"notification.morning.body" = "Your bookings from %1$@ have not been finalized yet.";
+"notification.endOfDay.title" = "Schichta · End of day sign-off";
+"notification.endOfDay.body" = "Time to finalize today's bookings for %1$@!";

@@ -87,10 +87,10 @@ struct StoreTests {
             #expect(SchichtaStore.availableSounds.contains("Hero"))
 
             store.appLanguage = .de
-            #expect(store.t("Heute", "Today") == "Heute")
+            #expect(store.t("main.today") == "Heute")
             #expect(SchichtaCore.formatFullDate("2026-10-26", language: .de).contains("Montag"))
             store.appLanguage = .en
-            #expect(store.t("Heute", "Today") == "Today")
+            #expect(store.t("main.today") == "Today")
             #expect(SchichtaCore.formatFullDate("2026-10-26", language: .en).contains("Monday"))
         }
     }
@@ -172,8 +172,8 @@ struct StoreTests {
             store.handleCheckIn(text: "Review", ticket: "", mode: .both, timeStr: "10:00", minutes: 20)
             #expect(store.entriesForSelectedDay().first?.minutes == 15)
 
-            let open = ProposedEntry(id: "ai-0", ticket: "", description: "Unclear", minutes: 0, source: LocalizedText("KI", "AI"))
-            let timed = ProposedEntry(id: "ai-1", ticket: "", description: "Fix", minutes: 52, source: LocalizedText("KI", "AI"))
+            let open = ProposedEntry(id: "ai-0", ticket: "", description: "Unclear", minutes: 0, source: LocalizedText(key: "ai.source", ""))
+            let timed = ProposedEntry(id: "ai-1", ticket: "", description: "Fix", minutes: 52, source: LocalizedText(key: "ai.source", ""))
             store.applyAISummary(AISummary.Result(summary: "", proposals: [open, timed], questions: []), day: store.selectedDay)
             #expect(store.proposals.map(\.minutes) == [0, 45], "time open stays open")
         }

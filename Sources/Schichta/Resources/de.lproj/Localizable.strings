@@ -1,0 +1,554 @@
+/* AI/AISummary.swift */
+"ai.theAnswerContainsNoValid" = "Antwort enthält kein gültiges JSON-Objekt.";
+"ai.aiCommandFailedExit" = "KI-Befehl fehlgeschlagen (Exit %1$@): %2$@";
+"ai.source" = "KI%1$@";
+"ai.sourceTimeOpen" = "KI · Zeit offen%1$@";
+
+/* AI/AISummaryViews.swift */
+"ai.noAiCommandSetUp" = "Kein KI-Befehl eingerichtet (Einstellungen › Integrationen).";
+"ai.aiSummaryFor" = "KI-Zusammenfassung für %1$@";
+"ai.exactlyThisTextIsSent" = "Genau dieser Text wird per stdin an den eingestellten Befehl geschickt. Offensichtliche Geheimnisse sind bereits entfernt.";
+"ai.noCommandSetUp" = "Kein Befehl eingerichtet";
+"ai.readingGitAndChats" = "Git und Chats werden gelesen…";
+"ai.chatSessionSCharacters" = "%1$@ Chat-Sitzung(en) · %2$@ Zeichen";
+"ai.settings" = "Einstellungen…";
+"ai.cancel" = "Abbrechen";
+"ai.send" = "Senden";
+"ai.aiSummary" = "KI-Zusammenfassung";
+"ai.commandThatReceivesTheDay" = "Befehl, der den Tagesauftrag auf stdin bekommt und JSON ausgibt. Die App ruft keine KI-API direkt auf; Chats werden nur aus getrackten Repositories gelesen. Vor dem Senden siehst du immer den vollständigen Text.";
+"ai.exampleClaudeP" = "z. B. claude -p …";
+"ai.tool" = "Werkzeug:";
+"ai.customCommand" = "Eigener Befehl";
+"ai.customFile" = " (eigene Datei)";
+"ai.notFound" = " – nicht gefunden";
+"ai.customToolsFolder" = "Ordner für eigene Tools";
+"ai.reload" = "Neu laden";
+
+/* AppIconGenerator.swift */
+"misc.couldNotCreatePngFor" = "Konnte PNG für %1$@ nicht erzeugen";
+
+/* AutoSynthesizer.swift */
+"synth.fromDailyNotes" = "Aus Tagesnotiz";
+"synth.fromCheckIns" = "Aus Check-ins";
+"synth.localChangesFilesInProgress" = "%1$@: Lokale Änderungen (%2$@ Dateien in Arbeit)";
+"synth.gitLocalChanges" = "Git · %1$@ (lokale Änderungen)";
+
+/* BookingTargets/BookingTarget.swift */
+"booking.theFileMustBeA" = "Datei muss ein JSON-Objekt sein.";
+"booking.urlIsMissing" = "\"url\" fehlt.";
+"booking.methodMustBePostPut" = "\"method\" muss POST, PUT oder PATCH sein.";
+"booking.modeMustBePerEntryOr" = "\"mode\" muss perEntry oder perDay sein.";
+"booking.secretsDontBelongInThe" = "Secrets gehören nicht in die Datei. Unter \"secret\" nur einen Namen angeben und den Wert in Schichta im Schlüsselbund speichern.";
+"booking.authBasicNeedsUsername" = "auth.basic braucht \"username\".";
+"booking.authHeaderNeedsHeader" = "auth.header braucht \"header\".";
+"booking.authNeedsATypeNone" = "\"auth\" braucht type (none, bearer, basic, header) und einen \"secret\"-Namen.";
+"booking.invalidWorkStartTime" = "Arbeitsbeginn ungültig.";
+"booking.secretIsMissingFromThe" = "Secret „%1$@“ fehlt im Schlüsselbund.";
+"booking.invalidUrl" = "Ungültige URL: %1$@";
+"booking.onlyHttpsIsAllowedHttp" = "Nur https erlaubt (http nur für localhost): %1$@";
+"booking.bodyMustBeAJson" = "\"body\" muss ein JSON-Objekt oder eine Liste sein.";
+"booking.noMappingInMapFor" = "Keine Zuordnung in \"map\" für „%1$@“ ({{%2$@}}).";
+"booking.unknownPlaceholder" = "Unbekannter Platzhalter {{%1$@}}.";
+"booking.isAListObjectAnd" = "{{%1$@}} ist eine Liste/ein Objekt und kann nicht in Text eingesetzt werden.";
+"booking.noEntriesFor" = "Keine Einträge für %1$@.";
+
+/* BookingTargets/BookingTargetsView.swift */
+"booking.bookingTargetsTargetFiles" = "Buchungsziele (Target-Dateien)";
+"booking.eachJsonFileInThe" = "Jede .json-Datei im Ordner beschreibt ein Ziel: URL, Authentifizierung (Wert im Schlüsselbund) und den JSON-Body aus Platzhaltern wie {{entry.ticket}}. Gesendet wird erst nach geprüfter Vorschau.";
+"booking.openFolder" = "Ordner öffnen";
+"booking.reload" = "Neu laden";
+"booking.noTargetsYetCopyClockify" = "Noch keine Ziele. Kopiere clockify.example.json im Ordner z. B. zu clockify.json und passe URL & Felder an.";
+"booking.sendNow" = "Jetzt senden?";
+"booking.cancel" = "Abbrechen";
+"booking.send" = "Senden";
+"booking.requestSWillBeSent" = "%1$@ Anfrage(n) werden genau wie in der Vorschau gesendet.";
+"booking.perDay" = "pro Tag";
+"booking.perEntry" = "pro Eintrag";
+"booking.inKeychain" = "„%1$@“ im Schlüsselbund";
+"booking.missing" = "„%1$@“ fehlt";
+"booking.newValue" = "Neuer Wert";
+"booking.enterValue" = "Wert eingeben";
+"booking.save" = "Speichern";
+"booking.previewFor" = "Vorschau für %1$@";
+"booking.send2" = "Senden …";
+"booking.dayOrEntriesChangedRegenerate" = "Tag oder Einträge haben sich geändert – Vorschau neu erzeugen.";
+
+/* BookingTargets/WeekBookingSheet.swift */
+"booking.confirmEstimateSFirst" = "%1$@ Schätzung(en) erst bestätigen";
+"booking.entriesChangedPreviewAgain" = "Einträge geändert – Vorschau neu erzeugen";
+"booking.bookWeekW" = "Woche buchen · KW %1$@";
+"booking.noBookingTargetSetUp" = "Noch kein Buchungsziel eingerichtet. Lege eine Target-Datei an (Hauptfenster › Buchen in …).";
+"booking.target" = "Ziel:";
+"booking.noOpenDaysWithEntries" = "Keine offenen Tage mit Einträgen in dieser Woche.";
+"booking.close" = "Schließen";
+"booking.sendDayS" = "%1$@ Tag(e) senden …";
+"booking.requestSForDayS" = "%1$@ Anfrage(n) für %2$@ Tag(e) werden genau wie in der Vorschau gesendet. Erfolgreiche Tage werden als gebucht markiert.";
+"booking.booked" = "Gebucht ✓";
+"booking.requestSReady" = "%1$@ Anfrage(n) bereit";
+"booking.preview" = "Vorschau";
+
+/* GitActivity.swift */
+"git.invalidDate" = "Ungültiges Datum";
+"git.gitCouldNotBeStarted" = "Git konnte nicht gestartet werden.";
+"git.gitQueryFailedOrTimed" = "Git-Abfrage fehlgeschlagen oder Zeitlimit überschritten.";
+"git.directoryNotFound" = "Verzeichnis nicht gefunden: %1$@";
+"git.notAGitRepository" = "Kein Git-Repository unter: %1$@";
+
+/* Models.swift */
+"model.vacation" = "Urlaub";
+"model.sick" = "Krank";
+"model.holiday" = "Feiertag";
+"model.asEntryAndNote" = "Als Eintrag + Notiz";
+"model.noteOnly" = "Nur als Notiz";
+
+/* SchichtaCore.swift */
+"core.durationMustNotBeEmpty" = "Dauer darf nicht leer sein.";
+"core.enterTheDurationAs1" = "Dauer als 1:30, 1,5 oder 30m eingeben.";
+"core.durationMustBeBetweenOne" = "Dauer muss zwischen einer Minute und 24 Stunden liegen.";
+"core.pleaseEnterAnActivityOr" = "Bitte eine Tätigkeit oder Notiz eingeben.";
+"core.theDataComesFromA" = "Die Daten stammen von einer neueren Schichta-Version (Format %1$@). Bitte Schichta aktualisieren.";
+"core.notAValidSchichtaBackup" = "Keine gültige Schichta-Sicherung.";
+"core.tooManyEntriesInThe" = "Zu viele Einträge in der Sicherung.";
+"core.duplicateEntryIdInThe" = "Doppelte Eintrags-ID in der Sicherung.";
+"core.invalidEntryDate" = "Ungültiges Eintragsdatum: %1$@";
+"core.durationOutOfRange1" = "Dauer außerhalb des gültigen Bereichs (1-1440 Min).";
+"core.ticketNameTooLong" = "Ticketname zu lang.";
+"core.invalidActivityDescription" = "Ungültige Tätigkeitsbeschreibung.";
+"core.invalidNoteDate" = "Ungültiges Notizdatum: %1$@";
+"core.noteContentTooLong" = "Notizinhalt zu lang.";
+
+/* Store/SchichtaStore+Booking.swift */
+"booking.dayMarkedAsBooked" = "Tag %1$@ als gebucht markiert ✓";
+"booking.dayMarkedAsOpen" = "Tag %1$@ als offen markiert.";
+"booking.endOfDayPromptTriggered" = "Feierabend-Prompt ausgelöst.";
+"booking.morningPromptForTriggered" = "Morgen-Prompt für %1$@ ausgelöst.";
+
+/* Store/SchichtaStore+CheckIn.swift */
+"checkIn.break" = "Pause";
+"checkIn.breakNoted" = "Pause notiert (%1$@).";
+
+/* Store/SchichtaStore+Entries.swift */
+"entries.errorDailyTotalCannotExceed" = "Fehler: Tagessumme darf 24 Stunden nicht überschreiten.";
+"entries.entryAdded" = "Eintrag hinzugefügt.";
+"entries.entryUpdated" = "Eintrag aktualisiert.";
+"entries.entryDeleted" = "Eintrag gelöscht.";
+"entries.estimateConfirmed" = "Schätzung bestätigt.";
+"entries.durationAdjustedMin" = "Dauer angepasst (%1$@ Min.): %2$@";
+"entries.durationChanged" = "Dauer geändert: %1$@";
+"entries.mEntryNoteRecorded" = "%1$@m-Eintrag & Notiz erfasst.";
+"entries.checkInSavedAsNote" = "Check-in als Notiz gespeichert.";
+"entries.activitiesAutomaticallyRecognized" = "%1$@ Tätigkeiten automatisch erkannt.";
+"entries.gitAnalysisError" = "Fehler bei Git-Auswertung: %1$@";
+"entries.aiProposalsPleaseReview" = "%1$@ KI-Vorschläge – bitte prüfen.";
+"entries.pleaseEnterADurationFirst" = "Bitte zuerst eine Dauer eintragen.";
+"entries.allProposalsAccepted" = "Alle Vorschläge übernommen.";
+
+/* Store/SchichtaStore+Export.swift */
+"export.yes" = "ja";
+"export.no" = "nein";
+"export.monthExported" = "Monat exportiert: %1$@";
+"export.exportFailed" = "Export fehlgeschlagen: %1$@";
+"export.column.date" = "Datum";
+"export.column.weekday" = "Wochentag";
+"export.column.ticket" = "Ticket";
+"export.column.project" = "Projekt";
+"export.column.description" = "Beschreibung";
+"export.column.minutes" = "Minuten";
+"export.column.hours" = "Stunden";
+"export.column.estimated" = "Geschätzt";
+"export.column.booked" = "Gebucht";
+"export.column.absence" = "Abwesenheit";
+
+/* Store/SchichtaStore+GitAndHooks.swift */
+"git.sampleJsonCopiedToClipboard" = "Beispiel-JSON in Zwischenablage kopiert.";
+"git.gitActivitiesInspectedFor" = "Git-Aktivitäten für %1$@ geprüft.";
+"git.gitInspectionError" = "Fehler bei Git-Prüfung: %1$@";
+"git.errorCreatingJson" = "Fehler beim Erzeugen des JSON: %1$@";
+"git.jsonExportedTo" = "JSON exportiert nach: %1$@";
+"git.runningExternalHook" = "Führe externen Hook aus...";
+"git.hookSuccess" = "Hook erfolgreich: %1$@";
+"git.hookMessage" = "Hook-Meldung: %1$@";
+"git.shellHookOk" = "Shell-Hook (Exit 0): %1$@";
+"git.shellHookError" = "Shell-Hook Fehler (Exit %1$@): %2$@";
+"git.shellHookFailedToStart" = "Shell-Hook Startfehler: %1$@";
+"git.invalidWebhookUrl" = "Webhook-URL ungültig: %1$@";
+"git.webhookError" = "Webhook Fehler: %1$@";
+
+/* Store/SchichtaStore+ImportExport.swift */
+"importExport.dailyDraftCopiedToClipboard" = "Tagesentwurf in Zwischenablage kopiert.";
+"importExport.dailyDraftCopiedDayMarked" = "Tagesentwurf kopiert & Tag als gebucht markiert ✓";
+"importExport.dailyDraftSaved" = "Tagesentwurf gespeichert.";
+"importExport.errorSaving" = "Fehler beim Speichern: %1$@";
+"importExport.backupSuccessfullyExported" = "Sicherung erfolgreich exportiert.";
+"importExport.exportFailed" = "Export fehlgeschlagen: %1$@";
+"importExport.fileIsTooLargeMaximum" = "Datei ist zu groß (maximal 10 MB).";
+"importExport.entriesImported" = "%1$@ Einträge importiert.";
+"importExport.importFailed" = "Import fehlgeschlagen: %1$@";
+
+/* Store/SchichtaStore+Repos.swift */
+"repos.couldNotReadDirectory" = "Verzeichnis konnte nicht gelesen werden: %1$@";
+"repos.newGitRepositorySAdded" = "%1$@ neue(s) Git-Repository(s) hinzugefügt.";
+"repos.noNewRepositoriesFoundIn" = "Keine neuen Repositories in %1$@ gefunden.";
+
+/* Store/SchichtaStore+Week.swift */
+"week.week" = "KW %1$@: %2$@ – %3$@";
+"week.totalOf" = "Gesamt: %1$@ von %2$@";
+"week.byTicket" = "Nach Ticket:";
+"week.noTicket" = "Ohne Ticket";
+
+/* Store/SchichtaStore.swift */
+"store.isAWorkingDayAgain" = "%1$@ ist wieder ein Arbeitstag.";
+"store.theDataFileCouldNot" = "Die Datendatei konnte nicht gelesen werden (%1$@). Sie wurde unverändert nach %2$@ verschoben; Schichta startet mit leeren Daten. Ältere Stände liegen im Ordner Backups.";
+"store.theDataFileCouldNot2" = "Die Datendatei konnte nicht gelesen werden (%1$@). Um sie nicht zu überschreiben, speichert Schichta bis zum Neustart nichts.";
+"store.savingFailed" = "Speichern fehlgeschlagen: %1$@";
+
+/* Views/CheckInPanel.swift */
+"checkIn.enableOrPauseMinuteInterval" = "%1$@-Minuten Intervall-Prompt aktivieren oder pausieren";
+"checkIn.closeEsc" = "Schließen (Esc)";
+"checkIn.breakDontLog" = "Pause – nicht buchen";
+"checkIn.sameAsBefore" = "Wie zuvor:";
+"checkIn.logTheLastCheckIn" = "Letzten Check-in mit der eingestellten Dauer wiederholen";
+"checkIn.ticketOptionalExampleProj2800" = "Ticket optional (z. B. PROJ-2800)";
+"checkIn.duration" = "Dauer:";
+"checkIn.minutes" = "−%1$@ Minuten";
+"checkIn.minutes2" = "+%1$@ Minuten";
+"checkIn.saved" = "✓ Gespeichert";
+"checkIn.save" = "Speichern ↵";
+"checkIn.mainWindow" = "Hauptfenster";
+"checkIn.laterM" = "Später (+%1$@m)";
+"checkIn.settings" = "Einstellungen… (⌘,)";
+"checkIn.quit" = "Beenden";
+"checkIn.whatAreYouWorkingOn" = "Was machst du gerade?";
+"checkIn.offToLunch" = "Gleich Mittagspause? 🍽";
+"checkIn.welcomeBack" = "Willkommen zurück";
+"checkIn.whatDidYouDoThis" = "Was hast du heute Vormittag gemacht?";
+"checkIn.awayWhatWasThat" = "Weg von %1$@ (%2$@). Was war das?";
+"checkIn.shortNoteWhatAreYou" = "Kurze Notiz: Woran arbeitest du gerade?";
+"checkIn.exampleReviewProj2800Daily" = "z. B. Review PROJ-2800, Daily, Bugfix Login";
+"checkIn.exampleTeamMeetingCustomerCall" = "z. B. Meeting mit Team, Kundencall";
+
+/* Views/MainWindow/MainWindowView+Banners.swift */
+"main.showDataFolderInFinder" = "Datenordner im Finder zeigen";
+"main.closeBanner" = "Hinweis schließen";
+"main.undo" = "Aufheben";
+"main.goodMorningThePreviousWork" = "Guten Morgen! Der Vortag (%1$@) ist noch nicht gebucht.";
+"main.yourBookingsFromHaveNot" = "Deine Buchungen vom %1$@ sind noch nicht übertragen.";
+"main.switchToPreviousDayReview" = "Zum Vortag wechseln & prüfen";
+"main.copyDraftMarkAsBooked" = "Entwurf kopieren & als gebucht markieren ✓";
+"main.ignoreAlreadyBooked" = "Ignorieren / Bereits gebucht";
+"main.dayCompletionWouldYouLike" = "Tagesabschluss: Möchtest du deine heutigen Buchungen (%1$@) jetzt abschließen?";
+"main.analyzeActivitiesForAndBook" = "Tätigkeiten für %1$@ auswerten und buchen.";
+"main.automaticallyAnalyzeDay" = "Tag automatisch auswerten";
+"main.copyDraftCompleteDay" = "Entwurf kopieren & Tag abschließen ✓";
+"main.remindMeLater" = "Später erinnern";
+"main.markedAs.vacation" = "%1$@ ist als Urlaub markiert: kein Soll, keine Erinnerungen.";
+"main.markedAs.sick" = "%1$@ ist als Krank markiert: kein Soll, keine Erinnerungen.";
+"main.markedAs.holiday" = "%1$@ ist als Feiertag markiert: kein Soll, keine Erinnerungen.";
+
+/* Views/MainWindow/MainWindowView+Cards.swift */
+"main.editActivity" = "Eintrag bearbeiten";
+"main.addActivity" = "Tätigkeit erfassen";
+"main.ticketOptionalExampleProj2800" = "Ticket optional (z. B. PROJ-2800)";
+"main.duration" = "Dauer:";
+"main.minutes" = "−%1$@ Minuten";
+"main.minutes2" = "+%1$@ Minuten";
+"main.recent" = "Zuletzt:";
+"main.whatDidYouWorkOn" = "Woran hast du gearbeitet? (z. B. Abstimmung Architektur)";
+"main.timeIsEstimatedVerifyBefore" = "Zeit ist geschätzt (vor Buchung prüfen)";
+"main.cancel" = "Abbrechen";
+"main.saveChanges" = "Änderungen speichern";
+"main.saveEntry" = "Eintrag speichern";
+"main.aiSummary" = "KI-Zusammenfassung";
+"main.addToDailyNotes" = "In Tagesnotizen übernehmen";
+"main.automaticallyRecognizedActivities" = "Automatisch erkannte Tätigkeiten (%1$@)";
+"main.acceptAllWithDuration" = "Alle mit Zeit übernehmen";
+"main.analyzingGitCommitsReflogsAnd" = "Git-Commits, Reflogs und Notizen werden analysiert...";
+"main.yourEntriesOn" = "Deine Einträge am %1$@";
+"main.1Entry" = "1 Eintrag";
+"main.entries" = "%1$@ Einträge";
+"main.noEntriesForThisDay" = "Noch keine Einträge für diesen Tag.";
+"main.addAnActivityAboveOr" = "Erfasse eine Tätigkeit oben oder nutze die automatische Auswertung.";
+"main.noTicket" = "Ohne Ticket";
+"main.noDescription" = "Ohne Beschreibung";
+"main.estimated" = "Geschätzt";
+"main.clickToConfirmEstimate" = "Klicken um Schätzung als bestätigt zu markieren";
+"main.addMinutes" = "+%1$@ Minuten hinzufügen";
+"main.edit" = "Bearbeiten";
+"main.delete" = "Löschen";
+"main.dailyNotes" = "Tagesnotizen";
+"main.inspectGitActivitiesInSettings" = "Git-Aktivitäten in den Einstellungen prüfen…";
+"main.freeDailyNotes30mCheck" = "Freie Tagesnotizen & 30m Check-in Protokoll:";
+
+/* Views/MainWindow/MainWindowView+Header.swift */
+"main.today" = "Heute";
+"main.done" = "Fertig";
+"main.day" = "Tag";
+"main.week" = "Woche";
+"main.dayViewOrWeekOverview" = "Tagesansicht oder Wochenübersicht";
+"main.previousWeek" = "Vorherige Woche";
+"main.previousDay" = "Vorheriger Tag";
+"main.selectDateInCalendar" = "Datum im Kalender wählen";
+"main.nextWeek" = "Nächste Woche";
+"main.nextDay" = "Nächster Tag";
+"main.jumpToToday" = "Zu heute springen";
+"main.w" = "KW %1$@ · %2$@–%3$@";
+"main.ai" = "KI";
+"main.summarizeTheDayFromNotes" = "Tag mit Notizen, Git und Claude-/Codex-Chats per KI zusammenfassen";
+"main.analyzeDay" = "Tag auswerten";
+"main.automaticallyAnalyzeLocalGitCommits" = "Lokale Git-Commits, Reflogs und Notizen automatisch auswerten";
+"main.settings" = "Einstellungen… (⌘,)";
+"main.openCheckInK" = "Check-in öffnen (⌘K)";
+"main.markAs" = "%1$@ markieren als";
+"main.testMorningPromptPreviousDay" = "Morgen-Prompt (Vortag) testen";
+"main.testEndOfDayPrompt" = "Feierabend-Prompt testen";
+"main.exportMonthAsCsv" = "Monat als CSV exportieren…";
+"main.exportBackup" = "Sicherung exportieren...";
+"main.importBackup" = "Sicherung importieren...";
+"main.moreActions" = "Weitere Aktionen";
+
+/* Views/MainWindow/MainWindowView+Inspector.swift */
+"main.dayEndSummary" = "Tagesabschluss";
+"main.bookingDraftFor" = "Buchungsentwurf für %1$@";
+"main.noEntriesYetLogYour" = "Noch keine Einträge. Erfasse deine Tätigkeiten für den Tag.";
+"main.verifyEstimatedDurationSBefore" = "%1$@ geschätzte Zeit(en) vor der Buchung prüfen.";
+"main.durationsVerifiedReadyToTransfer" = "Zeiten geprüft. Bereit für die Übertragung.";
+"main.draft" = "Entwurf:";
+"main.yourDailyDraftWillAppear" = "Dein Tagesentwurf erscheint hier, sobald du eine Tätigkeit speicherst.";
+"main.copyDailyDraft" = "Tagesentwurf kopieren";
+"main.bookTo" = "Buchen in …";
+"main.copyMarkAsBooked" = "Kopieren & als gebucht markieren";
+"main.saveAsTxt" = "Als TXT speichern …";
+"main.note" = "Hinweis:";
+"main.copyTheDraftAndEnter" = "Kopiere den Entwurf und trage ihn in deinem Buchungssystem ein – oder nutze „Buchen in …“.";
+"main.dayIsBookedCompleted" = "Tag ist gebucht & abgeschlossen";
+"main.recordedInBookingSystem" = "Im Buchungssystem eingetragen";
+"main.reopen" = "Wieder öffnen";
+"main.dayNotYetBooked" = "Tag noch nicht gebucht";
+"main.notCompletedYet" = "Noch nicht abgeschlossen";
+"main.markAsBooked" = "Als gebucht markieren";
+
+/* Views/MainWindow/MainWindowView+Metrics.swift */
+"main.loggedTime" = "Erfasste Zeit";
+"main.hReached" = "%1$@ h voll";
+"main.ofH" = "von %1$@ h";
+"main.activities" = "Tätigkeiten";
+"main.1EntryToday" = "1 Eintrag heute";
+"main.entriesToday" = "%1$@ Einträge heute";
+"main.reviewStatus" = "Prüfstatus";
+"main.noEntries" = "Keine Einträge";
+"main.startWithYour1stEntry" = "Beginne mit der 1. Tätigkeit";
+"main.over24Hours" = "Über 24 Stunden!";
+"main.pleaseCorrectDurations" = "Bitte Zeiten korrigieren";
+"main.booked" = "Gebucht";
+"main.dayIsCompleted" = "Tag ist abgeschlossen";
+"main.1Estimate" = "1 Schätzung";
+"main.estimates" = "%1$@ Schätzungen";
+"main.1WithoutTicket" = "1 ohne Ticket";
+"main.withoutTicket" = "%1$@ ohne Ticket";
+"main.verifyBeforeBooking" = "Vor Buchung prüfen";
+"main.readyToBook" = "Bereit zur Buchung";
+"main.allDetailsVerified" = "Alle Angaben geprüft";
+"main.checkInAssistant" = "Check-in-Assistent";
+"main.paused" = "Pausiert";
+"main.weekend" = "Wochenende";
+"main.resting" = "Ruht";
+"main.active" = "Aktiv";
+"main.decreaseIntervalBy515" = "Intervall um 5/15 Min. verringern";
+"main.increaseIntervalBy15Min" = "Intervall um 15 Min. erhöhen";
+"main.endOfDay" = "Feierabend: %1$@ Uhr";
+"main.change" = "Ändern…";
+"main.adjustWorkHoursEndOf" = "Arbeitszeit & Feierabend in den Einstellungen anpassen";
+
+/* Views/MainWindow/MainWindowView+Week.swift */
+"main.days" = "Tage";
+"main.bookWeek" = "Woche buchen…";
+"main.sendAllOpenDaysOf" = "Alle offenen Tage dieser Woche an ein Buchungsziel senden";
+"main.monthAsCsv" = "Monat als CSV…";
+"main.exportAllEntriesOfThe" = "Alle Einträge des Monats als Tabelle exportieren";
+"main.clickOpensTheDayRight" = "Klick öffnet den Tag · Rechtsklick: Urlaub, Krank oder Feiertag";
+"main.byTicket" = "Nach Ticket";
+"main.weekSummaryCopied" = "Wochenübersicht kopiert.";
+"main.copyWeek" = "Woche kopieren";
+"main.1DayIsNotBooked" = "1 Tag ist noch nicht gebucht:";
+"main.daysAreNotBookedYet" = "%1$@ Tage sind noch nicht gebucht:";
+"main.weekTotal" = "Woche gesamt";
+"main.weekBalance" = "Saldo Woche";
+"main.accountSince" = "Konto: %1$@ seit %2$@";
+"main.overtimeAccountLoggedMinusTarget" = "Überstundenkonto: Erfasst minus Soll aller Tage seit dem Startdatum, plus Startsaldo (Einstellungen › Arbeitszeit).";
+"main.bookedDays" = "Gebuchte Tage";
+"main.workingDaysThisWeek" = "Arbeitstage dieser Woche";
+"main.estimates2" = "Schätzungen";
+"main.allConfirmed" = "Alles bestätigt";
+"main.reviewBeforeBooking" = "Vor dem Buchen prüfen";
+"main.estimated2" = "%1$@ geschätzt";
+"main.normalWorkingDay" = "Normaler Arbeitstag";
+"main.booked2" = "Gebucht ✓";
+"main.open" = "Offen";
+"main.off" = "Frei";
+"main.noEntriesThisWeekYet" = "Diese Woche noch keine Einträge.";
+"main.openDay" = "%1$@ öffnen";
+
+/* Views/MainWindow/MainWindowView.swift */
+"main.shellHookAdapter" = "Shell-Hook / Adapter";
+"main.runFor" = "Für %1$@ ausführen";
+"main.noHookSetUpOpen" = "Kein Hook eingerichtet – Einstellungen öffnen…";
+"main.deleteEntry" = "Eintrag löschen?";
+"main.doYouReallyWantTo" = "Möchtest du „%1$@“ wirklich löschen?";
+"main.invalidDurationPleaseEnterAs" = "Ungültige Dauer. Bitte als 0:30, 1,5 oder 30m eingeben.";
+
+/* Views/MainWindow/ProposalRowView.swift */
+"proposal.accept" = "＋ Übernehmen";
+"proposal.ticket" = "Ticket";
+"proposal.minutes" = "−%1$@ Minuten";
+"proposal.minutes2" = "+%1$@ Minuten";
+"proposal.activity" = "Tätigkeit";
+
+/* Views/Settings/SettingsView+General.swift */
+"settings.language" = "Sprache / Language";
+"settings.appLanguage" = "App-Sprache:";
+"settings.switchesTheEntireUiMenus" = "Schaltet die gesamte Oberfläche, Menüs, Prompts und Datumsformate live um.";
+"settings.timeZone" = "Zeitzone";
+"settings.daysAndTimesIn" = "Tage und Uhrzeiten in:";
+"settings.system" = "System (%1$@)";
+"settings.decidesWhenADayStarts" = "Bestimmt, wann ein Tag beginnt und endet (Git-Abfragen, Check-ins, Erinnerungen) und in welcher Zeit Uhrzeiten angezeigt werden.";
+"settings.checkInBehavior" = "Check-in Verhalten";
+"settings.defaultMode" = "Standard-Modus:";
+"settings.definesWhetherCheckInsCreate" = "Legt fest, ob ein Check-in sofort eine buchungswirksame Tätigkeit erzeugt oder nur die Tagesnotiz ergänzt.";
+"settings.openTheCheckInFrom" = "Check-in überall mit %1$@ öffnen";
+"settings.showInDockOffMenu" = "Im Dock anzeigen (aus: nur Statusleiste)";
+"settings.startAtLogin" = "Beim Anmelden starten";
+"settings.loginItemNotChanged" = "Anmeldeobjekt nicht geändert: %1$@";
+"settings.pleaseAllowItInSystem" = "Bitte in Systemeinstellungen › Allgemein › Anmeldeobjekte erlauben.";
+"settings.userReports" = "Benutzer & Berichte";
+"settings.nameForDraftGitAuthor" = "Name für Entwurf & Git-Autor:";
+"settings.usedAsFilterForGit" = "Wird als Filter für 'git log --author' und in der Kopfzeile des Tagesentwurfs verwendet.";
+"settings.dataBackup" = "Daten & Sicherung";
+"settings.databaseLocation" = "Datenbank-Speicherort:";
+"settings.showInFinder" = "Im Finder anzeigen";
+"settings.exportBackup" = "Sicherung exportieren…";
+"settings.importBackup" = "Sicherung importieren…";
+
+/* Views/Settings/SettingsView+GitRepos.swift */
+"settings.trackedGitRepositories" = "Getrackte Git-Repositories";
+"settings.addAnyLocalGitDirectories" = "Füge hier beliebige lokale Git-Verzeichnisse hinzu. Für jedes Repo kannst du den konfigurierten Projektnamen (für Entwurf & Hooks) sowie ein optionales Standard-Ticket festlegen.";
+"settings.addGitDirectory" = "Git-Verzeichnis hinzufügen…";
+"settings.findGitFoldersInA" = "Git-Ordner in einem Ordner suchen…";
+"settings.noRepositoriesTrackedYetClick" = "Noch keine Repositories getrackt. Klicke auf 'Git-Verzeichnis hinzufügen…'.";
+"settings.enableDisableRepositoryForGit" = "Repository für Git-Scan aktivieren/deaktivieren";
+"settings.validGitRepoGitPresent" = "Gültiges Git-Repository (.git vorhanden)";
+"settings.noGitFolderFound" = "Kein .git-Ordner gefunden";
+"settings.removeRepository" = "Repository entfernen";
+"settings.projectNameForReportsHooks" = "Projektname für Berichte & Hooks:";
+"settings.exampleExampleApp" = "z. B. Example App";
+"settings.defaultTicketOptional" = "Standard-Ticket (optional):";
+"settings.exampleProj2800" = "z. B. PROJ-2800";
+"settings.localGitInspectionFor" = "Lokale Git-Prüfung für %1$@";
+"settings.inspectsAllActiveRepositoriesFor" = "Prüft für den ausgewählten Tag alle aktivierten Repositories: Eigene Commits, Dateiänderungen, Branch-/HEAD-Reflogs und heute uncommittete Dateien im Working-Tree.";
+"settings.inspectLocalDayActivityNow" = "Jetzt lokal prüfen, was an diesem Tag gemacht wurde";
+"settings.applyAsProposals" = "Als Vorschläge übernehmen";
+"settings.readingLocalGitActivityFrom" = "Lese lokale Git-Aktivitäten aus Repositories...";
+"settings.recognizedActivityByRepository" = "Erkannte Aktivitäten nach Repositories:";
+"settings.commits" = "%1$@ Commits";
+"settings.headLogs" = "%1$@ HEAD-Logs";
+"settings.uncommitted" = "%1$@ uncommittet";
+"settings.detailedGitLog" = "Detailliertes Git-Protokoll:";
+"settings.diffFound" = "Diff vorhanden";
+"settings.noDiff" = "Kein Diff";
+
+/* Views/Settings/SettingsView+Integrations.swift */
+"settings.externalIntegrationsWebhooks" = "Externe Integrationen & Webhooks";
+"settings.seamlesslyIntegrateSchichtaWithExternal" = "Integriere Schichta nahtlos mit deinen externen Tools (z. B. lokales Shell- oder Python-Skript, n8n, Zapier, Webhook oder eigener Adapter). Jedem Eintrag wird automatisch der zugehörige Projektname des Repos zugeordnet.";
+"settings.environmentVariablesForShellHooks" = "Umgebungsvariablen für Shell-Hooks:";
+"settings.copySampleJson" = "Beispiel-JSON kopieren";
+"settings.hookConfiguration" = "Hook-Konfiguration";
+"settings.localShellCommandCliScript" = "Lokaler Shell-Befehl / CLI-Skript:";
+"settings.executedViaBinZshC" = "Wird via '/bin/zsh -c' ausgeführt. Erhält das JSON über stdin und gesetzte Umgebungsvariablen.";
+"settings.httpPostWebhookUrl" = "HTTP POST Webhook URL:";
+"settings.sendsAnHttpPostRequest" = "Sendet einen HTTP POST Request mit Content-Type: application/json an diesen Endpunkt.";
+"settings.runHookAutomaticallyWhenA" = "Hook automatisch ausführen, wenn ein Tag als gebucht abgeschlossen wird";
+"settings.testHookLiveStatus" = "Hook testen & Live-Status";
+"settings.testHookNowWithDay" = "Hook jetzt mit Tag %1$@ testen";
+"settings.lastHookOutput" = "Letzte Hook-Ausgabe:";
+
+/* Views/Settings/SettingsView+WorkHours.swift */
+"settings.regularWorkingDays" = "Reguläre Arbeitstage";
+"settings.selectYourRegularWorkingDays" = "Wähle deine regulären Arbeitstage. An freien Tagen ruhen automatische Prompts.";
+"settings.toggleAsWorkingDay" = "%1$@ als Arbeitstag umschalten";
+"settings.dailyTargetWorkHours" = "Tagessoll & Arbeitszeitfenster";
+"settings.dailyTargetWorkTime" = "Tägliche Soll-Arbeitszeit:";
+"settings.30Minutes" = "−30 Minuten";
+"settings.30Minutes2" = "+30 Minuten";
+"settings.timeStep" = "Zeitraster:";
+"settings.allDurationsAreRoundedTo" = "Alle Dauern werden auf dieses Raster gerundet; auch die ±-Knöpfe springen um diesen Wert. Bestehende Einträge bleiben, bis du sie änderst.";
+"settings.workHoursWindow" = "Arbeitszeit-Fenster:";
+"settings.to" = "bis";
+"settings.automaticPromptsOnlyOnWork" = "Automatische Prompts nur an Arbeitstagen & innerhalb der Arbeitszeit";
+"settings.checkInAssistantPrompts" = "Check-in-Assistent & Prompts";
+"settings.regularCheckInTimerActive" = "Regelmäßiger Check-in-Timer aktiv";
+"settings.morningPromptRemindIfPrevious" = "Morgen-Prompt: An ungebuchten Vortag erinnern";
+"settings.endOfDayPromptRemind" = "Feierabend-Prompt: Zum Arbeitsende an Tagesabschluss erinnern";
+"settings.lunchPromptAskAboutThe" = "Mittags-Prompt: Vor der Pause nach dem Vormittag fragen";
+"settings.detectTimeAwayAskWhat" = "Abwesenheit erkennen: nach Rückkehr fragen, was die Lücke war";
+"settings.min" = "ab %1$@ min";
+"settings.idleTimeSleepAndThe" = "Leerlauf, Ruhezustand und Bildschirmsperre zählen als weg. Während du weg bist, gibt es keine Check-ins; ein unbeantworteter Check-in meldet sich nach 3 Minuten per Mitteilung.";
+"settings.playShortSoundOnCheck" = "Kurzen Sound bei Check-in & Prompts abspielen";
+"settings.sound" = "Ton:";
+"settings.preview" = "Vorschau";
+"settings.playSoundPreview" = "Klangprobe abspielen";
+"settings.overtimeAccountFrom" = "Überstundenkonto ab:";
+"settings.fixedStartDate" = "Festes Startdatum";
+"settings.firstEntry" = "erster Eintrag (%1$@)";
+"settings.openingBalance" = "Startsaldo:";
+"settings.example1230Or4" = "z. B. +12:30 oder -4:00, mit Enter übernehmen";
+"settings.accountToday" = "Konto heute: %1$@";
+"settings.pleaseEnterAs1230" = "Bitte als +12:30, -4:00 oder 1,5 eingeben.";
+"settings.balanceOpeningBalanceLoggedTarget" = "Saldo = Startsaldo + Erfasst − Soll für jeden Tag seit dem Startdatum. Urlaub, Krank und Feiertage haben kein Soll.";
+"settings.weekday.mon" = "Mo";
+"settings.weekday.tue" = "Di";
+"settings.weekday.wed" = "Mi";
+"settings.weekday.thu" = "Do";
+"settings.weekday.fri" = "Fr";
+"settings.weekday.sat" = "Sa";
+"settings.weekday.sun" = "So";
+
+/* Views/Settings/SettingsView.swift */
+"settings.general" = "Allgemein";
+"settings.workHoursPrompts" = "Arbeitszeit & Prompts";
+"settings.gitReposInspector" = "Git-Repos & Prüfung";
+"settings.integrationsHooks" = "Integrationen & Hooks";
+"settings.scan" = "Durchsuchen";
+
+/* Views/SharedControls.swift */
+"controls.typeTheDurationTabMoves" = "Dauer eintippen, Tab wechselt zu Minuten, ↑/↓ ändern den Wert; Enter bestätigt";
+
+/* AppDelegate.swift */
+"app.minuteCheckIn" = "%1$@ Min. Check-in";
+"app.settingsTitle" = "Einstellungen";
+"app.menu.about" = "Über Schichta";
+"app.menu.settings" = "Einstellungen…";
+"app.menu.openCheckIn" = "Check-in öffnen";
+"app.menu.showMainWindow" = "Hauptfenster anzeigen";
+"app.menu.testMorningPrompt" = "Morgen-Prompt (Vortag) testen";
+"app.menu.testEndOfDayPrompt" = "Feierabend-Prompt testen";
+"app.menu.quit" = "Schichta beenden";
+"app.menu.edit" = "Bearbeiten";
+"app.menu.undo" = "Rückgängig";
+"app.menu.cut" = "Ausschneiden";
+"app.menu.copy" = "Kopieren";
+"app.menu.paste" = "Einfügen";
+"app.menu.selectAll" = "Alles auswählen";
+"app.checkInDue" = "Schichta – Check-in fällig";
+"notification.reply" = "Antworten…";
+"notification.save" = "Speichern";
+"notification.replyPlaceholder" = "Woran arbeitest du? (Ticket optional)";
+"notification.sameAsBefore" = "Wie zuvor";
+"notification.later" = "Später";
+"notification.askLater" = "Später erinnern";
+"notification.lunch.title" = "Schichta · Mittagspause?";
+"notification.lunch.body" = "Was hast du heute Vormittag gemacht? Kurz antworten, bevor du gehst.";
+"notification.checkIn.title" = "Schichta · %1$@ Minuten";
+"notification.checkIn.body" = "Was machst du gerade? Hier antworten oder in der Statusleiste festhalten.";
+"notification.morning.title" = "Schichta · Vortag noch offen";
+"notification.morning.body" = "Deine Buchungen vom %1$@ sind noch nicht abgeschlossen.";
+"notification.endOfDay.title" = "Schichta · Feierabend-Abschluss";
+"notification.endOfDay.body" = "Zeit, deine heutigen Buchungen für %1$@ abzuschließen!";

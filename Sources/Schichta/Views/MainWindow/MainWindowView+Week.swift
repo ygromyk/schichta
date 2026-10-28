@@ -17,33 +17,33 @@ extension MainWindowView {
 
                 HStack(alignment: .top, spacing: 16) {
                     sectionCard(
-                        title: store.t("Tage", "Days"),
+                        title: store.t("main.days"),
                         icon: "calendar",
                         trailing: {
                             Button(action: { showWeekBooking = true }) {
-                                Label(store.t("Woche buchen…", "Book week…"), systemImage: "paperplane")
+                                Label(store.t("main.bookWeek"), systemImage: "paperplane")
                                     .font(.system(size: 11, weight: .medium))
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(SchichtaTheme.forestGreen)
                             .controlSize(.small)
                             .disabled(week.unbookedDays.isEmpty && !week.days.contains { $0.isToday && !$0.booked && $0.minutes > 0 })
-                            .help(store.t("Alle offenen Tage dieser Woche an ein Buchungsziel senden", "Send all open days of this week to a booking target"))
+                            .help(store.t("main.sendAllOpenDaysOf"))
 
                             Button(action: { store.exportMonthCSV(window: NSApp.keyWindow) }) {
-                                Label(store.t("Monat als CSV…", "Month as CSV…"), systemImage: "tablecells")
+                                Label(store.t("main.monthAsCsv"), systemImage: "tablecells")
                                     .font(.system(size: 11, weight: .medium))
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.small)
-                            .help(store.t("Alle Einträge des Monats als Tabelle exportieren", "Export all entries of the month as a spreadsheet"))
+                            .help(store.t("main.exportAllEntriesOfThe"))
                         }
                     ) {
                         VStack(spacing: 6) {
                             ForEach(week.days, id: \.day) { day in
                                 weekDayRow(day)
                             }
-                            Text(store.t("Klick öffnet den Tag · Rechtsklick: Urlaub, Krank oder Feiertag", "Click opens the day · right-click: vacation, sick or holiday"))
+                            Text(store.t("main.clickOpensTheDayRight"))
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -53,14 +53,14 @@ extension MainWindowView {
                     .frame(maxWidth: .infinity)
 
                     sectionCard(
-                        title: store.t("Nach Ticket", "By ticket"),
+                        title: store.t("main.byTicket"),
                         icon: "number",
                         trailing: {
                             Button(action: {
                                 store.copyToPasteboard(store.weekReport(week))
-                                store.showToast(store.t("Wochenübersicht kopiert.", "Week summary copied."))
+                                store.showToast(store.t("main.weekSummaryCopied"))
                             }) {
-                                Label(store.t("Woche kopieren", "Copy week"), systemImage: "doc.on.doc")
+                                Label(store.t("main.copyWeek"), systemImage: "doc.on.doc")
                                     .font(.system(size: 11, weight: .medium))
                             }
                             .buttonStyle(.bordered)
@@ -83,8 +83,8 @@ extension MainWindowView {
                 .foregroundColor(.orange)
                 .font(.system(size: 16))
             Text(days.count == 1
-                 ? store.t("1 Tag ist noch nicht gebucht:", "1 day is not booked yet:")
-                 : store.t("\(days.count) Tage sind noch nicht gebucht:", "\(days.count) days are not booked yet:"))
+                 ? store.t("main.1DayIsNotBooked")
+                 : store.t("main.daysAreNotBookedYet", "\(days.count)"))
                 .font(.system(size: 12, weight: .semibold))
             ForEach(days, id: \.self) { day in
                 Button(shortDayLabel(day)) { store.openDay(day) }
@@ -103,13 +103,13 @@ extension MainWindowView {
         let progress = week.target > 0 ? min(1.0, Double(week.total) / Double(week.target)) : 0
         let balance = week.balanceSoFar
         return HStack(spacing: 12) {
-            weekTile(icon: "clock.fill", color: SchichtaTheme.forestGreen, title: store.t("Woche gesamt", "Week total")) {
+            weekTile(icon: "clock.fill", color: SchichtaTheme.forestGreen, title: store.t("main.weekTotal")) {
                 HStack(alignment: .firstTextBaseline, spacing: 3) {
                     Text(SchichtaCore.formatTime(week.total))
                         .font(.system(size: 20, weight: .bold, design: .monospaced))
                     Text("h").font(.system(size: 13, weight: .medium)).foregroundColor(.secondary)
                     Spacer()
-                    Text(store.t("von \(SchichtaCore.formatTime(week.target)) h", "of \(SchichtaCore.formatTime(week.target)) h"))
+                    Text(store.t("main.ofH", "\(SchichtaCore.formatTime(week.target))"))
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                 }
@@ -118,35 +118,34 @@ extension MainWindowView {
                     .tint(SchichtaTheme.forestGreen)
             }
 
-            weekTile(icon: "plusminus", color: balance >= 0 ? SchichtaTheme.forestGreen : .orange, title: store.t("Saldo Woche", "Week balance")) {
+            weekTile(icon: "plusminus", color: balance >= 0 ? SchichtaTheme.forestGreen : .orange, title: store.t("main.weekBalance")) {
                 Text(SchichtaCore.formatSignedTime(balance))
                     .font(.system(size: 20, weight: .bold, design: .monospaced))
                     .foregroundColor(balance >= 0 ? SchichtaTheme.forestGreen : .orange)
                 let account = store.overtimeBalance()
                 let since = String(SchichtaCore.formatGermanDate(store.overtimeStart()).prefix(6))
-                Text(store.t("Konto: \(SchichtaCore.formatSignedTime(account)) seit \(since)", "Account: \(SchichtaCore.formatSignedTime(account)) since \(since)"))
+                Text(store.t("main.accountSince", "\(SchichtaCore.formatSignedTime(account))", "\(since)"))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(account >= 0 ? .secondary : .orange)
                     .lineLimit(1)
-                    .help(store.t("Überstundenkonto: Erfasst minus Soll aller Tage seit dem Startdatum, plus Startsaldo (Einstellungen › Arbeitszeit).",
-                                  "Overtime account: logged minus target for every day since the start date, plus the opening balance (Settings › Work Hours)."))
+                    .help(store.t("main.overtimeAccountLoggedMinusTarget"))
             }
 
-            weekTile(icon: "checkmark.seal.fill", color: .blue, title: store.t("Gebuchte Tage", "Booked days")) {
+            weekTile(icon: "checkmark.seal.fill", color: .blue, title: store.t("main.bookedDays")) {
                 Text("\(week.bookedWorkingDays) / \(week.workingDays)")
                     .font(.system(size: 20, weight: .bold))
-                Text(store.t("Arbeitstage dieser Woche", "Working days this week"))
+                Text(store.t("main.workingDaysThisWeek"))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
 
-            weekTile(icon: "questionmark.circle.fill", color: week.estimatedCount > 0 ? .orange : .secondary, title: store.t("Schätzungen", "Estimates")) {
+            weekTile(icon: "questionmark.circle.fill", color: week.estimatedCount > 0 ? .orange : .secondary, title: store.t("main.estimates2")) {
                 Text("\(week.estimatedCount)")
                     .font(.system(size: 20, weight: .bold))
                 Text(week.estimatedCount == 0
-                     ? store.t("Alles bestätigt", "All confirmed")
-                     : store.t("Vor dem Buchen prüfen", "Review before booking"))
+                     ? store.t("main.allConfirmed")
+                     : store.t("main.reviewBeforeBooking"))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
@@ -196,7 +195,7 @@ extension MainWindowView {
                     .frame(width: 100, alignment: .trailing)
 
                 if day.estimatedCount > 0 {
-                    Text(store.t("\(day.estimatedCount) geschätzt", "\(day.estimatedCount) estimated"))
+                    Text(store.t("main.estimated2", "\(day.estimatedCount)"))
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.orange)
                 }
@@ -215,7 +214,7 @@ extension MainWindowView {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(store.t("\(SchichtaCore.formatFullDate(day.day, language: .de)) öffnen", "Open \(SchichtaCore.formatFullDate(day.day, language: .en))"))
+        .help(store.t("main.openDay", SchichtaCore.formatFullDate(day.day, language: store.appLanguage)))
         .contextMenu { absenceMenuItems(for: day.day) }
     }
 
@@ -231,7 +230,7 @@ extension MainWindowView {
         if current != nil {
             Divider()
             Button(action: { store.setAbsence(nil, on: day) }) {
-                Label(store.t("Normaler Arbeitstag", "Normal working day"), systemImage: "briefcase")
+                Label(store.t("main.normalWorkingDay"), systemImage: "briefcase")
             }
         }
     }
@@ -239,11 +238,11 @@ extension MainWindowView {
     private func dayStatusChip(_ day: DaySummary) -> some View {
         let (label, color): (String, Color) = {
             if let absence = day.absence { return (absence.title(for: store.appLanguage), .purple) }
-            if day.booked { return (store.t("Gebucht ✓", "Booked ✓"), SchichtaTheme.forestGreen) }
-            if day.isToday { return (store.t("Heute", "Today"), .blue) }
-            if day.isUnbooked { return (store.t("Offen", "Open"), .orange) }
+            if day.booked { return (store.t("main.booked2"), SchichtaTheme.forestGreen) }
+            if day.isToday { return (store.t("main.today"), .blue) }
+            if day.isUnbooked { return (store.t("main.open"), .orange) }
             if day.isFuture { return ("–", .secondary) }
-            return (store.t("Frei", "Off"), .secondary)
+            return (store.t("main.off"), .secondary)
         }()
         return Text(label)
             .font(.system(size: 10.5, weight: .semibold))
@@ -257,7 +256,7 @@ extension MainWindowView {
     @ViewBuilder
     private func ticketTotalsList(_ week: WeekSummary) -> some View {
         if week.ticketTotals.isEmpty {
-            Text(store.t("Diese Woche noch keine Einträge.", "No entries this week yet."))
+            Text(store.t("main.noEntriesThisWeekYet"))
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -268,7 +267,7 @@ extension MainWindowView {
                 ForEach(week.ticketTotals, id: \.self) { total in
                     VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 6) {
-                            Text(total.ticket.isEmpty ? store.t("Ohne Ticket", "No ticket") : total.ticket)
+                            Text(total.ticket.isEmpty ? store.t("main.noTicket") : total.ticket)
                                 .font(.system(size: 12, weight: .semibold, design: total.ticket.isEmpty ? .default : .monospaced))
                                 .foregroundColor(total.ticket.isEmpty ? .secondary : .primary)
                             if !total.project.isEmpty {

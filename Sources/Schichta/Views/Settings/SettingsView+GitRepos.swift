@@ -7,9 +7,9 @@ extension SettingsView {
     var gitReposAndInspectorTab: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Section 1: tracked repositories
-            GroupBox(label: Label(store.t("Getrackte Git-Repositories", "Tracked Git Repositories"), systemImage: "arrow.triangle.branch")) {
+            GroupBox(label: Label(store.t("settings.trackedGitRepositories"), systemImage: "arrow.triangle.branch")) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(store.t("Füge hier beliebige lokale Git-Verzeichnisse hinzu. Für jedes Repo kannst du den konfigurierten Projektnamen (für Entwurf & Hooks) sowie ein optionales Standard-Ticket festlegen.", "Add any local Git directories here. For each repo you can specify the project name (for draft & hooks) and an optional default ticket."))
+                    Text(store.t("settings.addAnyLocalGitDirectories"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
 
@@ -17,7 +17,7 @@ extension SettingsView {
                         Button(action: { chooseGitDirectories() }) {
                             HStack(spacing: 5) {
                                 Image(systemName: "plus")
-                                Text(store.t("Git-Verzeichnis hinzufügen…", "Add Git directory…"))
+                                Text(store.t("settings.addGitDirectory"))
                             }
                         }
                         .buttonStyle(.borderedProminent)
@@ -27,7 +27,7 @@ extension SettingsView {
                         Button(action: { chooseFolderToScan() }) {
                             HStack(spacing: 5) {
                                 Image(systemName: "folder.badge.gearshape")
-                                Text(store.t("Git-Ordner in einem Ordner suchen…", "Find Git folders in a folder…"))
+                                Text(store.t("settings.findGitFoldersInA"))
                             }
                         }
                         .buttonStyle(.bordered)
@@ -37,7 +37,7 @@ extension SettingsView {
                     }
 
                     if store.trackedRepos.isEmpty {
-                        Text(store.t("Noch keine Repositories getrackt. Klicke auf 'Git-Verzeichnis hinzufügen…'.", "No repositories tracked yet. Click 'Add Git directory…'."))
+                        Text(store.t("settings.noRepositoriesTrackedYetClick"))
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                             .padding(.vertical, 10)
@@ -50,13 +50,13 @@ extension SettingsView {
                                     Toggle("", isOn: $store.trackedRepos[idx].enabled)
                                         .labelsHidden()
                                         .padding(.top, 4)
-                                        .help(store.t("Repository für Git-Scan aktivieren/deaktivieren", "Enable/disable repository for Git scanning"))
+                                        .help(store.t("settings.enableDisableRepositoryForGit"))
 
                                     Circle()
                                         .fill(isGit ? Color.green : Color.red)
                                         .frame(width: 8, height: 8)
                                         .padding(.top, 9)
-                                        .help(isGit ? store.t("Gültiges Git-Repository (.git vorhanden)", "Valid Git repo (.git present)") : store.t("Kein .git-Ordner gefunden", "No .git folder found"))
+                                        .help(isGit ? store.t("settings.validGitRepoGitPresent") : store.t("settings.noGitFolderFound"))
 
                                     VStack(alignment: .leading, spacing: 6) {
                                         HStack {
@@ -78,7 +78,7 @@ extension SettingsView {
                                                     .foregroundColor(.red.opacity(0.8))
                                             }
                                             .buttonStyle(.plain)
-                                            .help(store.t("Repository entfernen", "Remove repository"))
+                                            .help(store.t("settings.removeRepository"))
                                         }
 
                                         Text(repo.path)
@@ -89,19 +89,19 @@ extension SettingsView {
 
                                         HStack(spacing: 12) {
                                             VStack(alignment: .leading, spacing: 2) {
-                                                Text(store.t("Projektname für Berichte & Hooks:", "Project name for reports & hooks:"))
+                                                Text(store.t("settings.projectNameForReportsHooks"))
                                                     .font(.system(size: 10, weight: .medium))
                                                     .foregroundColor(.secondary)
-                                                TextField(store.t("z. B. Example App", "e.g. Example App"), text: $store.trackedRepos[idx].projectName)
+                                                TextField(store.t("settings.exampleExampleApp"), text: $store.trackedRepos[idx].projectName)
                                                     .textFieldStyle(.roundedBorder)
                                                     .font(.system(size: 11.5))
                                             }
 
                                             VStack(alignment: .leading, spacing: 2) {
-                                                Text(store.t("Standard-Ticket (optional):", "Default ticket (optional):"))
+                                                Text(store.t("settings.defaultTicketOptional"))
                                                     .font(.system(size: 10, weight: .medium))
                                                     .foregroundColor(.secondary)
-                                                TextField(store.t("z. B. PROJ-2800", "e.g. PROJ-2800"), text: $store.trackedRepos[idx].defaultTicket)
+                                                TextField(store.t("settings.exampleProj2800"), text: $store.trackedRepos[idx].defaultTicket)
                                                     .textFieldStyle(.roundedBorder)
                                                     .font(.system(size: 11.5))
                                                     .frame(width: 170)
@@ -121,9 +121,9 @@ extension SettingsView {
             }
 
             // Section 2: local day activity inspector
-            GroupBox(label: Label(store.t("Lokale Git-Prüfung für \(SchichtaCore.formatGermanDate(store.selectedDay))", "Local Git inspection for \(SchichtaCore.formatGermanDate(store.selectedDay))"), systemImage: "magnifyingglass")) {
+            GroupBox(label: Label(store.t("settings.localGitInspectionFor", "\(SchichtaCore.formatGermanDate(store.selectedDay))"), systemImage: "magnifyingglass")) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(store.t("Prüft für den ausgewählten Tag alle aktivierten Repositories: Eigene Commits, Dateiänderungen, Branch-/HEAD-Reflogs und heute uncommittete Dateien im Working-Tree.", "Inspects all active repositories for the selected day: own commits, file diffs, branch/HEAD reflogs, and uncommitted working tree files."))
+                    Text(store.t("settings.inspectsAllActiveRepositoriesFor"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
 
@@ -131,7 +131,7 @@ extension SettingsView {
                         Button(action: { store.inspectGitActivityForSelectedDay() }) {
                             HStack(spacing: 5) {
                                 Image(systemName: "magnifyingglass")
-                                Text(store.t("Jetzt lokal prüfen, was an diesem Tag gemacht wurde", "Inspect local day activity now"))
+                                Text(store.t("settings.inspectLocalDayActivityNow"))
                             }
                         }
                         .buttonStyle(.borderedProminent)
@@ -142,7 +142,7 @@ extension SettingsView {
                         Button(action: { store.synthesizeDayAction() }) {
                             HStack(spacing: 5) {
                                 Image(systemName: "sparkles")
-                                Text(store.t("Als Vorschläge übernehmen", "Apply as proposals"))
+                                Text(store.t("settings.applyAsProposals"))
                             }
                         }
                         .buttonStyle(.bordered)
@@ -155,7 +155,7 @@ extension SettingsView {
                     if store.isInspectingGit {
                         HStack(spacing: 8) {
                             ProgressView().controlSize(.small)
-                            Text(store.t("Lese lokale Git-Aktivitäten aus Repositories...", "Reading local Git activity from repositories..."))
+                            Text(store.t("settings.readingLocalGitActivityFrom"))
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }
@@ -165,7 +165,7 @@ extension SettingsView {
                     // Stats per repo
                     if let repos = store.inspectedGitResult?.repositories, !repos.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text(store.t("Erkannte Aktivitäten nach Repositories:", "Recognized activity by repository:"))
+                            Text(store.t("settings.recognizedActivityByRepository"))
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundColor(.secondary)
 
@@ -188,11 +188,11 @@ extension SettingsView {
                                     }
 
                                     HStack(spacing: 8) {
-                                        statPill(label: store.t("\(commitCount) Commits", "\(commitCount) commits"), icon: "checkmark.circle", color: commitCount > 0 ? SchichtaTheme.forestGreen : .secondary)
-                                        statPill(label: store.t(hasDiff ? "Diff vorhanden" : "Kein Diff", hasDiff ? "Diff found" : "No diff"), icon: "doc.badge.gearshape", color: hasDiff ? .blue : .secondary)
-                                        statPill(label: store.t("\(reflogCount) HEAD-Logs", "\(reflogCount) HEAD logs"), icon: "arrow.triangle.branch", color: reflogCount > 0 ? .purple : .secondary)
+                                        statPill(label: store.t("settings.commits", "\(commitCount)"), icon: "checkmark.circle", color: commitCount > 0 ? SchichtaTheme.forestGreen : .secondary)
+                                        statPill(label: store.t(hasDiff ? "settings.diffFound" : "settings.noDiff"), icon: "doc.badge.gearshape", color: hasDiff ? .blue : .secondary)
+                                        statPill(label: store.t("settings.headLogs", "\(reflogCount)"), icon: "arrow.triangle.branch", color: reflogCount > 0 ? .purple : .secondary)
                                         if store.selectedDay == SchichtaCore.day() {
-                                            statPill(label: store.t("\(wtCount) uncommittet", "\(wtCount) uncommitted"), icon: "pencil.circle", color: wtCount > 0 ? .orange : .secondary)
+                                            statPill(label: store.t("settings.uncommitted", "\(wtCount)"), icon: "pencil.circle", color: wtCount > 0 ? .orange : .secondary)
                                         }
                                     }
                                 }
@@ -208,7 +208,7 @@ extension SettingsView {
                     let logs = store.journalForSelectedDay().logs
                     if !logs.isEmpty {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(store.t("Detailliertes Git-Protokoll:", "Detailed Git log:"))
+                            Text(store.t("settings.detailedGitLog"))
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundColor(.secondary)
 

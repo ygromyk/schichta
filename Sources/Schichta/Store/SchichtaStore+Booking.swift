@@ -16,7 +16,7 @@ extension SchichtaStore {
         if booked && hookAutoTriggerOnBook {
             runExternalHook(for: day)
         }
-        showToast(booked ? t("Tag \(SchichtaCore.formatGermanDate(day)) als gebucht markiert ✓", "Day \(SchichtaCore.formatGermanDate(day)) marked as booked ✓") : t("Tag \(SchichtaCore.formatGermanDate(day)) als offen markiert.", "Day \(SchichtaCore.formatGermanDate(day)) marked as open."))
+        showToast(booked ? t("booking.dayMarkedAsBooked", "\(SchichtaCore.formatGermanDate(day))") : t("booking.dayMarkedAsOpen", "\(SchichtaCore.formatGermanDate(day))"))
     }
 
     func isDayUnbooked(_ day: String) -> Bool {
@@ -67,7 +67,7 @@ extension SchichtaStore {
         self.activePrompt = .endOfDay(day: day)
         appDelegate()?.sendEndOfDayPromptNotification(for: day)
         appDelegate()?.bringMainWindowToFront()
-        showToast(t("Feierabend-Prompt ausgelöst.", "End-of-day prompt triggered."))
+        showToast(t("booking.endOfDayPromptTriggered"))
     }
 
     func triggerMorningPromptManually() {
@@ -75,6 +75,6 @@ extension SchichtaStore {
         self.activePrompt = .morning(unbookedDay: unbooked)
         appDelegate()?.sendMorningPromptNotification(for: unbooked)
         appDelegate()?.bringMainWindowToFront()
-        showToast(t("Morgen-Prompt für \(SchichtaCore.formatGermanDate(unbooked)) ausgelöst.", "Morning prompt for \(SchichtaCore.formatGermanDate(unbooked)) triggered."))
+        showToast(t("booking.morningPromptForTriggered", "\(SchichtaCore.formatGermanDate(unbooked))"))
     }
 }

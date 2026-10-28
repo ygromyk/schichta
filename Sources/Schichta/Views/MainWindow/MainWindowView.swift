@@ -85,11 +85,11 @@ struct MainWindowView: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        GroupBox(label: Label(store.t("Shell-Hook / Adapter", "Shell hook / adapter"), systemImage: "terminal")) {
+                        GroupBox(label: Label(store.t("main.shellHookAdapter"), systemImage: "terminal")) {
                             VStack(alignment: .leading, spacing: 8) {
                                 if store.hasExternalHookConfigured {
                                     Button(action: { store.runExternalHook(for: store.selectedDay) }) {
-                                        Label(store.t("Für \(SchichtaCore.formatGermanDate(store.selectedDay)) ausführen", "Run for \(SchichtaCore.formatGermanDate(store.selectedDay))"), systemImage: "play.fill")
+                                        Label(store.t("main.runFor", "\(SchichtaCore.formatGermanDate(store.selectedDay))"), systemImage: "play.fill")
                                     }
                                     if !store.lastHookResult.isEmpty {
                                         Text(store.lastHookResult)
@@ -98,7 +98,7 @@ struct MainWindowView: View {
                                             .frame(maxWidth: .infinity, alignment: .leading)
                                     }
                                 } else {
-                                    Button(store.t("Kein Hook eingerichtet – Einstellungen öffnen…", "No hook set up – open settings…")) {
+                                    Button(store.t("main.noHookSetUpOpen")) {
                                         showTargetsSheet = false
                                         appDelegate()?.showSettings(tab: .integrations)
                                     }
@@ -115,21 +115,21 @@ struct MainWindowView: View {
                 Divider()
                 HStack {
                     Spacer()
-                    Button(store.t("Fertig", "Done")) { showTargetsSheet = false }
+                    Button(store.t("main.done")) { showTargetsSheet = false }
                         .keyboardShortcut(.defaultAction)
                 }
                 .padding(12)
             }
             .frame(width: 680, height: 540)
         }
-        .alert(store.t("Eintrag löschen?", "Delete entry?"), isPresented: $showDeleteAlert, presenting: entryToDelete) { entry in
-            Button(store.t("Abbrechen", "Cancel"), role: .cancel) { }
-            Button(store.t("Löschen", "Delete"), role: .destructive) {
+        .alert(store.t("main.deleteEntry"), isPresented: $showDeleteAlert, presenting: entryToDelete) { entry in
+            Button(store.t("main.cancel"), role: .cancel) { }
+            Button(store.t("main.delete"), role: .destructive) {
                 store.deleteEntry(id: entry.id)
                 if editingEntryId == entry.id { resetForm() }
             }
         } message: { entry in
-            Text(store.t("Möchtest du „\(entry.description)“ wirklich löschen?", "Do you really want to delete „\(entry.description)“?"))
+            Text(store.t("main.doYouReallyWantTo", "\(entry.description)"))
         }
     }
 
@@ -199,7 +199,7 @@ struct MainWindowView: View {
 
     func saveForm() {
         guard let minutes = try? SchichtaCore.parseMinutes(formDuration) else {
-            store.showToast(store.t("Ungültige Dauer. Bitte als 0:30, 1,5 oder 30m eingeben.", "Invalid duration. Please enter as 0:30, 1.5 or 30m."))
+            store.showToast(store.t("main.invalidDurationPleaseEnterAs"))
             return
         }
 

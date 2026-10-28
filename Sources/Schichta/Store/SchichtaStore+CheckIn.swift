@@ -149,13 +149,13 @@ extension SchichtaStore {
     /// Notes an away period as a break, so the day's notes show the gap; nothing is booked.
     func logBreak(_ period: AwayPeriod) {
         let day = SchichtaCore.day(from: period.to)
-        let line = "- \(AppTime.clock.string(from: period.from))–\(AppTime.clock.string(from: period.to)) \(t("Pause", "Break"))"
+        let line = "- \(AppTime.clock.string(from: period.from))–\(AppTime.clock.string(from: period.to)) \(t("checkIn.break"))"
         var item = database.journal[day] ?? JournalItem()
         let base = item.notes.replacingOccurrences(of: #"\s+$"#, with: "", options: .regularExpression)
         item.notes = base.isEmpty ? line : "\(base)\n\(line)"
         database.journal[day] = item
         save()
-        showToast(t("Pause notiert (\(SchichtaCore.formatTime(period.minutes))).", "Break noted (\(SchichtaCore.formatTime(period.minutes)))."))
+        showToast(t("checkIn.breakNoted", "\(SchichtaCore.formatTime(period.minutes))"))
     }
 
     /// True once a working day reaches the lunch time, for 90 minutes, unless already asked today.

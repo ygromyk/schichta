@@ -90,7 +90,7 @@ enum AutoSynthesizer {
                                 description: cleanedDesc,
                                 minutes: parsedMinutes,
                                 estimated: true,
-                                source: LocalizedText("Aus Tagesnotiz", "From daily notes")
+                                source: LocalizedText(key: "synth.fromDailyNotes")
                             )
                             proposals.append(prop)
                         }
@@ -108,7 +108,7 @@ enum AutoSynthesizer {
                 description: item.desc,
                 minutes: item.minutes,
                 estimated: true,
-                source: LocalizedText("Aus Check-ins", "From check-ins")
+                source: LocalizedText(key: "synth.fromCheckIns")
             )
             proposals.append(prop)
         }
@@ -159,7 +159,7 @@ enum AutoSynthesizer {
                         description: finalDesc,
                         minutes: estMinutes,
                         estimated: true,
-                        source: LocalizedText("Git · \(displayLabel)"),
+                        source: LocalizedText(verbatim: "Git · \(displayLabel)"),
                         project: displayLabel
                     )
                     proposals.append(prop)
@@ -174,16 +174,14 @@ enum AutoSynthesizer {
                     let fileCount = wtLines.count
                     let branchTicket = extractTicket(from: repo.headActivity.text) ?? ""
                     let effectiveTicket = !branchTicket.isEmpty ? branchTicket : defaultTicket
-                    let finalDesc = LocalizedText(
-                        "\(displayLabel): Lokale Änderungen (\(fileCount) Dateien in Arbeit)",
-                        "\(displayLabel): Local changes (\(fileCount) files in progress)").in(language)
+                    let finalDesc = LocalizedText(key: "synth.localChangesFilesInProgress", "\(displayLabel)", "\(fileCount)").in(language)
                     let prop = ProposedEntry(
                         id: "git-wt:\(folderName):\(day):\(finalDesc.hashValue)",
                         ticket: effectiveTicket,
                         description: finalDesc,
                         minutes: 30,
                         estimated: true,
-                        source: LocalizedText("Git · \(displayLabel) (lokale Änderungen)", "Git · \(displayLabel) (local changes)"),
+                        source: LocalizedText(key: "synth.gitLocalChanges", "\(displayLabel)"),
                         project: displayLabel
                     )
                     proposals.append(prop)

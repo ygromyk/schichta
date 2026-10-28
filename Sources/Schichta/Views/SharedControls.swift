@@ -151,7 +151,7 @@ struct InlineDurationField: View {
     var body: some View {
         DurationInput(
             text: $text, step: store.timeStepMinutes, fontSize: 13,
-            help: store.t("Dauer eintippen, Tab wechselt zu Minuten, ↑/↓ ändern den Wert; Enter bestätigt", "Type the duration, Tab moves to minutes, ↑/↓ change the value; Enter confirms"),
+            help: store.t("controls.typeTheDurationTabMoves"),
             onCommit: commitChange
         )
         .onAppear {

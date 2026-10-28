@@ -29,11 +29,10 @@ extension SchichtaStore {
             return isDe ? value.replacingOccurrences(of: ".", with: ",") : value
         }
 
-        let header = isDe
-            ? ["Datum", "Wochentag", "Ticket", "Projekt", "Beschreibung", "Minuten", "Stunden", "Geschätzt", "Gebucht", "Abwesenheit"]
-            : ["Date", "Weekday", "Ticket", "Project", "Description", "Minutes", "Hours", "Estimated", "Booked", "Absence"]
+        let header = ["date", "weekday", "ticket", "project", "description", "minutes", "hours", "estimated", "booked", "absence"]
+            .map { t("export.column.\($0)") }
         var rows = [header.joined(separator: separator)]
-        let yes = t("ja", "yes"), no = t("nein", "no")
+        let yes = t("export.yes"), no = t("export.no")
 
         var current = start
         while current <= end {
@@ -65,7 +64,7 @@ extension SchichtaStore {
         present(panel, window: window, onURL: { url in
             // The byte order mark makes Excel read the file as UTF-8 (umlauts).
             try Data(("\u{FEFF}" + csv).utf8).write(to: url, options: .atomic)
-            self.showToast(self.t("Monat exportiert: \(url.lastPathComponent)", "Month exported: \(url.lastPathComponent)"))
-        }, failure: { self.t("Export fehlgeschlagen: \(self.describe($0))", "Export failed: \(self.describe($0))") })
+            self.showToast(self.t("export.monthExported", "\(url.lastPathComponent)"))
+        }, failure: { self.t("export.exportFailed", "\(self.describe($0))") })
     }
 }

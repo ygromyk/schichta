@@ -72,7 +72,7 @@ struct CheckInPopoverView: View {
                 Toggle("", isOn: $store.timerEnabled)
                     .toggleStyle(.switch)
                     .labelsHidden()
-                    .help(store.t("\(store.reminderIntervalMinutes)-Minuten Intervall-Prompt aktivieren oder pausieren", "Enable or pause \(store.reminderIntervalMinutes)-minute interval prompt"))
+                    .help(store.t("checkIn.enableOrPauseMinuteInterval", "\(store.reminderIntervalMinutes)"))
 
                 Button(action: onClose) {
                     Image(systemName: "xmark.circle.fill")
@@ -80,7 +80,7 @@ struct CheckInPopoverView: View {
                         .font(.system(size: 15))
                 }
                 .buttonStyle(.plain)
-                .help(store.t("Schließen (Esc)", "Close (Esc)"))
+                .help(store.t("checkIn.closeEsc"))
             }
 
             // Back after time away: the gap can be a break
@@ -90,7 +90,7 @@ struct CheckInPopoverView: View {
                     appDelegate()?.checkInAnswered()
                     onClose()
                 }) {
-                    Label(store.t("Pause – nicht buchen", "Break – don't log"), systemImage: "cup.and.saucer")
+                    Label(store.t("checkIn.breakDontLog"), systemImage: "cup.and.saucer")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
@@ -102,7 +102,7 @@ struct CheckInPopoverView: View {
                 Button(action: { repeatLast() }) {
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.clockwise")
-                        Text(store.t("Wie zuvor:", "Same as before:"))
+                        Text(store.t("checkIn.sameAsBefore"))
                             .foregroundColor(.secondary)
                         Text((last.ticket.isEmpty ? "" : "[\(last.ticket)] ") + last.text)
                             .lineLimit(1)
@@ -112,7 +112,7 @@ struct CheckInPopoverView: View {
                     .font(.system(size: 11, weight: .medium))
                 }
                 .buttonStyle(.plain)
-                .help(store.t("Letzten Check-in mit der eingestellten Dauer wiederholen", "Log the last check-in again with the duration below"))
+                .help(store.t("checkIn.logTheLastCheckIn"))
             }
 
             // Quick Recent Tickets Chips
@@ -145,7 +145,7 @@ struct CheckInPopoverView: View {
 
             // Input Card
             VStack(spacing: 0) {
-                TextField(store.t("Ticket optional (z. B. PROJ-2800)", "Ticket optional (e.g. PROJ-2800)"), text: $ticketText)
+                TextField(store.t("checkIn.ticketOptionalExampleProj2800"), text: $ticketText)
                     .textFieldStyle(.plain)
                     .font(.system(size: 12, weight: .medium))
                     .padding(.horizontal, 10)
@@ -167,15 +167,15 @@ struct CheckInPopoverView: View {
 
                 // Duration & quick chips
                 HStack(spacing: 6) {
-                    Text(store.t("Dauer:", "Duration:"))
+                    Text(store.t("checkIn.duration"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
 
-                    StepButton(increase: false, size: 16, help: store.t("−\(store.timeStepMinutes) Minuten", "−\(store.timeStepMinutes) minutes")) { adjustDuration(steps: -1) }
+                    StepButton(increase: false, size: 16, help: store.t("checkIn.minutes", "\(store.timeStepMinutes)")) { adjustDuration(steps: -1) }
 
                     DurationInput(text: $durationText, step: store.timeStepMinutes)
 
-                    StepButton(increase: true, size: 16, help: store.t("+\(store.timeStepMinutes) Minuten", "+\(store.timeStepMinutes) minutes")) { adjustDuration(steps: 1) }
+                    StepButton(increase: true, size: 16, help: store.t("checkIn.minutes2", "\(store.timeStepMinutes)")) { adjustDuration(steps: 1) }
 
                     Spacer(minLength: 4)
 
@@ -205,7 +205,7 @@ struct CheckInPopoverView: View {
                 .labelsHidden()
 
                 Button(action: submitCheckIn) {
-                    Text(isSaved ? store.t("✓ Gespeichert", "✓ Saved") : store.t("Speichern ↵", "Save ↵"))
+                    Text(isSaved ? store.t("checkIn.saved") : store.t("checkIn.save"))
                         .font(.system(size: 12, weight: .semibold))
                         .frame(minWidth: 100)
                 }
@@ -216,7 +216,7 @@ struct CheckInPopoverView: View {
 
             // Footer
             HStack {
-                Button(store.t("Hauptfenster", "Main window")) {
+                Button(store.t("checkIn.mainWindow")) {
                     appDelegate()?.showMainWindow(nil)
                     onClose()
                 }
@@ -226,7 +226,7 @@ struct CheckInPopoverView: View {
 
                 Spacer()
 
-                Button(store.t("Später (+\(store.reminderIntervalMinutes)m)", "Later (+\(store.reminderIntervalMinutes)m)")) {
+                Button(store.t("checkIn.laterM", "\(store.reminderIntervalMinutes)")) {
                     appDelegate()?.snoozeCheckIn()
                     onClose()
                 }
@@ -245,11 +245,11 @@ struct CheckInPopoverView: View {
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
-                .help(store.t("Einstellungen… (⌘,)", "Settings… (⌘,)"))
+                .help(store.t("checkIn.settings"))
 
                 Spacer()
 
-                Button(store.t("Beenden", "Quit")) {
+                Button(store.t("checkIn.quit")) {
                     NSApp.terminate(nil)
                 }
                 .buttonStyle(.plain)
@@ -283,9 +283,9 @@ struct CheckInPopoverView: View {
 
     private var headline: String {
         switch store.checkInRequest.reason {
-        case .manual, .timer: return store.t("Was machst du gerade?", "What are you working on?")
-        case .beforeLunch: return store.t("Gleich Mittagspause? 🍽", "Off to lunch? 🍽")
-        case .back: return store.t("Willkommen zurück", "Welcome back")
+        case .manual, .timer: return store.t("checkIn.whatAreYouWorkingOn")
+        case .beforeLunch: return store.t("checkIn.offToLunch")
+        case .back: return store.t("checkIn.welcomeBack")
         }
     }
 
@@ -294,19 +294,18 @@ struct CheckInPopoverView: View {
         case .manual, .timer:
             return AppDelegate.checkInWindowString(intervalMinutes: durationMinutes, language: store.appLanguage)
         case .beforeLunch:
-            return store.t("Was hast du heute Vormittag gemacht?", "What did you do this morning?")
+            return store.t("checkIn.whatDidYouDoThis")
         case .back(let period):
             let range = "\(AppTime.clock.string(from: period.from))–\(AppTime.clock.string(from: period.to))"
-            return store.t("Weg von \(range) (\(SchichtaCore.formatTime(period.minutes))). Was war das?",
-                           "Away \(range) (\(SchichtaCore.formatTime(period.minutes))). What was that?")
+            return store.t("checkIn.awayWhatWasThat", "\(range)", "\(SchichtaCore.formatTime(period.minutes))")
         }
     }
 
     private var notePlaceholder: String {
         switch store.checkInRequest.reason {
-        case .manual, .timer: return store.t("Kurze Notiz: Woran arbeitest du gerade?", "Short note: What are you working on?")
-        case .beforeLunch: return store.t("z. B. Review PROJ-2800, Daily, Bugfix Login", "e.g. review PROJ-2800, daily, login bugfix")
-        case .back: return store.t("z. B. Meeting mit Team, Kundencall", "e.g. team meeting, customer call")
+        case .manual, .timer: return store.t("checkIn.shortNoteWhatAreYou")
+        case .beforeLunch: return store.t("checkIn.exampleReviewProj2800Daily")
+        case .back: return store.t("checkIn.exampleTeamMeetingCustomerCall")
         }
     }
 

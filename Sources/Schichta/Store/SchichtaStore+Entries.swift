@@ -56,7 +56,7 @@ extension SchichtaStore {
 
         let daySum = entriesForSelectedDay().reduce(0) { $0 + $1.minutes }
         if daySum + minutes > 1440 {
-            showToast(t("Fehler: Tagessumme darf 24 Stunden nicht überschreiten.", "Error: Daily total cannot exceed 24 hours."))
+            showToast(t("entries.errorDailyTotalCannotExceed"))
             return
         }
 
@@ -64,7 +64,7 @@ extension SchichtaStore {
         newEntry.project = SchichtaCore.resolveProjectName(for: newEntry, repos: trackedRepos)
         database.entries.append(newEntry)
         save()
-        showToast(t("Eintrag hinzugefügt.", "Entry added."))
+        showToast(t("entries.entryAdded"))
     }
 
     func updateEntry(id: String, ticket: String, description: String, minutes: Int, estimated: Bool, project: String? = nil) {
@@ -80,20 +80,20 @@ extension SchichtaStore {
             database.entries[idx].project = p
         }
         save()
-        showToast(t("Eintrag aktualisiert.", "Entry updated."))
+        showToast(t("entries.entryUpdated"))
     }
 
     func deleteEntry(id: String) {
         database.entries.removeAll(where: { $0.id == id })
         save()
-        showToast(t("Eintrag gelöscht.", "Entry deleted."))
+        showToast(t("entries.entryDeleted"))
     }
 
     func confirmEstimate(id: String) {
         guard let idx = database.entries.firstIndex(where: { $0.id == id }) else { return }
         database.entries[idx].estimated = false
         save()
-        showToast(t("Schätzung bestätigt.", "Estimate confirmed."))
+        showToast(t("entries.estimateConfirmed"))
     }
 
     /// Moves the duration by `steps` time steps; an off-step duration (from before the setting) lands on the grid.
@@ -106,7 +106,7 @@ extension SchichtaStore {
         database.entries[idx].minutes = updated
         save()
         let sign = delta >= 0 ? "+\(delta)" : "\(delta)"
-        showToast(t("Dauer angepasst (\(sign) Min.): \(SchichtaCore.formatTime(updated))", "Duration adjusted (\(sign) min): \(SchichtaCore.formatTime(updated))"))
+        showToast(t("entries.durationAdjustedMin", "\(sign)", "\(SchichtaCore.formatTime(updated))"))
     }
 
     func setEntryMinutes(id: String, minutes: Int) {
@@ -115,7 +115,7 @@ extension SchichtaStore {
         guard updated != database.entries[idx].minutes else { return }
         database.entries[idx].minutes = updated
         save()
-        showToast(t("Dauer geändert: \(SchichtaCore.formatTime(updated))", "Duration changed: \(SchichtaCore.formatTime(updated))"))
+        showToast(t("entries.durationChanged", "\(SchichtaCore.formatTime(updated))"))
     }
 
     // --- Journal & Check-Ins ---
@@ -158,7 +158,7 @@ extension SchichtaStore {
         }
 
         save()
-        showToast(mode == .both ? t("\(effectiveMinutes)m-Eintrag & Notiz erfasst.", "\(effectiveMinutes)m entry & note recorded.") : t("Check-in als Notiz gespeichert.", "Check-in saved as note."))
+        showToast(mode == .both ? t("entries.mEntryNoteRecorded", "\(effectiveMinutes)") : t("entries.checkInSavedAsNote"))
     }
 
     // --- Auto Synthesize Actions ---
@@ -174,9 +174,9 @@ extension SchichtaStore {
             case .success(let loaded):
                 let synth = AutoSynthesizer.synthesizeDay(day: day, journal: loaded.journal, gitResult: loaded.result, existingEntries: existing, language: self.appLanguage)
                 self.proposals = synth.map { self.snapped($0) }
-                self.showToast(self.t("\(synth.count) Tätigkeiten automatisch erkannt.", "\(synth.count) activities automatically recognized."))
+                self.showToast(self.t("entries.activitiesAutomaticallyRecognized", "\(synth.count)"))
             case .failure(let error):
-                self.showToast(self.t("Fehler bei Git-Auswertung: \(error.localizedDescription)", "Git analysis error: \(error.localizedDescription)"))
+                self.showToast(self.t("entries.gitAnalysisError", "\(error.localizedDescription)"))
             }
         }
     }
@@ -187,7 +187,7 @@ extension SchichtaStore {
         aiQuestions = result.questions
         // Replace earlier AI proposals, keep local ones (Git/check-in).
         proposals = proposals.filter { !$0.id.hasPrefix("ai-") } + result.proposals.map(snapped)
-        showToast(t("\(result.proposals.count) KI-Vorschläge – bitte prüfen.", "\(result.proposals.count) AI proposals – please review."))
+        showToast(t("entries.aiProposalsPleaseReview", "\(result.proposals.count)"))
     }
 
     /// A proposal with its duration on the time step; "time open" (0) stays open.
@@ -199,7 +199,7 @@ extension SchichtaStore {
 
     func acceptProposal(_ prop: ProposedEntry) {
         guard prop.minutes > 0 else {
-            showToast(t("Bitte zuerst eine Dauer eintragen.", "Please enter a duration first."))
+            showToast(t("entries.pleaseEnterADurationFirst"))
             return
         }
         addEntry(ticket: prop.ticket, description: prop.description, minutes: prop.minutes, estimated: prop.estimated, project: prop.project)
@@ -212,6 +212,6 @@ extension SchichtaStore {
             addEntry(ticket: prop.ticket, description: prop.description, minutes: prop.minutes, estimated: prop.estimated, project: prop.project)
         }
         proposals.removeAll(where: { $0.minutes > 0 })
-        showToast(t("Alle Vorschläge übernommen.", "All proposals accepted."))
+        showToast(t("entries.allProposalsAccepted"))
     }
 }

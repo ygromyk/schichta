@@ -14,7 +14,7 @@ extension MainWindowView {
                     .font(.system(size: 12))
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
-                Button(store.t("Datenordner im Finder zeigen", "Show data folder in Finder")) {
+                Button(store.t("main.showDataFolderInFinder")) {
                     store.revealDataFolder()
                 }
                 .controlSize(.small)
@@ -26,7 +26,7 @@ extension MainWindowView {
                     .font(.system(size: 15))
             }
             .buttonStyle(.plain)
-            .help(store.t("Hinweis schließen", "Close banner"))
+            .help(store.t("main.closeBanner"))
         }
         .bannerStyle(.red)
     }
@@ -38,11 +38,10 @@ extension MainWindowView {
             Image(systemName: absence.icon)
                 .foregroundColor(.purple)
                 .font(.system(size: 16))
-            Text(store.t("\(SchichtaCore.formatGermanDate(day)) ist als \(absence.title(for: .de)) markiert: kein Soll, keine Erinnerungen.",
-                         "\(SchichtaCore.formatGermanDate(day)) is marked as \(absence.title(for: .en).lowercased()): no target, no reminders."))
+            Text(store.t("main.markedAs.\(absence.rawValue)", SchichtaCore.formatGermanDate(day)))
                 .font(.system(size: 12, weight: .medium))
             Spacer()
-            Button(store.t("Aufheben", "Undo")) { store.setAbsence(nil, on: day) }
+            Button(store.t("main.undo")) { store.setAbsence(nil, on: day) }
                 .controlSize(.small)
         }
         .bannerStyle(.purple)
@@ -59,9 +58,9 @@ extension MainWindowView {
                     .cornerRadius(6)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(store.t("Guten Morgen! Der Vortag (\(SchichtaCore.formatGermanDate(unbookedDay))) ist noch nicht gebucht.", "Good morning! The previous work day (\(SchichtaCore.formatGermanDate(unbookedDay))) is not booked yet."))
+                    Text(store.t("main.goodMorningThePreviousWork", "\(SchichtaCore.formatGermanDate(unbookedDay))"))
                         .font(.system(size: 13, weight: .bold))
-                    Text(store.t("Deine Buchungen vom \(SchichtaCore.formatGermanDate(unbookedDay)) sind noch nicht übertragen.", "Your bookings from \(SchichtaCore.formatGermanDate(unbookedDay)) have not been transferred yet."))
+                    Text(store.t("main.yourBookingsFromHaveNot", "\(SchichtaCore.formatGermanDate(unbookedDay))"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
@@ -74,7 +73,7 @@ extension MainWindowView {
                         .font(.system(size: 15))
                 }
                 .buttonStyle(.plain)
-                .help(store.t("Hinweis schließen", "Close banner"))
+                .help(store.t("main.closeBanner"))
             }
 
             HStack(spacing: 8) {
@@ -87,7 +86,7 @@ extension MainWindowView {
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.uturn.backward")
-                        Text(store.t("Zum Vortag wechseln & prüfen", "Switch to previous day & review"))
+                        Text(store.t("main.switchToPreviousDayReview"))
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -102,14 +101,14 @@ extension MainWindowView {
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "doc.on.doc")
-                        Text(store.t("Entwurf kopieren & als gebucht markieren ✓", "Copy draft & mark as booked ✓"))
+                        Text(store.t("main.copyDraftMarkAsBooked"))
                     }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(SchichtaTheme.forestGreen)
                 .controlSize(.small)
 
-                Button(store.t("Ignorieren / Bereits gebucht", "Ignore / Already booked")) {
+                Button(store.t("main.ignoreAlreadyBooked")) {
                     withAnimation {
                         store.markDayBooked(unbookedDay, booked: true)
                         store.activePrompt = .none
@@ -131,9 +130,9 @@ extension MainWindowView {
                     .cornerRadius(6)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(store.t("Tagesabschluss: Möchtest du deine heutigen Buchungen (\(SchichtaCore.formatGermanDate(day))) jetzt abschließen?", "Day completion: Would you like to close today's bookings (\(SchichtaCore.formatGermanDate(day))) now?"))
+                    Text(store.t("main.dayCompletionWouldYouLike", "\(SchichtaCore.formatGermanDate(day))"))
                         .font(.system(size: 13, weight: .bold))
-                    Text(store.t("Tätigkeiten für \(SchichtaCore.formatGermanDate(day)) auswerten und buchen.", "Analyze activities for \(SchichtaCore.formatGermanDate(day)) and book them."))
+                    Text(store.t("main.analyzeActivitiesForAndBook", "\(SchichtaCore.formatGermanDate(day))"))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
@@ -146,7 +145,7 @@ extension MainWindowView {
                         .font(.system(size: 15))
                 }
                 .buttonStyle(.plain)
-                .help(store.t("Hinweis schließen", "Close banner"))
+                .help(store.t("main.closeBanner"))
             }
 
             HStack(spacing: 8) {
@@ -156,7 +155,7 @@ extension MainWindowView {
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "sparkles")
-                        Text(store.t("Tag automatisch auswerten", "Automatically analyze day"))
+                        Text(store.t("main.automaticallyAnalyzeDay"))
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -171,14 +170,14 @@ extension MainWindowView {
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "doc.on.doc")
-                        Text(store.t("Entwurf kopieren & Tag abschließen ✓", "Copy draft & complete day ✓"))
+                        Text(store.t("main.copyDraftCompleteDay"))
                     }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(SchichtaTheme.forestGreen)
                 .controlSize(.small)
 
-                Button(store.t("Später erinnern", "Remind me later")) {
+                Button(store.t("main.remindMeLater")) {
                     withAnimation {
                         store.activePrompt = .none
                     }

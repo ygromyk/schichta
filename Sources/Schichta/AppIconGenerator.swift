@@ -208,7 +208,7 @@ enum AppIconGenerator {
         ]
         for (filename, ptSize) in sizes {
             guard let png = pngData(makeIcon(size: ptSize)) else {
-                throw SchichtaError("Konnte PNG für \(filename) nicht erzeugen", en: "Could not create PNG for \(filename)")
+                throw SchichtaError("misc.couldNotCreatePngFor", "\(filename)")
             }
             try png.write(to: directory.appendingPathComponent(filename))
         }

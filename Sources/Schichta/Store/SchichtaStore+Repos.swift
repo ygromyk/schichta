@@ -19,7 +19,7 @@ extension SchichtaStore {
     func scanAndAddRepos(in rootPath: String) -> Int {
         let rootURL = URL(fileURLWithPath: rootPath)
         guard let contents = try? FileManager.default.contentsOfDirectory(at: rootURL, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) else {
-            showToast(t("Verzeichnis konnte nicht gelesen werden: \(rootPath)", "Could not read directory: \(rootPath)"))
+            showToast(t("repos.couldNotReadDirectory", "\(rootPath)"))
             return 0
         }
         var added = 0
@@ -30,9 +30,9 @@ extension SchichtaStore {
             if addTrackedRepo(path: item.path) { added += 1 }
         }
         if added > 0 {
-            showToast(t("\(added) neue(s) Git-Repository(s) hinzugefügt.", "\(added) new Git repository(s) added."))
+            showToast(t("repos.newGitRepositorySAdded", "\(added)"))
         } else {
-            showToast(t("Keine neuen Repositories in \(rootPath) gefunden.", "No new repositories found in \(rootPath)."))
+            showToast(t("repos.noNewRepositoriesFoundIn", "\(rootPath)"))
         }
         return added
     }

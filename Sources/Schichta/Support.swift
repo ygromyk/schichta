@@ -62,25 +62,39 @@ enum AppTime {
     }
 }
 
-/// A user-facing text in both UI languages; whoever shows it picks the language.
+/// A user-facing text that is resolved later; whoever shows it picks the language.
 struct LocalizedText: Equatable {
-    let de: String
-    let en: String
-    init(_ de: String, _ en: String) {
-        self.de = de
-        self.en = en
+    private let key: String?
+    private let args: [String]
+
+    /// A key from Localizable.strings; `args` fill its `%1$@`, `%2$@`, …
+    init(key: String, _ args: String...) {
+        self.init(key: key, args: args)
+    }
+    init(key: String, args: [String]) {
+        self.key = key
+        self.args = args
     }
     /// The same text in both languages, e.g. a name.
-    init(_ both: String) { self.init(both, both) }
+    init(verbatim text: String) {
+        key = nil
+        args = [text]
+    }
 
-    func `in`(_ language: AppLanguage) -> String { language == .de ? de : en }
+    func `in`(_ language: AppLanguage) -> String {
+        guard let key else { return args[0] }
+        return L10n.string(key, args, language: language)
+    }
+    var de: String { self.in(.de) }
+    var en: String { self.in(.en) }
 }
 
-/// An error with a German and an English message. `localizedDescription` uses `AppLanguage.current`,
+/// An error with a localized message. `localizedDescription` uses `AppLanguage.current`,
 /// so errors thrown deep in the core read right wherever the UI shows them.
 struct SchichtaError: LocalizedError {
     let text: LocalizedText
-    init(_ de: String, en: String) { text = LocalizedText(de, en) }
+    init(_ key: String, _ args: String...) { text = LocalizedText(key: key, args: args) }
+    init(_ text: LocalizedText) { self.text = text }
     var errorDescription: String? { text.in(AppLanguage.current) }
 }
 

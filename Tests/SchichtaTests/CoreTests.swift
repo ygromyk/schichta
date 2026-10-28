@@ -144,11 +144,11 @@ struct LanguageTests {
 
     @Test func storeDescribesErrorsInItsLanguage() {
         withTestStore { store in
-            let error = SchichtaError("Fehler", en: "Error")
+            let error = SchichtaError("git.invalidDate")
             store.appLanguage = .en
-            #expect(store.describe(error) == "Error")
+            #expect(store.describe(error) == "Invalid date")
             store.appLanguage = .de
-            #expect(store.describe(error) == "Fehler")
+            #expect(store.describe(error) == "Ungültiges Datum")
         }
     }
 
