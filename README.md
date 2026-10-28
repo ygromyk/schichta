@@ -70,9 +70,15 @@ hook. AI and booking requests are shown to you in full before anything is sent. 
 
 - **Menu bar check-ins.** A check-in panel pops up at your chosen interval without stealing the
   keyboard from what you're typing (or press `⌥⌘K` from any app). Save the answer as a timestamped
-  note or directly as an estimated entry, or repeat the last one with one click. Unanswered check-ins
-  send a notification after 3 minutes that you can answer in place. A dot on the menu bar icon shows
-  that a check-in is due.
+  note or directly as an estimated entry, or repeat the last one with one click. A dot on the menu
+  bar icon shows that a check-in is due.
+- **Notifications that stay out of the way.** An unanswered check-in sends a notification after
+  3 minutes that you can answer in place: reply with a line of text, repeat the last check-in, or
+  put it off. There is only ever one check-in notification, and answering or closing the panel
+  removes it from Notification Center. The morning and end-of-day reminders are notifications too,
+  with *Ask later* (asks again in an hour). No banner interrupts you while the prompt is already on
+  screen. Schichta asks for notification permission at first launch; if you declined, Settings ›
+  Work Hours & Prompts shows a hint with a button to System Settings.
 - **Away and lunch.** After time away from the Mac (idle, sleep, locked screen) Schichta asks what the
   gap was: a meeting or a break. Before lunch it asks what you did in the morning.
 - **Git activity.** Shows your own commits and HEAD reflog for the day from the repositories you
@@ -81,8 +87,10 @@ hook. AI and booking requests are shown to you in full before anything is sent. 
 
 ### Review the day
 
-- **Day view.** Add entries with ticket, project and duration (`1:30`, `1,5` and `1.5` all work).
-  Use quick +/− buttons and a progress bar against your daily target.
+- **Day view.** Add entries with ticket, project and duration (`1:30`, `1,5` and `1.5` all work);
+  the description is optional. Use quick +/− buttons and a progress bar against your daily target.
+  Click a ticket or description to copy it, or copy ticket, description or duration from the row's
+  context menu. A day without entries offers to copy the last day's entries as estimates.
 - **Time step.** Every duration (typed, from a button, a check-in or an AI proposal) is rounded to
   your time step: 1, 5, 10, 15 (default), 30 or 60 minutes, set in Settings › Work Hours & Prompts. The +/−
   buttons and quick chips move by one step. Changing the step does not rewrite existing entries.
@@ -239,10 +247,13 @@ Any command that reads the prompt on stdin and prints JSON works, for example
 4. Open it. **Schichta** appears in the menu bar.
 
 **Requirements:** macOS 14 Sonoma or later, on Apple silicon or Intel (universal binary).
+Notification permission is asked for at first launch; everything works without it, you just
+get no reminders outside the app.
 
-**"Schichta can't be opened because Apple cannot check it"?** Releases are notarized when the
-maintainer has an Apple Developer ID configured. If a release is not notarized (ad-hoc signed),
-open it once like this:
+**"Schichta can't be opened because Apple cannot check it"?** Releases are ad-hoc signed and not
+notarized: this is a free-time project without an Apple Developer Program membership. The checksum
+and the build attestation above are what vouch for the download. macOS therefore asks once; open
+the app like this:
 
 - macOS 15 or later: try to open it, then go to **System Settings › Privacy & Security** and click
   **Open Anyway**.
@@ -327,13 +338,15 @@ estimates and already-booked days by default. Plug it in as a shell hook.
 | Last hook payload | `~/Library/Application Support/Schichta/last-export.json` |
 | Booking targets, AI tools | `~/Library/Application Support/Schichta/targets/`, `…/ai-tools/` |
 | Settings | macOS user defaults, domain `local.schichta` |
+| Notification icon (cache, recreated as needed) | `~/Library/Application Support/Schichta/notification-icon.png` |
 | Secrets | Keychain, service `Schichta.Targets` |
 
 If `schichta.json` can't be read (a bad hand edit, or a file from a newer version), Schichta never
 overwrites it: it renames it to `schichta.unreadable-<time>.json`, starts empty and tells you.
 
 To back up, copy the folder. To uninstall, delete the app, that folder and
-`~/Library/Preferences/local.schichta.plist`.
+`~/Library/Preferences/local.schichta.plist` (plus `local.schichta.data-dir.plist` if you ever ran
+Schichta with `SCHICHTA_DATA_DIR`).
 
 ## Development
 
@@ -348,6 +361,10 @@ cd adapters/bcs && npm install && npm test
 `test.sh` runs `swift test` (Swift Testing, `Tests/SchichtaTests`); with Xcode installed, plain
 `swift test` works too. Tests use a temporary database and their own user-defaults domains
 (`local.schichta.tests.*`), so they never touch your real entries or settings.
+
+**Trying the reminders.** The Schichta menu has *Test Morning Prompt* and *Test End-of-Day
+Prompt*, which fire the two day reminders right away. Their notifications land silently in
+Notification Center, since the main window is already in front.
 
 **Screenshots.** Everything in `docs/screenshots` uses invented demo data. To run Schichta on
 separate data, set `SCHICHTA_DATA_DIR`: the data file then lives in that folder and settings go to
@@ -374,9 +391,9 @@ attestation](https://docs.github.com/actions/security-for-github-actions/using-a
 and publishes a GitHub Release with generated notes. Tags with a suffix such as `v1.2.0-beta.1`
 become pre-releases.
 
-**Signing and notarization (optional).** Add these repository secrets and the workflow signs
-with your Developer ID, then notarizes and staples both the app and the DMG. Without them it ships
-ad-hoc signed builds.
+**Signing and notarization (optional, for forks).** This repository's releases are ad-hoc
+signed, see [Install](#install). If you have an Apple Developer ID, add these repository secrets
+and the workflow signs with it, then notarizes and staples both the app and the DMG.
 
 | Secret | Content |
 | --- | --- |
