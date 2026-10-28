@@ -285,8 +285,9 @@ extension MainWindowView {
                                     .padding(.vertical, 3)
                                     .background(SchichtaTheme.forestGreen)
                                     .cornerRadius(4)
+                                    .copyOnClick(entry.ticket, store: store)
+                                    .help(store.t("main.clickToCopy"))
                             }
-                            CopyButton(text: entry.ticket, help: store.t("main.copyTicket"), store: store)
 
                             // Project label and description: the label only when the description still keeps
                             // 110 pt, so a narrow window neither breaks words nor pushes the buttons off the row.
@@ -312,8 +313,8 @@ extension MainWindowView {
                                 }
                                 description
                             }
-                            .help(proj)
-                            CopyButton(text: entry.description, help: store.t("main.copyDescription"), store: store)
+                            .copyOnClick(entry.description, store: store)
+                            .help(entry.description.isEmpty ? proj : [proj, store.t("main.clickToCopy")].filter { !$0.isEmpty }.joined(separator: " · "))
 
                             // Estimated Tag / Confirm Button
                             if entry.estimated {
@@ -356,8 +357,6 @@ extension MainWindowView {
                             .fixedSize()
                             .help(store.t("main.addMinutes", "\(2 * store.timeStepMinutes)"))
 
-                            CopyButton(text: SchichtaCore.formatTime(entry.minutes), help: store.t("main.copyDuration"), store: store)
-
                             // Edit & Delete
                             Button(action: { startEditing(entry) }) {
                                 Image(systemName: "pencil")
@@ -381,6 +380,15 @@ extension MainWindowView {
                         .background(editingEntryId == entry.id ? Color.accentColor.opacity(0.1) : Color(nsColor: .controlBackgroundColor))
                         .cornerRadius(6)
                         .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.06), lineWidth: 0.5))
+                        .contextMenu {
+                            if !entry.ticket.isEmpty {
+                                Button(store.t("main.copyTicket")) { store.copyValue(entry.ticket) }
+                            }
+                            if !entry.description.isEmpty {
+                                Button(store.t("main.copyDescription")) { store.copyValue(entry.description) }
+                            }
+                            Button(store.t("main.copyDuration")) { store.copyValue(SchichtaCore.formatTime(entry.minutes)) }
+                        }
                     }
                 }
             }

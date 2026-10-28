@@ -9,6 +9,13 @@ extension SchichtaStore {
         NSPasteboard.general.setString(text, forType: .string)
     }
 
+    /// Copies one field of an entry (ticket, description, duration) and confirms it in the toast.
+    func copyValue(_ text: String) {
+        guard !text.isEmpty else { return }
+        copyToPasteboard(text)
+        showToast(t("main.copiedValue", text))
+    }
+
     /// Shows the panel as a sheet on the window (if any), otherwise modally, and calls `onURL` only on "OK".
     func present(_ panel: NSSavePanel, window: NSWindow?, onURL: @escaping (URL) throws -> Void, failure: @escaping (Error) -> String) {
         let handler: (NSApplication.ModalResponse) -> Void = { result in

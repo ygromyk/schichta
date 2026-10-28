@@ -21,30 +21,59 @@ struct StepButton: View {
     }
 }
 
-/// Small clipboard icon that copies one value of an entry row (ticket, description, duration).
-/// Hidden entirely when there is nothing to copy, so empty fields do not get a dead button.
-struct CopyButton: View {
+/// Makes a label copyable with one click: a highlight and the pointing hand on hover say "clickable",
+/// and after the click the label flashes green with a checkmark and "Copied" for a moment.
+struct CopyOnClick: ViewModifier {
     let text: String
-    let help: String
     @ObservedObject var store: SchichtaStore
+    @State private var hovered = false
+    @State private var copied = false
 
-    var body: some View {
-        if !text.isEmpty {
-            Button {
-                store.copyToPasteboard(text)
-                store.showToast(store.t("main.copiedValue", text))
-            } label: {
-                Image(systemName: "doc.on.doc")
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary)
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, 4)
+            .padding(.vertical, 2)
+            .background(
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(SchichtaTheme.forestGreen.opacity(hovered && !text.isEmpty ? 0.14 : 0))
+            )
+            .overlay {
+                if copied {
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(SchichtaTheme.forestGreen)
+                        .overlay {
+                            Label(store.t("main.copied"), systemImage: "checkmark")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
+                                .padding(.horizontal, 4)
+                        }
+                        .transition(.opacity)
+                }
             }
-            .buttonStyle(.plain)
-            .help(help)
-        }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                guard !text.isEmpty else { return }
+                store.copyValue(text)
+                withAnimation(.easeOut(duration: 0.15)) { copied = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    withAnimation(.easeIn(duration: 0.3)) { copied = false }
+                }
+            }
+            .onHover { inside in
+                guard !text.isEmpty else { return }
+                hovered = inside
+                if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+            }
     }
 }
 
 extension View {
+    func copyOnClick(_ text: String, store: SchichtaStore) -> some View {
+        modifier(CopyOnClick(text: text, store: store))
+    }
+
     /// Frame of the four tiles in the metrics bar.
     func tileStyle() -> some View {
         padding(.horizontal, 14)

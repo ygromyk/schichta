@@ -376,6 +376,8 @@
 "main.copyDescription" = "Copy description";
 "main.copyDuration" = "Copy duration";
 "main.copiedValue" = "Copied: %1$@";
+"main.clickToCopy" = "Click to copy";
+"main.copied" = "Copied";
 "main.1DayIsNotBooked" = "1 day is not booked yet:";
 "main.daysAreNotBookedYet" = "%1$@ days are not booked yet:";
 "main.weekTotal" = "Week total";
